@@ -42,6 +42,41 @@ console.log(results);
 ```
 
 which should yield the following:
-````
+```
 {feasible: true, Yusip: 270, Exotic: 260, result: 1985}
+```
+##What If I Want Only Integers
+
+Say you live in the real world and partial results aren't realistic, or are too messy.
+
+>Steven manages a wood shop that makes money by charging people money to use its tools.
+>The shop owner tells Steven that he has an extra $40,000 this year to spend on new equipment.
+>After thinking of ways to get the new tools in the shop, Steven realizes that he only has 205 sqft
+>to work with.
+>
+>The 3 pieces of equipment Steven is most interestd in are the press, the lathe, and the drill.
+>A new drill will cost $8,000, take up 15 sqft, and yield about $100 in profit / week.
+>A new lathe will only cost $4,000, make about $150 / wk in profit, but it takes up 30 sqft.
+>Finally, Steven can get a new drill for $4,500 which takes up 14 sqft; and can expect about $80 / wk from it.
+>
+>What should Steven buy to maximize profit?
+
+```javascript
+ models.push({
+     optimize: "profit",
+     opType: "max",
+     constraints: {
+         space: {max: 205},
+         price: {max: 40000}
+     },
+     variables: {
+                 press: {space: 15, price: 8000, profit: 100},
+                 lathe: {space: 30, price: 4000, profit: 150},
+                 drill: {space: 14, price: 4500, profit: 80}
+             },
+     ints: {
+         press: 1 ,lathe: 1 ,drill: 1
+     }
+ });
+
 ```
