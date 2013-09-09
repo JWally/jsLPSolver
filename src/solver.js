@@ -428,9 +428,11 @@ var Solver = function () {
 
 
     //-------------------------------------------------------------------
-    //Function: MILP
-    //Detail: Main function, my attempt at a mixed integer linear programming
-    //          solver
+    // Function: MILP
+    // Detail: Main function, my attempt at a mixed integer linear programming
+    //         solver
+    // Plan: 
+    //      What we're aiming at here is to 
     //-------------------------------------------------------------------
     this.MILP = function (model) {
         obj.models = [];
@@ -446,24 +448,46 @@ var Solver = function () {
             branch_a,
             branch_b,
             tmp;
+            
+        // This is the default result
+        // If nothing is both *integral* and *feasible*
         obj.best = {
             result: -1e99 * minmax,
             feasible: false
         };
 
+        // And here...we...go!
+        
+        // 1.) Load a model into the queue
         obj.models.push(model);
 
+        // If all branches have been exhausted, or we've been piddling around
+        // for too long, one of these 2 constraints will terminate the algorithm
         while (obj.models.length > 0 && y < 1200) {
-            //Pop a model out of the queue
+            
+        // Get a model from the queue
             model = obj.models.pop();
-            //Solve it
+        // Solve it
             solution = this.Solve(model);
-            //Is the model both integral and feasible?
+            
+        // Is the model both integral and feasible?
             if (obj.integral(model, solution) && solution.feasible) {
+            // Is the new result the best that we've ever had?
                 if (solution.result * minmax > obj.best.result * minmax) {
+                // Store the solution as the best
                     obj.best = solution;
+                } else {
+                    // The solution is feasible and interagal;
+                    // But it is worse than the current solution;
+                    // Ignore it.
                 }
-                //console.log('Done: ', solution)
+            // If the solution is
+            //  a. Feasible
+            //  b. Better than the current solution
+            //  c. but *NOT* integral
+            
+            // We need to create 2 new solutions, with new bounds on the most
+            // Fractional integer constraint
             } else if (solution.feasible && solution.result * minmax > minmax * obj.best.result) {
                 key = obj.frac(model, solution);
                 intval = solution[key];
