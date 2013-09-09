@@ -434,7 +434,7 @@ var Solver = function () {
     // Plan: 
     //      What we're aiming at here is to 
     //-------------------------------------------------------------------
-    this.MILP = function (model) {
+    this.MILP = function (model, precision) {
         obj.models = [];
         obj.priors = {};
 
@@ -442,7 +442,6 @@ var Solver = function () {
             minmax = model.opType === "min" ? -1 : 1,
             solution = {},
             key,
-            intval,
             iHigh,
             iLow,
             branch_a,
@@ -486,13 +485,40 @@ var Solver = function () {
             //  b. Better than the current solution
             //  c. but *NOT* integral
             
-            // We need to create 2 new solutions, with new bounds on the most
-            // Fractional integer constraint
+            // So the solution isn't integral? How do we solve this.
+            // We create 2 new models, that are mirror images of the prior
+            // model, with 1 exception.
+            
+            // Say we're trying to solve some stupid problem involving apples
+            // and bananas. We also want whole fruit for whatever reason.
+            
+            // Say that the optimal solution to this problem if we didn't have
+            // to make it integral was {banana: 8, apple: 3.5}
+            
+            // What we would do is find the most fractional variable (apple)
+            // and create new models from the old models, but with a new constraint
+            // on apples. The constraints on the low model would look like:
+            // constraints: {...
+            //   apple: {max: 3}
+            //   ...
+            // }
+            //
+            // while the constraints on the high model would look like: 
+            //
+            // constraints: {...
+            //   apple: {min: 4}
+            //   ...
+            // }
+            
+            // If neither of these models is feasible because of this constraint,
+            // the model is not integral at this point, and fails.
             } else if (solution.feasible && solution.result * minmax > minmax * obj.best.result) {
+
+                // Find out where we want to split the solution
                 key = obj.frac(model, solution);
-                intval = solution[key];
-                iHigh = Math.ceil(intval);
-                iLow = Math.floor(intval);
+
+                iHigh = Math.ceil(solution[key];);
+                iLow = Math.floor(solution[key];);
                 branch_a = JSON.parse(JSON.stringify(model));
                 branch_a.constraints[key] = branch_a.constraints[key] || {};
                 branch_a.constraints[key].min = iHigh || 1;
