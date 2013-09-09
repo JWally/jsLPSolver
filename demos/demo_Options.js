@@ -2,13 +2,14 @@ var solver = new Solver();
 //Problem 7
 var model = {
     opType: "max",
-    optimize: "profit",
+    optimize: "x13",
     constraints: {
         SP0: {min: 0, max: 1},
         SP560: {min: 0, max: 1}
         ,SP585: {min: 0, max: 1}
         ,SP610: {min: 0, max: 1}
         ,SP1000: {min: 0, max: 1}
+        ,it: {max: 1, min: 1}
     },
     variables: {
         Buy_Call_580: {SP0: -1500, SP560: -1500, SP585: -1000, SP610: 1500, SP1000: 40500, it: 1 }
