@@ -28,7 +28,7 @@ var model = {
     }
 }
 
-console.log(solver.MILP(model));
+console.log(solver.Solve(model));
 
 
 
@@ -41,7 +41,7 @@ var model = {
         ,SP585: {min: 0, max: 1}
         ,SP610: {min: 0, max: 1}
         ,SP1000: {min: 0, max: 1}
-        ,it: {max: 1, min: 1}
+        ,it: {min: 1, max: 100}
     },
     ints: {
         Buy_Call_580: 1
@@ -74,4 +74,4 @@ var model = {
     }
 }
 
-console.log(solver.MILP(model));
+console.log(solver.MILP(model, 3));

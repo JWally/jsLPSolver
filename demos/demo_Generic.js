@@ -1,6 +1,7 @@
 var solver = new Solver;
 
-var models = [];
+var models = [],
+    milps = [];
 
 
 // Word Problem Source: http://www.algebra.com/algebra/homework/coordinate/word/THEO-2012-01-26.lesson
@@ -16,8 +17,7 @@ models.push({
     variables: {
         "Yusip": {"Costa Rican" : 0.5, "Etheopian": 0.5, profit: 3.5},
         "Exotic": {"Costa Rican" : 0.25, "Etheopian": 0.75, profit: 4}
-    },
-    ints: {Yusip: 1, Exotic: 1}
+    }
 })
 
 
@@ -109,7 +109,7 @@ models.push({
 
 
 //Ops Research Problem
-models.push({
+milps.push({
     optimize: "profit",
     opType: "max",
     constraints: {
@@ -142,7 +142,7 @@ models.push({
 })
 
 
-models.push({
+milps.push({
     optimize: "profit",
     opType: "max",
     constraints: {
@@ -160,7 +160,7 @@ models.push({
 });
 
 
-models.push({
+milps.push({
     optimize: "usage",
     opType: "max",
     constraints: {
@@ -183,7 +183,7 @@ models.push({
 })
 
 //Problem 5
-models.push({
+milps.push({
     optimize: "cost",
     opType: "min",
     constraints: {
@@ -198,7 +198,7 @@ models.push({
 });
 
 //Problem 6
-models.push({
+milps.push({
     optimize: "profit",
     opType: "max",
     constraints: {
@@ -214,7 +214,7 @@ models.push({
     }
 })
 
-models.push({
+milps.push({
     optimize: "profit",
     opType: "max",
     constraints: {
@@ -234,8 +234,11 @@ models.push({
 
 
     for(x in models){
-        console.log(solver.MILP(models[x]));
+        console.log(solver.Solve(models[x]));
         console.log("");
     }
 
-
+    for(x in milps){
+        console.log(solver.MILP(milps[x]));
+        console.log("");
+    }
