@@ -45,24 +45,42 @@ var Solver = function () {
         });
     };
 
+    // Function to get keys that are to be ints
+    obj.shared = function (obj_1, obj_2) {
+        var keys = Object.keys(obj_1),
+            rslts = [],
+            i;
+
+        for (i = 0; i < keys.length; i = i + 1) {
+            if (obj_2[keys[i]]) {
+                rslts.push(keys[i]);
+            } else {
+
+            }
+        }
+
+        return rslts;
+    };
+
     // Function to see if a number is an integer or not
     obj.isInt = function (num, precision) {
         precision = precision || 5;
         return Math.round(num) === obj.round(num, precision);
     };
 
-    // Function to check if the solution is integral
-    obj.integral = function (model, solution) {
-        var key;
-        for (key in model.ints) {
-            if (model.ints.hasOwnProperty(key)) {
-                if (!obj.isInt(solution[key])) {
-                    return false;
-                }
+
+    // Function to check the intregrality of the solution
+    obj.integral = function (model, solution, precision) {
+        var i,
+            keys = obj.shared(model.ints, solution);
+        for (i = 0; i < keys.length; i = i + 1) {
+            if (!obj.isInt(solution[keys[i]], precision)) {
+                return false;
             }
         }
         return true;
     };
+
 
     // Function to find the most fractional variable of the 'ints' constraints
     obj.frac = function (model, solution) {
@@ -447,7 +465,7 @@ var Solver = function () {
             branch_a,
             branch_b,
             tmp;
-            
+
         // This is the default result
         // If nothing is both *integral* and *feasible*
         obj.best = {
@@ -456,64 +474,68 @@ var Solver = function () {
         };
 
         // And here...we...go!
-        
+
         // 1.) Load a model into the queue
         obj.models.push(model);
 
         // If all branches have been exhausted, or we've been piddling around
         // for too long, one of these 2 constraints will terminate the loop
         while (obj.models.length > 0 && y < 1200) {
-            
-        // Get a model from the queue
+
+            // Get a model from the queue
             model = obj.models.pop();
-        // Solve it
+            // Solve it
             solution = this.Solve(model);
-            
-        // Is the model both integral and feasible?
-            if (obj.integral(model, solution) && solution.feasible) {
-            // Is the new result the best that we've ever had?
-                if (solution.result * minmax > obj.best.result * minmax) {
-                // Store the solution as the best
+
+            // Is the model both integral and feasible?
+            if (obj.integral(model, solution, precision) && solution.feasible) {
+                // Is the new result the best that we've ever had?          
+                if (
+                    (solution.result * minmax) >
+                    (obj.best.result * minmax)
+                ) {
+                    // Store the solution as the best
                     obj.best = solution;
                 } else {
                     // The solution is feasible and interagal;
                     // But it is worse than the current solution;
                     // Ignore it.
                 }
-            // If the solution is
-            //  a. Feasible
-            //  b. Better than the current solution
-            //  c. but *NOT* integral
-            
-            // So the solution isn't integral? How do we solve this.
-            // We create 2 new models, that are mirror images of the prior
-            // model, with 1 exception.
-            
-            // Say we're trying to solve some stupid problem involving apples
-            // and bananas. We also want whole fruit for whatever reason.
-            
-            // Say that the optimal solution to this problem if we didn't have
-            // to make it integral was {banana: 8, apple: 3.5}
-            
-            // What we would do is find the most fractional variable (apple)
-            // and create new models from the old models, but with a new constraint
-            // on apples. The constraints on the low model would look like:
-            // constraints: {...
-            //   apple: {max: 3}
-            //   ...
-            // }
-            //
-            // while the constraints on the high model would look like: 
-            //
-            // constraints: {...
-            //   apple: {min: 4}
-            //   ...
-            // }
-            
-            // If neither of these models is feasible because of this constraint,
-            // the model is not integral at this point, and fails.
-            } else if (solution.feasible && solution.result * minmax > minmax * obj.best.result) {
 
+
+                // If the solution is
+                //  a. Feasible
+                //  b. Better than the current solution
+                //  c. but *NOT* integral
+
+                // So the solution isn't integral? How do we solve this.
+                // We create 2 new models, that are mirror images of the prior
+                // model, with 1 exception.
+
+                // Say we're trying to solve some stupid problem involving apples
+                // and bananas. We also want whole fruit for whatever reason.
+
+                // Say that the optimal solution to this problem if we didn't have
+                // to make it integral was {banana: 8, apple: 3.5}
+
+                // What we would do is find the most fractional variable (apple)
+                // and create new models from the old models, but with a new constraint
+                // on apples. The constraints on the low model would look like:
+                // constraints: {...
+                //   apple: {max: 3}
+                //   ...
+                // }
+                //
+                // while the constraints on the high model would look like: 
+                //
+                // constraints: {...
+                //   apple: {min: 4}
+                //   ...
+                // }
+
+                // If neither of these models is feasible because of this constraint,
+                // the model is not integral at this point, and fails.
+            } else if (solution.feasible && solution.result * minmax > minmax * obj.best.result) {
                 // Find out where we want to split the solution
                 key = obj.frac(model, solution);
 
