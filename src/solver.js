@@ -48,7 +48,7 @@ var Solver = function () {
     // Function to see if a number is an integer or not
     obj.isInt = function (num, precision) {
         precision = precision || 5;
-        return Math.round(num) === (Math.round(num * 10 * precision) / (10 * precision));
+        return Math.round(num) === obj.round(num, precision);
     };
 
     // Function to check if the solution is integral
@@ -461,7 +461,7 @@ var Solver = function () {
         obj.models.push(model);
 
         // If all branches have been exhausted, or we've been piddling around
-        // for too long, one of these 2 constraints will terminate the algorithm
+        // for too long, one of these 2 constraints will terminate the loop
         while (obj.models.length > 0 && y < 1200) {
             
         // Get a model from the queue
@@ -517,8 +517,8 @@ var Solver = function () {
                 // Find out where we want to split the solution
                 key = obj.frac(model, solution);
 
-                iHigh = Math.ceil(solution[key];);
-                iLow = Math.floor(solution[key];);
+                iHigh = Math.ceil(solution[key]);
+                iLow = Math.floor(solution[key]);
                 branch_a = JSON.parse(JSON.stringify(model));
                 branch_a.constraints[key] = branch_a.constraints[key] || {};
                 branch_a.constraints[key].min = iHigh || 1;
