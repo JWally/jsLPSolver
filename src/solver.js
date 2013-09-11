@@ -532,25 +532,40 @@ var Solver = function () {
                 //   apple: {min: 4}
                 //   ...
                 // }
-
                 // If neither of these models is feasible because of this constraint,
                 // the model is not integral at this point, and fails.
+                
             } else if (solution.feasible && solution.result * minmax > minmax * obj.best.result) {
+
                 // Find out where we want to split the solution
                 key = obj.frac(model, solution);
 
+                // Round up
                 iHigh = Math.ceil(solution[key]);
-                iLow = Math.floor(solution[key]);
+                // Copy the old model into the new branch_a variable
                 branch_a = JSON.parse(JSON.stringify(model));
+                // If there was already a constraint on this variable, keep it; else add one
                 branch_a.constraints[key] = branch_a.constraints[key] || {};
+                // Set the new constraint on this variable
                 branch_a.constraints[key].min = iHigh || 1;
 
+                // We don't want the same models popping up all the time.
+                // If it's been run once, we don't want to check it again,
+                // and go through a possible infinite branching...
+                // 
+                // To prevent this, we have a hash on the `obj` object
+                // which uses the stringified version of the new model as the key.
+                //
+                // This is kind of similar to an MD5 or a SHA1 hash check, but
+                // easier (and faster)
+                
                 tmp = JSON.stringify(branch_a);
                 if (!obj.priors[tmp]) {
                     obj.priors[tmp] = 1;
                     obj.models.push(branch_a);
                 }
 
+                iLow = Math.floor(solution[key]);
                 branch_b = JSON.parse(JSON.stringify(model));
                 branch_b.constraints[key] = branch_b.constraints[key] || {};
                 branch_b.constraints[key].max = iLow || 0;
