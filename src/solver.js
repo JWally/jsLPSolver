@@ -568,3 +568,15 @@ var Solver = function () {
         return obj.best;
     };
 };
+
+// Determine the environment we're in.
+// if we're in node, offer a friendly exports
+// otherwise, Solver's going global
+
+(function () {
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = Solver;
+    } else {
+        // MEH!
+    }
+})();
