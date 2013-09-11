@@ -6,7 +6,7 @@ module.exports = function(grunt){
         },
         "jsbeautifier" : {
             "default": {
-                src: ["src/**/*.js", "src/**/*.html"]
+                src: ["src/**/*.js", "test/**/*.js", "src/**/*.html"]
             },
             "options": {
                 "html": {
