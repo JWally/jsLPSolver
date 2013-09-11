@@ -534,7 +534,7 @@ var Solver = function () {
                 // }
                 // If neither of these models is feasible because of this constraint,
                 // the model is not integral at this point, and fails.
-                
+
             } else if (solution.feasible && solution.result * minmax > minmax * obj.best.result) {
 
                 // Find out where we want to split the solution
@@ -558,7 +558,7 @@ var Solver = function () {
                 //
                 // This is kind of similar to an MD5 or a SHA1 hash check, but
                 // easier (and faster)
-                
+
                 tmp = JSON.stringify(branch_a);
                 if (!obj.priors[tmp]) {
                     obj.priors[tmp] = 1;
