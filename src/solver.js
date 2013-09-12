@@ -583,14 +583,14 @@ var Solver = function () {
         return obj.best;
     };
 
-    this.Solve = function(model, precision){
+    this.Solve = function (model, precision) {
         precision = precision || 5;
-        if(model.ints){
+        if (model.ints) {
             return obj.MILP(model, precision);
         } else {
             return obj.Solve(model);
         }
-    }
+    };
 };
 
 // Determine the environment we're in.
