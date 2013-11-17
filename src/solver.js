@@ -512,24 +512,28 @@ var Solver = function () {
                 // We create 2 new models, that are mirror images of the prior
                 // model, with 1 exception.
 
-                // Say we're trying to solve some stupid problem involving apples
-                // and bananas. We also want whole fruit for whatever reason.
+                // Say we're trying to solve some stupid problem requiring you get
+                // animals for your daughter's kindergarten petting zoo party
+                // and you have to choose how many ducks, goats, and lambs to get.
 
                 // Say that the optimal solution to this problem if we didn't have
-                // to make it integral was {banana: 8, apple: 3.5}
+                // to make it integral was {duck: 8, lambs: 3.5}
+                //
+                // To keep from traumatizing your daughter and the other children
+                // you're going to want to have whole animals
 
-                // What we would do is find the most fractional variable (apple)
+                // What we would do is find the most fractional variable (lambs)
                 // and create new models from the old models, but with a new constraint
                 // on apples. The constraints on the low model would look like:
                 // constraints: {...
-                //   apple: {max: 3}
+                //   lamb: {max: 3}
                 //   ...
                 // }
                 //
                 // while the constraints on the high model would look like: 
                 //
                 // constraints: {...
-                //   apple: {min: 4}
+                //   lamb: {min: 4}
                 //   ...
                 // }
                 // If neither of these models is feasible because of this constraint,
