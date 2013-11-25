@@ -239,6 +239,6 @@ milps.push({
     }
 
     for(x in milps){
-        console.log(solver.MILP(milps[x]));
+        console.log(solver.Solve(milps[x]));
         console.log("");
     }

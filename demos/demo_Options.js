@@ -74,4 +74,4 @@ var model = {
     }
 }
 
-console.log(solver.MILP(model, 3));
+console.log(solver.Solve(model, 3));

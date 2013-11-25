@@ -362,7 +362,7 @@ var Solver = function () {
     //Function: Solve
     //Detail: Main function, linear programming solver
     //-------------------------------------------------------------------
-    this.Solve = function (model) {
+    obj.Solve = function (model) {
         var tableau = [], //The LHS of the Tableau
             rhs = [], //The RHS of the Tableau
             cstr = Object.keys(model.constraints), //Array with name of each constraint type
@@ -476,7 +476,7 @@ var Solver = function () {
     // Plan: 
     //      What we're aiming at here is to 
     //-------------------------------------------------------------------
-    this.MILP = function (model, precision) {
+    obj.MILP = function (model, precision) {
         obj.models = [];
         obj.priors = {};
 
@@ -509,7 +509,7 @@ var Solver = function () {
             // Get a model from the queue
             model = obj.models.pop();
             // Solve it
-            solution = this.Solve(model);
+            solution = obj.Solve(model);
 
             // Is the model both integral and feasible?
             if (obj.integral(model, solution, precision) && solution.feasible) {
@@ -605,6 +605,15 @@ var Solver = function () {
             }
         }
         return obj.best;
+    };
+
+    this.Solve = function (model, precision) {
+        precision = precision || 5;
+        if (model.ints) {
+            return obj.MILP(model, precision);
+        } else {
+            return obj.Solve(model);
+        }
     };
 };
 
