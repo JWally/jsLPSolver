@@ -21,14 +21,38 @@ var Solver = function () {
     // Expose the obj to the world for testing; Maybe remove from production
     this._helpers = obj;
 
-    // John Resig's method for extracting the max value from an Array
-    obj.max = function (array) {
-        return Math.max.apply(Math, array);
+    //-------------------------------------------------------------------
+    // Function: max
+    // Puprose: Iterate over a 1d array to find its max
+    //
+    // Example: obj.max([1,3,4,5,6]) === 6
+    //-------------------------------------------------------------------
+    obj.max = function (ary) {
+        var i,
+            tmp = -1e99,
+            len = ary.length;
+
+        for (i = 0; i < len; i++) {
+            tmp = ary[i] > tmp ? ary[i] : tmp;
+        }
+        return tmp;
     };
 
-    // John Resig's method for extracting the min value from an Array
-    obj.min = function (array) {
-        return Math.min.apply(Math, array);
+    //-------------------------------------------------------------------
+    // Function: min
+    // Puprose: Iterate over a 1d array to find its min
+    //
+    // Example: obj.min([1,3,4,5,6]) === 1
+    //-------------------------------------------------------------------
+    obj.min = function (ary) {
+        var i,
+            tmp = 1e99,
+            len = ary.length;
+
+        for (i = 0; i < len; i++) {
+            tmp = ary[i] < tmp ? ary[i] : tmp;
+        }
+        return tmp;
     };
 
     // Quick and dirty method to round numbers        

@@ -8,6 +8,7 @@
     "grunt-contrib-jshint": "*",
     "grunt-mocha-test": "*",
     "grunt-contrib-uglify": "*",
-    "grunt-jsbeautifier": "*"
+    "grunt-jsbeautifier": "*",
+    "benchmark": "*"
   }
 }
