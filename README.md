@@ -37,7 +37,7 @@ var solver = new Solver,
     }
 };
 
-results = solver.solve(model);
+results = solver.Solve(model);
 console.log(results);
 ```
 
