@@ -1,0 +1,29 @@
+{
+  "name": "jsLPSolver",
+  "version": "0.1.0",
+  "homepage": "https://github.com/JWally/jsLPSolver",
+  "description": "Easy OOP Linear Programming and Mixed Int. Programming Solver",
+  "main": "src/solver.js",
+  "moduleType": [
+    "globals",
+    "node"
+  ],
+  "keywords": [
+    "Linear",
+    "Programming",
+    "Integer",
+    "Programming",
+    "Solver"
+  ],
+  "authors": [
+    "Justin W. Wolcott"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
