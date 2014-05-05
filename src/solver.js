@@ -57,7 +57,8 @@ var Solver = function () {
 
     // Quick and dirty method to round numbers        
     obj.round = function (num, precision) {
-        return Math.round(num * Math.pow(10, precision - 0)) / (Math.pow(10, precision - 0));
+        return Math.round(num * Math.pow(10, precision - 0)) / (Math.pow(10,
+            precision - 0));
     };
 
     // Method to quickly transpose a 2d array
@@ -78,8 +79,6 @@ var Solver = function () {
         for (i = 0; i < keys.length; i = i + 1) {
             if (obj_2[keys[i]]) {
                 rslts.push(keys[i]);
-            } else {
-
             }
         }
 
@@ -316,7 +315,7 @@ var Solver = function () {
     //-------------------------------------------------------------------
     obj.optimize = function (tbl) {
         var
-        tracker = [],
+            tracker = [],
             results = {},
             counter,
             test;
@@ -353,7 +352,8 @@ var Solver = function () {
         }
 
         results.result = tbl.slice(-1)[0].slice(-1)[0];
-        results.feasible = obj.min(obj.transpose(tbl).slice(-1)[0].slice(0, -1)) > -0.001 ? true : false;
+        results.feasible = obj.min(obj.transpose(tbl).slice(-1)[0].slice(0, -
+            1)) > -0.001 ? true : false;
         return results;
 
     };
@@ -385,12 +385,14 @@ var Solver = function () {
             //add it to the constraints
             if (typeof model.variables[variable].max !== "undefined") {
                 model.constraints[variable] = model.constraints[variable] || {};
-                model.constraints[variable].max = model.variables[variable].max;
+                model.constraints[variable].max = model.variables[variable]
+                    .max;
             }
 
             if (typeof model.variables[variable].min !== "undefined") {
                 model.constraints[variable] = model.constraints[variable] || {};
-                model.constraints[variable].min = model.variables[variable].min;
+                model.constraints[variable].min = model.variables[variable]
+                    .min;
             }
         }
 
@@ -416,14 +418,22 @@ var Solver = function () {
 
             if (typeof model.constraints[constraint].max !== "undefined") {
                 for (j = 0; j < vari.length; j = j + 1) {
-                    tableau[z][j] = typeof model.variables[vari[j]][constraint] === "undefined" ? 0 : model.variables[vari[j]][constraint];
+                    tableau[z][j] = typeof model.variables[vari[j]][
+                        constraint
+                    ] === "undefined" ? 0 : model.variables[vari[j]][
+                        constraint
+                    ];
                 }
                 z = z + 1;
             }
 
             if (typeof model.constraints[constraint].min !== "undefined") {
                 for (j = 0; j < vari.length; j = j + 1) {
-                    tableau[z][j] = typeof model.variables[vari[j]][constraint] === "undefined" ? 0 : -model.variables[vari[j]][constraint];
+                    tableau[z][j] = typeof model.variables[vari[j]][
+                        constraint
+                    ] === "undefined" ? 0 : -model.variables[vari[j]][
+                        constraint
+                    ];
                 }
                 z = z + 1;
             }
@@ -436,7 +446,9 @@ var Solver = function () {
 
         //Add the Objective Function
         for (j = 0; j < vari.length; j = j + 1) {
-            tableau[tableau.length - 1][j] = typeof model.variables[vari[j]][model.optimize] === "undefined" ? 0 : opType * model.variables[vari[j]][model.optimize];
+            tableau[tableau.length - 1][j] = typeof model.variables[vari[j]]
+            [model.optimize] === "undefined" ? 0 : opType * model.variables[
+                vari[j]][model.optimize];
         }
 
         //Add Slack Variables to the Tableau
@@ -520,11 +532,11 @@ var Solver = function () {
                 ) {
                     // Store the solution as the best
                     obj.best = solution;
-                } else {
-                    // The solution is feasible and interagal;
-                    // But it is worse than the current solution;
-                    // Ignore it.
                 }
+
+                // The solution is feasible and interagal;
+                // But it is worse than the current solution;
+                // Ignore it.
 
 
                 // If the solution is
@@ -563,7 +575,8 @@ var Solver = function () {
                 // If neither of these models is feasible because of this constraint,
                 // the model is not integral at this point, and fails.
 
-            } else if (solution.feasible && solution.result * minmax > minmax * obj.best.result) {
+            } else if (solution.feasible && solution.result * minmax >
+                minmax * obj.best.result) {
 
                 // Find out where we want to split the solution
                 key = obj.frac(model, solution);
@@ -624,11 +637,10 @@ var Solver = function () {
 // Determine the environment we're in.
 // if we're in node, offer a friendly exports
 // otherwise, Solver's going global
-
+/* jshint ignore:start */
 (function () {
-    if (typeof module !== 'undefined' && module.exports) {
+    if (typeof module !== "undefined" && module.exports) {
         module.exports = Solver;
-    } else {
-        // MEH!
     }
 })();
+/* jshint ignore:end */

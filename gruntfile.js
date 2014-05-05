@@ -2,7 +2,16 @@ module.exports = function(grunt){
     grunt.initConfig({
         "pkg": "package.json",
         "jshint": {
-            "files": ["src/**/*.js"]
+            "files": ["src/**/*.js"],
+            "options": {
+                "curly": true,
+                "eqeqeq": true,
+                "latedef": true,
+                "indent": 4,
+                "noempty": true,
+                "quotmark": "double",
+                "undef": true
+            }
         },
         "jsbeautifier" : {
             "default": {
@@ -36,7 +45,7 @@ module.exports = function(grunt){
                     "space_before_conditional": true,
                     "space_in_paren": false,
                     "unescape_strings": false,
-                    "wrap_line_length": 0                    
+                    "wrap_line_length": 80                    
                 }
             }
         }       
