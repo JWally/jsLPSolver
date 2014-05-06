@@ -70,20 +70,26 @@ var Solver = function () {
         });
     };
 
-    // Function to get keys that are to be ints
-    obj.shared = function (obj_1, obj_2) {
-        var keys = Object.keys(obj_1),
-            rslts = [],
-            i;
+    /****************************************************
+     * Credit: http://stackoverflow.com/questions/
+     *              1885557/simplest-code-for-array-
+     *              intersection-in-javascript
+     *
+     * Method to get the intersecting keys from 2 Objects
+     * todo: benchmark this against other methods
+     *
+     * **************************************************
+     */
+    obj.shared = function (a, b) {
+        a = Object.keys(a);
+        b = Object.keys(b);
 
-        for (i = 0; i < keys.length; i = i + 1) {
-            if (obj_2[keys[i]]) {
-                rslts.push(keys[i]);
-            }
-        }
-
-        return rslts;
+        return a.filter(function (d) {
+            return b.indexOf(d) !== -1;
+        });
     };
+
+
 
     // Function to see if a number is an integer or not
     obj.isInt = function (num, precision) {
