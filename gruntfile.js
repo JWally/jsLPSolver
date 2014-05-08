@@ -2,7 +2,7 @@ module.exports = function(grunt){
     grunt.initConfig({
         "pkg": "package.json",
         "jshint": {
-            "files": ["src/**/*.js"],
+            "files": ["src/**/*.js","demos/**/*.json"],
             "options": {
                 "curly": true,
                 "eqeqeq": true,
@@ -15,7 +15,7 @@ module.exports = function(grunt){
         },
         "jsbeautifier" : {
             "default": {
-                src: ["src/**/*.js", "test/**/*.js", "src/**/*.html"]
+                src: ["src/**/*.js", "test/**/*.js", "src/**/*.html","*/**.json"]
             },
             "options": {
                 "html": {
