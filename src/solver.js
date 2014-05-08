@@ -646,7 +646,7 @@ var Solver = function () {
 /* jshint ignore:start */
 (function () {
     if (typeof module !== "undefined" && module.exports) {
-        module.exports = Solver;
+        module.exports = new Solver();
     }
 })();
 /* jshint ignore:end */
