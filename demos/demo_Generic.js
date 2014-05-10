@@ -8,21 +8,28 @@ var models = [],
 
 //Problem 2
 models.push({
-    optimize: "profit",
-    opType: "max",
-    constraints: {
-        "Costa Rican" : {max: 200},
-        "Etheopian": {max: 330}
+    "expect": {
+        "feasible": true,
+        "Yusip": 270,
+        "Exotic": 260,
+        "result": 1985 
+    }, 
+    "optimize": "profit",
+    "opType": "max",
+    "constraints": {
+        "Costa Rican" : {"max": 200},
+        "Etheopian": {"max": 330}
     },
-    variables: {
-        "Yusip": {"Costa Rican" : 0.5, "Etheopian": 0.5, profit: 3.5},
-        "Exotic": {"Costa Rican" : 0.25, "Etheopian": 0.75, profit: 4}
+    "variables": {
+        "Yusip": {"Costa Rican" : 0.5, "Etheopian": 0.5, "profit": 3.5},
+        "Exotic": {"Costa Rican" : 0.25, "Etheopian": 0.75, "profit": 4}
     }
 })
 
 
 //Problem 3
 models.push({
+    "expect": {feasible: true, computer: 59.09090909090909, printer: 36.36363636363636, result: 71818.18181818182},
     optimize: "profit",
     opType: "max",
     constraints: {
