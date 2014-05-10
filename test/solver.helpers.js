@@ -1,3 +1,8 @@
+/*global require*/
+/*global describe*/
+/*global it*/
+
+
 var assert = require("assert");
 
 

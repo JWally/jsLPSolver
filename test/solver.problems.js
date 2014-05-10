@@ -1,3 +1,7 @@
+/*global describe*/
+/*global require*/
+/*global it*/
+
 var assert = require("assert"),
     problems = require("./problems.json");
 
@@ -24,7 +28,7 @@ describe("The Solve method takes a problem and solves it",
                     assert.deepEqual(
                         problems[1].expects,
                         solver.Solve(problems[1])
-                    )
+                    );
                 }
             );
 
@@ -34,7 +38,7 @@ describe("The Solve method takes a problem and solves it",
                     assert.deepEqual(
                         problems[3].expects,
                         solver.Solve(problems[3])
-                    )
+                    );
                 }
             );
 
@@ -44,20 +48,15 @@ describe("The Solve method takes a problem and solves it",
             it("Should be able to handle the schedueling problem",
                 function () {
                     // Get the problem
-                    var problem = problems[problems.length - 1]
+                    var problem = problems[problems.length - 1];
 
                     assert.deepEqual(
                         problem.expects,
                         solver.Solve(problem)
-                    )
+                    );
                 }
             );
 
         });
-
-
-
-
-
     }
 );
