@@ -3,8 +3,7 @@ var assert = require("assert");
 
 describe("The Helper Object exposes helper functions of the Solver module",
     function () {
-        var Solver = require("../src/solver"),
-            solver = new Solver(),
+        var solver = require("../src/solver"),
             helper = solver._helpers;
 
         // DESCRIBING THE MAX FUNCTION    

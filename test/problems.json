@@ -1,10 +1,4 @@
 [{
-    "expect": {
-        "feasible": true,
-        "Yusip": 270,
-        "Exotic": 260,
-        "result": 1985
-    },
     "optimize": "profit",
     "opType": "max",
     "constraints": {
@@ -36,12 +30,6 @@
         "result": 1985
     }
 }, {
-    "expect": {
-        "feasible": true,
-        "computer": 59.09090909090909,
-        "printer": 36.36363636363636,
-        "result": 71818.18181818182
-    },
     "optimize": "profit",
     "opType": "max",
     "constraints": {
@@ -73,12 +61,6 @@
         "result": 71818.18181818182
     }
 }, {
-    "expect": {
-        "feasible": true,
-        "large": 20,
-        "small": 30,
-        "result": 9500
-    },
     "optimize": "profit",
     "opType": "max",
     "constraints": {
@@ -110,12 +92,6 @@
         "result": 9500
     }
 }, {
-    "expect": {
-        "feasible": true,
-        "large": 20,
-        "small": 30,
-        "result": 9500
-    },
     "optimize": "profit",
     "opType": "max",
     "constraints": {
@@ -495,7 +471,6 @@
         "result": 1460
     }
 }, {
-    "expect": {},
     "optimize": "profit",
     "opType": "max",
     "constraints": {

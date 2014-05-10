@@ -13,6 +13,14 @@ module.exports = function(grunt){
                 "undef": true
             }
         },
+        "mochaTest": {
+            "test": {
+                "options": {
+                    "reporter": "spec"
+                },
+                "src": ["test/**/*.js"]
+            }
+        },
         "jsbeautifier" : {
             "default": {
                 src: ["src/**/*.js", "test/**/*.js", "src/**/*.html","*/**.json"]
@@ -54,5 +62,6 @@ module.exports = function(grunt){
     grunt.loadNpmTasks("grunt-contrib-uglify");
     grunt.loadNpmTasks("grunt-jsbeautifier");
     grunt.loadNpmTasks("grunt-contrib-jshint");
-    grunt.registerTask("default", ["jsbeautifier:default", "jshint"]);
+    grunt.loadNpmTasks("grunt-mocha-test");
+    grunt.registerTask("default", ["jsbeautifier:default", "jshint","mochaTest"]);
 }

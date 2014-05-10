@@ -633,22 +633,22 @@ var Solver = function () {
 
 
     /*************************************************************
-    * Method: Solve
-    * Scope: Public:
-    * Agruments: 
-    *        model: The model we want solver to operate on
-    *        precision: If we're solving a MILP, how tight
-    *                   do we want to define an integer, given
-    *                   that 20.000000000000001 is not an integer.
-    *                   (defaults to 5)
-    **************************************************************/
+     * Method: Solve
+     * Scope: Public:
+     * Agruments:
+     *        model: The model we want solver to operate on
+     *        precision: If we're solving a MILP, how tight
+     *                   do we want to define an integer, given
+     *                   that 20.000000000000001 is not an integer.
+     *                   (defaults to 5)
+     **************************************************************/
     this.Solve = function (model, precision) {
         // Make sure we at least have a model
-        if(!model){
+        if (!model) {
             throw new Error("Solver requires a model to operate on");
         }
 
-        
+
         precision = precision || 5;
         if (model.ints) {
             return obj.MILP(model, precision);
