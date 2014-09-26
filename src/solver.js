@@ -665,6 +665,10 @@ var Solver = function () {
 (function () {
     if (typeof module !== "undefined" && module.exports) {
         module.exports = new Solver();
+    } else if(typeof define === "function"){
+        define([], function() {
+            return Solver;
+        });
     }
 })();
 /* jshint ignore:end */
