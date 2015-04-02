@@ -227,7 +227,7 @@ var Solver = function () {
     //
     //-------------------------------------------------------------------
     obj.phase1 = function (tbl) {
-        var rhs,
+        var rhs = [],
             row,
             col,
             len = tbl[0].length - 1;
