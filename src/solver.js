@@ -229,10 +229,14 @@ var Solver = function () {
     obj.phase1 = function (tbl) {
         var rhs,
             row,
-            col;
+            col,
+            len = tbl[0].length - 1;
 
         // Sloppy method for finding the smallest value in the Right Hand Side
-        rhs = obj.transpose(tbl).slice(-1)[0].slice(0, -1);
+        // rhs = obj.transpose(tbl).slice(-1)[0].slice(0, -1);
+        for (var i = 0; i < tbl.length - 1; i++) {
+            rhs.push(tbl[i][len]);
+        }        
 
         row = obj.min(rhs);
 
