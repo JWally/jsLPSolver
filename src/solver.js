@@ -57,7 +57,8 @@ var Solver = function () {
 
     // Quick and dirty method to round numbers        
     obj.round = function (num, precision) {
-        return Math.round(num * Math.pow(10, precision - 0)) / (Math.pow(10,
+        return Math.round(num * Math.pow(10, precision - 0)) / (Math.pow(
+            10,
             precision - 0));
     };
 
@@ -180,11 +181,11 @@ var Solver = function () {
     //          [[-0.6,0,0.6],[0.8,1,1.2],[0.6,0,-0.6]]
     //
     //-------------------------------------------------------------------
-    obj.pivot = function (tbl, row, col, tracker, transposed) {
+    obj.pivot = function (tbl, row, col, tracker) {
         var target = tbl[row][col],
             length = tbl.length,
             width = tbl[0].length,
-            rowEl,
+            pivot_row,
             i,
             j;
 
@@ -202,9 +203,9 @@ var Solver = function () {
         // row by ... yuck... just look below; better explanation later
         for (i = 0; i < length; i = i + 1) {
             if (i !== row) {
-                rowEl = tbl[i][col];
+                pivot_row = tbl[i][col];
                 for (j = 0; j < width; j = j + 1) {
-                    tbl[i][j] = ((-rowEl * tbl[row][j]) + tbl[i][j]);
+                    tbl[i][j] = ((-pivot_row * tbl[row][j]) + tbl[i][j]);
                 }
             }
         }
@@ -228,28 +229,38 @@ var Solver = function () {
     //-------------------------------------------------------------------
     obj.phase1 = function (tbl) {
         var rhs = [],
+            rhs_min,
             row,
             col,
             len = tbl[0].length - 1;
 
-        // Sloppy method for finding the smallest value in the Right Hand Side
-        // rhs = obj.transpose(tbl).slice(-1)[0].slice(0, -1);
+        // Push the values of the RHS into a 1d array
         for (var i = 0; i < tbl.length - 1; i++) {
             rhs.push(tbl[i][len]);
-        }        
+        }
 
-        row = obj.min(rhs);
+        // Find the minimum of the RHS
+        rhs_min = obj.min(rhs);
 
         // If nothing is less than 0; we're done with phase 1.
-        if (row >= 0) {
+        if (rhs_min >= 0) {
             return true;
         } else {
-            row = rhs.indexOf(row);
+            // The lowest point on the RHS will be our next
+            // pivot row
+            row = rhs.indexOf(rhs_min);
+            // The Smallest negative entry in our next pivot
+            // row will be the column we pivot on next
             col = obj.min(tbl[row].slice(0, -1));
             if (col >= 0) {
+                // If everything in this row is > 0
+                // we need to hop out of phase 1
                 return true;
             } else {
+                // Identify the column
                 col = tbl[row].indexOf(col);
+                // Return an object telling us which
+                // row and column to pivot on
                 return {
                     row: row,
                     col: col
@@ -279,7 +290,8 @@ var Solver = function () {
             dividend;
 
         // Step 1. Identify the smallest entry in the objective row
-        objRow = tbl.slice(-1)[0].slice(0, -1);
+        //         (the bottom)
+        objRow = tbl[length - 1].slice(0, -1);
         min = obj.min(objRow);
 
         // Step 2a. If its non-negative, stop. A solution has been found
@@ -357,12 +369,14 @@ var Solver = function () {
             }
 
         }
-        for (counter = 0; counter < tracker.length; counter = counter + 1) {
+        for (counter = 0; counter < tracker.length; counter = counter +
+            1) {
             results[tracker[counter]] = tbl[counter].slice(-1)[0];
         }
 
         results.result = tbl.slice(-1)[0].slice(-1)[0];
-        results.feasible = obj.min(obj.transpose(tbl).slice(-1)[0].slice(0, -
+        results.feasible = obj.min(obj.transpose(tbl).slice(-1)[0].slice(
+            0, -
             1)) > -0.001 ? true : false;
         return results;
 
@@ -395,14 +409,18 @@ var Solver = function () {
             //if a min or max exists in the variables;
             //add it to the constraints
             if (typeof model.variables[variable].max !== "undefined") {
-                model.constraints[variable] = model.constraints[variable] || {};
-                model.constraints[variable].max = model.variables[variable]
+                model.constraints[variable] = model.constraints[
+                    variable] || {};
+                model.constraints[variable].max = model.variables[
+                        variable]
                     .max;
             }
 
             if (typeof model.variables[variable].min !== "undefined") {
-                model.constraints[variable] = model.constraints[variable] || {};
-                model.constraints[variable].min = model.variables[variable]
+                model.constraints[variable] = model.constraints[
+                    variable] || {};
+                model.constraints[variable].min = model.variables[
+                        variable]
                     .min;
             }
         }
@@ -412,12 +430,14 @@ var Solver = function () {
 
         //Load up the RHS
         for (constraint in model.constraints) {
-            if (typeof model.constraints[constraint].max !== "undefined") {
+            if (typeof model.constraints[constraint].max !==
+                "undefined") {
                 tableau.push([]);
                 rhs.push(model.constraints[constraint].max);
             }
 
-            if (typeof model.constraints[constraint].min !== "undefined") {
+            if (typeof model.constraints[constraint].min !==
+                "undefined") {
                 tableau.push([]);
                 rhs.push(-model.constraints[constraint].min);
             }
@@ -427,24 +447,28 @@ var Solver = function () {
         for (i = 0; i < cstr.length; i = i + 1) {
             constraint = cstr[i];
 
-            if (typeof model.constraints[constraint].max !== "undefined") {
+            if (typeof model.constraints[constraint].max !==
+                "undefined") {
                 for (j = 0; j < vari.length; j = j + 1) {
                     tableau[z][j] = typeof model.variables[vari[j]][
-                        constraint
-                    ] === "undefined" ? 0 : model.variables[vari[j]][
-                        constraint
-                    ];
+                            constraint
+                        ] === "undefined" ? 0 : model.variables[vari[j]]
+                        [
+                            constraint
+                        ];
                 }
                 z = z + 1;
             }
 
-            if (typeof model.constraints[constraint].min !== "undefined") {
+            if (typeof model.constraints[constraint].min !==
+                "undefined") {
                 for (j = 0; j < vari.length; j = j + 1) {
                     tableau[z][j] = typeof model.variables[vari[j]][
-                        constraint
-                    ] === "undefined" ? 0 : -model.variables[vari[j]][
-                        constraint
-                    ];
+                            constraint
+                        ] === "undefined" ? 0 : -model.variables[vari[j]]
+                        [
+                            constraint
+                        ];
                 }
                 z = z + 1;
             }
@@ -457,9 +481,10 @@ var Solver = function () {
 
         //Add the Objective Function
         for (j = 0; j < vari.length; j = j + 1) {
-            tableau[tableau.length - 1][j] = typeof model.variables[vari[j]]
-            [model.optimize] === "undefined" ? 0 : opType * model.variables[
-                vari[j]][model.optimize];
+            tableau[tableau.length - 1][j] = typeof model.variables[
+                    vari[j]]
+                [model.optimize] === "undefined" ? 0 : opType * model.variables[
+                    vari[j]][model.optimize];
         }
 
         //Add Slack Variables to the Tableau
@@ -669,8 +694,8 @@ var Solver = function () {
 (function () {
     if (typeof module !== "undefined" && module.exports) {
         module.exports = new Solver();
-    } else if(typeof define === "function"){
-        define([], function() {
+    } else if (typeof define === "function") {
+        define([], function () {
             return Solver;
         });
     }
