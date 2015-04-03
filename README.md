@@ -1,6 +1,6 @@
 jsLPSolver
 ==========
-Simple OOP javaScript library to solve linear programs, and mixed integer linear programs
+[A linear programming solver for the rest of us!](https://youtu.be/LbfMmCf5-ds?t=51)
 
 
 ##What Can I do with it?
