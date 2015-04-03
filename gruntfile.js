@@ -65,4 +65,5 @@ module.exports = function(grunt){
     grunt.loadNpmTasks("grunt-mocha-test");
     grunt.registerTask("default", ["jsbeautifier:default", "jshint"]);
     grunt.registerTask("test", ["jsbeautifier:default", "jshint","mochaTest"]);
+    grunt.registerTask("speed", function(){require("./test/solver.play");});
 }
