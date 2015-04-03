@@ -63,5 +63,6 @@ module.exports = function(grunt){
     grunt.loadNpmTasks("grunt-jsbeautifier");
     grunt.loadNpmTasks("grunt-contrib-jshint");
     grunt.loadNpmTasks("grunt-mocha-test");
-    grunt.registerTask("default", ["jsbeautifier:default", "jshint","mochaTest"]);
+    grunt.registerTask("default", ["jsbeautifier:default", "jshint"]);
+    grunt.registerTask("test", ["jsbeautifier:default", "jshint","mochaTest"]);
 }

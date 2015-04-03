@@ -23,7 +23,8 @@ describe("The Solve method takes a problem and solves it",
             );
 
             // Computer Supply Problem
-            it("should be able to solve the Computer Supply Problem",
+            it(
+                "should be able to solve the Computer Supply Problem",
                 function () {
                     assert.deepEqual(
                         problems[1].expects,
@@ -33,7 +34,8 @@ describe("The Solve method takes a problem and solves it",
             );
 
             // Chocolate Production
-            it("should be able to solve the Chocolate Production Problem",
+            it(
+                "should be able to solve the Chocolate Production Problem",
                 function () {
                     assert.deepEqual(
                         problems[3].expects,
@@ -42,13 +44,28 @@ describe("The Solve method takes a problem and solves it",
                 }
             );
 
+            // MONSTER PROBLEM
+            it(
+                "should be able to solve the Monster Problem",
+                function () {
+                    // Get the problem
+                    var problem = problems[15];
+
+                    assert.deepEqual(
+                        problem.expects,
+                        solver.Solve(problem)
+                    );
+                }
+            );
+
         });
 
+        // MILP SECTION
         describe("Mixed Integer Linear Program Solver", function () {
             it("Should be able to handle the schedueling problem",
                 function () {
                     // Get the problem
-                    var problem = problems[problems.length - 1];
+                    var problem = problems[5];
 
                     assert.deepEqual(
                         problem.expects,
