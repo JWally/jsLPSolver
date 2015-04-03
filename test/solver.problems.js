@@ -44,19 +44,6 @@ describe("The Solve method takes a problem and solves it",
                 }
             );
 
-            // MONSTER PROBLEM
-            it(
-                "should be able to solve the Monster Problem",
-                function () {
-                    // Get the problem
-                    var problem = problems[15];
-
-                    assert.deepEqual(
-                        problem.expects,
-                        solver.Solve(problem)
-                    );
-                }
-            );
 
         });
 

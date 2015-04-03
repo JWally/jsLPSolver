@@ -339,13 +339,13 @@ var Solver = function () {
         var
             tracker = [],
             results = {},
-            counter,
+            i,
             test;
 
         // Create a transposition of the array to track changes;
 
         // Execute Phase 1 to Normalize the tableau;
-        for (counter = 0; counter < 1000; counter = counter + 1) {
+        for (i = 0; i < 1000; i = i + 1) {
             test = obj.phase1(tbl);
             if (test === true) {
                 break;
@@ -355,7 +355,7 @@ var Solver = function () {
         }
 
         // Execute Phase 2 to Finish;
-        for (counter = 0; counter < 1000; counter = counter + 1) {
+        for (i = 0; i < 1000; i = i + 1) {
             test = obj.phase2(tbl);
             if (typeof test === "object") {
                 obj.pivot(tbl, test.row, test.col, tracker);
@@ -369,9 +369,9 @@ var Solver = function () {
             }
 
         }
-        for (counter = 0; counter < tracker.length; counter = counter +
+        for (i = 0; i < tracker.length; i = i +
             1) {
-            results[tracker[counter]] = tbl[counter].slice(-1)[0];
+            results[tracker[i]] = tbl[i].slice(-1)[0];
         }
 
         results.result = tbl.slice(-1)[0].slice(-1)[0];
