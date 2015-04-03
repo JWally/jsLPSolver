@@ -54,15 +54,20 @@ var Solver = function () {
         }
         return tmp;
     };
-
-    // Quick and dirty method to round numbers        
+    
+    //-------------------------------------------------------------------
+    // Quick and dirty method to round numbers 
+    //-------------------------------------------------------------------
+    
     obj.round = function (num, precision) {
         return Math.round(num * Math.pow(10, precision - 0)) / (Math.pow(
             10,
             precision - 0));
     };
-
+    
+    //-------------------------------------------------------------------
     // Method to quickly transpose a 2d array
+    //-------------------------------------------------------------------    
     obj.transpose = function (a) {
         return Object.keys(a[0]).map(function (c) {
             return a.map(function (r) {
@@ -91,15 +96,17 @@ var Solver = function () {
     };
 
 
-
+    //-------------------------------------------------------------------
     // Function to see if a number is an integer or not
+    //-------------------------------------------------------------------    
     obj.isInt = function (num, precision) {
         precision = precision || 5;
         return Math.round(num) === obj.round(num, precision);
     };
 
-
+    //-------------------------------------------------------------------
     // Function to check the intregrality of the solution
+    //-------------------------------------------------------------------    
     obj.integral = function (model, solution, precision) {
         var i,
             keys = obj.shared(model.ints, solution);
@@ -111,8 +118,9 @@ var Solver = function () {
         return true;
     };
 
-
+    //-------------------------------------------------------------------
     // Function to find the most fractional variable of the 'ints' constraints
+    //-------------------------------------------------------------------    
     obj.frac = function (model, solution) {
         var best = 10,
             split = "",
@@ -201,6 +209,7 @@ var Solver = function () {
         // set the value in the target column = 0 by
         // multiplying the value of all elements in the objective
         // row by ... yuck... just look below; better explanation later
+        var a = new Date().getTime();
         for (i = 0; i < length; i = i + 1) {
             if (i !== row) {
                 pivot_row = tbl[i][col];
@@ -209,6 +218,7 @@ var Solver = function () {
                 }
             }
         }
+        console.log(new Date().getTime() - a);
     };
 
 
@@ -336,8 +346,7 @@ var Solver = function () {
     //
     //-------------------------------------------------------------------
     obj.optimize = function (tbl) {
-        var
-            tracker = [],
+        var tracker = [],
             results = {},
             i,
             test;
@@ -345,7 +354,7 @@ var Solver = function () {
         // Create a transposition of the array to track changes;
 
         // Execute Phase 1 to Normalize the tableau;
-        for (i = 0; i < 1000; i = i + 1) {
+        for (i = 0; i < 1000; i++) {
             test = obj.phase1(tbl);
             if (test === true) {
                 break;
@@ -355,7 +364,7 @@ var Solver = function () {
         }
 
         // Execute Phase 2 to Finish;
-        for (i = 0; i < 1000; i = i + 1) {
+        for (i = 0; i < 1000; i++) {
             test = obj.phase2(tbl);
             if (typeof test === "object") {
                 obj.pivot(tbl, test.row, test.col, tracker);
@@ -367,17 +376,21 @@ var Solver = function () {
                     break;
                 }
             }
-
         }
-        for (i = 0; i < tracker.length; i = i +
-            1) {
+        
+        // Describe whats going on here
+        for (i = 0; i < tracker.length; i++) {
             results[tracker[i]] = tbl[i].slice(-1)[0];
         }
 
+        // Tell me what the hell this is
         results.result = tbl.slice(-1)[0].slice(-1)[0];
-        results.feasible = obj.min(obj.transpose(tbl).slice(-1)[0].slice(
-            0, -
-            1)) > -0.001 ? true : false;
+        results.feasible = obj.min(obj
+            .transpose(tbl)
+            .slice(-1)[0]
+            .slice(0, -1)
+        ) > -0.001 ? true : false;
+        
         return results;
 
     };
