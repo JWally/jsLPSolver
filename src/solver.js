@@ -54,17 +54,17 @@ var Solver = function () {
         }
         return tmp;
     };
-    
+
     //-------------------------------------------------------------------
     // Quick and dirty method to round numbers 
     //-------------------------------------------------------------------
-    
+
     obj.round = function (num, precision) {
         return Math.round(num * Math.pow(10, precision - 0)) / (Math.pow(
             10,
             precision - 0));
     };
-    
+
     //-------------------------------------------------------------------
     // Method to quickly transpose a 2d array
     //-------------------------------------------------------------------    
@@ -209,16 +209,16 @@ var Solver = function () {
         // set the value in the target column = 0 by
         // multiplying the value of all elements in the objective
         // row by ... yuck... just look below; better explanation later
-        var a = new Date().getTime();
+        //var a = new Date().getTime();
         for (i = 0; i < length; i = i + 1) {
             if (i !== row) {
                 pivot_row = tbl[i][col];
                 for (j = 0; j < width; j = j + 1) {
-                    tbl[i][j] = ((-pivot_row * tbl[row][j]) + tbl[i][j]);
+                    tbl[i][j] = ((-1 * pivot_row * tbl[row][j]) + tbl[i][j]);
                 }
             }
         }
-        console.log(new Date().getTime() - a);
+        //console.log(new Date().getTime() - a);
     };
 
 
@@ -377,7 +377,7 @@ var Solver = function () {
                 }
             }
         }
-        
+
         // Describe whats going on here
         for (i = 0; i < tracker.length; i++) {
             results[tracker[i]] = tbl[i].slice(-1)[0];
@@ -390,7 +390,7 @@ var Solver = function () {
             .slice(-1)[0]
             .slice(0, -1)
         ) > -0.001 ? true : false;
-        
+
         return results;
 
     };
