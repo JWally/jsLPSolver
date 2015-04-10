@@ -110,7 +110,7 @@ var Solver = function () {
     obj.integral = function (model, solution, precision) {
         var i,
             keys = obj.shared(model.ints, solution);
-        for (i = 0; i < keys.length; i = i + 1) {
+        for (i = 0; i < keys.length; i++) {
             if (!obj.isInt(solution[keys[i]], precision)) {
                 return false;
             }
@@ -172,7 +172,7 @@ var Solver = function () {
             p,
             i;
 
-        for (i = 0; i < len; i = i + 1) {
+        for (i = 0; i < len; i++) {
             base = i !== (len - 1) ? 1 : 0;
             p = i !== (len - 1) ? 0 : 1;
 
@@ -200,7 +200,7 @@ var Solver = function () {
         tracker[row] = col - 1;
         // Divide everything in the target row by the element @
         // the target column
-        for (i = 0; i < width; i = i + 1) {
+        for (i = 0; i < width; i++) {
             tbl[row][i] = (tbl[row][i] / target);
         }
 
@@ -315,7 +315,7 @@ var Solver = function () {
             // stop. The solution is unbounded;
 
             quotient = [];
-            for (i = 0; i < (length - 1); i = i + 1) {
+            for (i = 0; i < (length - 1); i++) {
                 if (tbl[i][col] > 0.001) {
                     quotient.push((tbl[i][width - 1]) / (tbl[i][col]));
                 } else {
@@ -401,7 +401,7 @@ var Solver = function () {
     //-------------------------------------------------------------------
     obj.Solve = function (model) {
 
-        var tableau = [], //The LHS of the Tableau
+        var tbl = [], //The LHS of the Tableau
             rhs = [], //The RHS of the Tableau
             cstr = Object.keys(model.constraints), //Array with name of each constraint type
             vari = Object.keys(model.variables), //Array with name of each Variable
@@ -412,29 +412,23 @@ var Solver = function () {
             i,
             j,
             x,
-            constraint,
-            variable,
+            c,
+            v,
             rslts;
 
         //Give all of the variables a self property of 1
-        for (variable in model.variables) {
-            model.variables[variable][variable] = 1;
+        for (v in model.variables) {
+            model.variables[v][v] = 1;
             //if a min or max exists in the variables;
             //add it to the constraints
-            if (typeof model.variables[variable].max !== "undefined") {
-                model.constraints[variable] = model.constraints[
-                    variable] || {};
-                model.constraints[variable].max = model.variables[
-                        variable]
-                    .max;
+            if (typeof model.variables[v].max !== "undefined") {
+                model.constraints[v] = model.constraints[v] || {};
+                model.constraints[v].max = model.variables[v].max;
             }
 
-            if (typeof model.variables[variable].min !== "undefined") {
-                model.constraints[variable] = model.constraints[
-                    variable] || {};
-                model.constraints[variable].min = model.variables[
-                        variable]
-                    .min;
+            if (typeof model.variables[v].min !== "undefined") {
+                model.constraints[v] = model.constraints[v] || {};
+                model.constraints[v].min = model.variables[v].min;
             }
         }
 
@@ -442,46 +436,36 @@ var Solver = function () {
         vari = Object.keys(model.variables); //Array with name of each Variable
 
         //Load up the RHS
-        for (constraint in model.constraints) {
-            if (typeof model.constraints[constraint].max !==
-                "undefined") {
-                tableau.push([]);
-                rhs.push(model.constraints[constraint].max);
+        for (c in model.constraints) {
+            if (typeof model.constraints[c].max !== "undefined") {
+                tbl.push([]);
+                rhs.push(model.constraints[c].max);
             }
 
-            if (typeof model.constraints[constraint].min !==
-                "undefined") {
-                tableau.push([]);
-                rhs.push(-model.constraints[constraint].min);
+            if (typeof model.constraints[c].min !== "undefined") {
+                tbl.push([]);
+                rhs.push(-model.constraints[c].min);
             }
         }
 
         //Load up the Tableau
-        for (i = 0; i < cstr.length; i = i + 1) {
-            constraint = cstr[i];
+        for (i = 0; i < cstr.length; i++) {
+            c = cstr[i];
 
-            if (typeof model.constraints[constraint].max !==
+            if (typeof model.constraints[c].max !==
                 "undefined") {
-                for (j = 0; j < vari.length; j = j + 1) {
-                    tableau[z][j] = typeof model.variables[vari[j]][
-                            constraint
-                        ] === "undefined" ? 0 : model.variables[vari[j]]
-                        [
-                            constraint
-                        ];
+                for (j = 0; j < vari.length; j++) {
+                    tbl[z][j] = typeof model.variables[vari[j]][c] ===
+                        "undefined" ? 0 : model.variables[vari[j]][c];
                 }
                 z = z + 1;
             }
 
-            if (typeof model.constraints[constraint].min !==
+            if (typeof model.constraints[c].min !==
                 "undefined") {
-                for (j = 0; j < vari.length; j = j + 1) {
-                    tableau[z][j] = typeof model.variables[vari[j]][
-                            constraint
-                        ] === "undefined" ? 0 : -model.variables[vari[j]]
-                        [
-                            constraint
-                        ];
+                for (j = 0; j < vari.length; j++) {
+                    tbl[z][j] = typeof model.variables[vari[j]][c] ===
+                        "undefined" ? 0 : -model.variables[vari[j]][c];
                 }
                 z = z + 1;
             }
@@ -490,28 +474,26 @@ var Solver = function () {
 
 
         //Add an array to the tableau for the Objective Function
-        tableau.push([]);
+        tbl.push([]);
 
         //Add the Objective Function
-        for (j = 0; j < vari.length; j = j + 1) {
-            tableau[tableau.length - 1][j] = typeof model.variables[
+        for (j = 0; j < vari.length; j++) {
+            tbl[tbl.length - 1][j] = typeof model.variables[
                     vari[j]]
                 [model.optimize] === "undefined" ? 0 : opType * model.variables[
                     vari[j]][model.optimize];
         }
 
         //Add Slack Variables to the Tableau
-        obj.slack(tableau);
+        obj.slack(tbl);
 
         //Add on the Right Hand Side variables
-        len = tableau[0].length;
+        len = tbl[0].length;
         for (x in rhs) {
-            tableau[x][len - 1] = rhs[x];
+            tbl[x][len - 1] = rhs[x];
         }
 
-
-
-        rslts = obj.optimize(tableau);
+        rslts = obj.optimize(tbl);
         hsh = {
             feasible: rslts.feasible
         };
