@@ -210,11 +210,11 @@ var Solver = function () {
         // multiplying the value of all elements in the objective
         // row by ... yuck... just look below; better explanation later
         //var a = new Date().getTime();
-        for (i = 0; i < length; i = i + 1) {
+        for (i = 0; i < length; i++) {
             if (i !== row) {
                 pivot_row = tbl[i][col];
-                for (j = 0; j < width; j = j + 1) {
-                    tbl[i][j] = ((-1 * pivot_row * tbl[row][j]) + tbl[i][j]);
+                for (j = 0; j < width; j++) {
+                    tbl[i][j] += -pivot_row * tbl[row][j];
                 }
             }
         }
