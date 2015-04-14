@@ -27,12 +27,14 @@ var Solver = function () {
     //
     // Example: obj.max([1,3,4,5,6]) === 6
     //-------------------------------------------------------------------
-    obj.max = function (ary) {
+    obj.max = function (ary, offset) {
         var i,
             tmp = -1e99,
             len = ary.length;
 
-        for (i = 0; i < len; i++) {
+        offset = offset || 0;
+
+        for (i = 0; i < len - offset; i++) {
             tmp = ary[i] > tmp ? ary[i] : tmp;
         }
         return tmp;
@@ -44,12 +46,14 @@ var Solver = function () {
     //
     // Example: obj.min([1,3,4,5,6]) === 1
     //-------------------------------------------------------------------
-    obj.min = function (ary) {
+    obj.min = function (ary, offset) {
         var i,
             tmp = 1e99,
             len = ary.length;
 
-        for (i = 0; i < len; i++) {
+        offset = offset || 0;
+
+        for (i = 0; i < len - offset; i++) {
             tmp = ary[i] < tmp ? ary[i] : tmp;
         }
         return tmp;
@@ -261,7 +265,9 @@ var Solver = function () {
             row = rhs.indexOf(rhs_min);
             // The Smallest negative entry in our next pivot
             // row will be the column we pivot on next
-            col = obj.min(tbl[row].slice(0, -1));
+            // col = obj.min(tbl[row].slice(0, -1));
+            col = obj.min(tbl[row], 1);
+
             if (col >= 0) {
                 // If everything in this row is > 0
                 // we need to hop out of phase 1
@@ -292,8 +298,8 @@ var Solver = function () {
         var col,
             row,
             quotient,
-            length = tbl.length,
-            width = tbl[0].length,
+            length = tbl.length - 1,
+            width = tbl[0].length - 1,
             objRow,
             min,
             i,
@@ -301,23 +307,23 @@ var Solver = function () {
 
         // Step 1. Identify the smallest entry in the objective row
         //         (the bottom)
-        objRow = tbl[length - 1].slice(0, -1);
-        min = obj.min(objRow);
+        //objRow = tbl[length - 1].slice(0, -1);
+        min = obj.min(tbl[length], 1);
 
         // Step 2a. If its non-negative, stop. A solution has been found
         if (min >= 0) {
             return true;
         } else {
             // Step 2b. Otherwise, we have our pivot column
-            col = objRow.indexOf(min);
+            col = tbl[length].indexOf(min);
 
             // Step 3a. If all entries in the pivot column are <= 0;
             // stop. The solution is unbounded;
 
             quotient = [];
-            for (i = 0; i < (length - 1); i++) {
+            for (i = 0; i < (length); i++) {
                 if (tbl[i][col] > 0.001) {
-                    quotient.push((tbl[i][width - 1]) / (tbl[i][col]));
+                    quotient.push((tbl[i][width]) / (tbl[i][col]));
                 } else {
                     quotient.push(1e99);
                 }
@@ -385,11 +391,15 @@ var Solver = function () {
 
         // Tell me what the hell this is
         results.result = tbl.slice(-1)[0].slice(-1)[0];
-        results.feasible = obj.min(obj
+        
+        // What is this thing giving
+        var feas = obj.min(obj
             .transpose(tbl)
             .slice(-1)[0]
             .slice(0, -1)
-        ) > -0.001 ? true : false;
+        );
+                
+        results.feasible = feas > -0.001 ? true : false;
 
         return results;
 
