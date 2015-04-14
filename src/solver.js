@@ -205,7 +205,7 @@ var Solver = function () {
         // Divide everything in the target row by the element @
         // the target column
         for (i = 0; i < width; i++) {
-            tbl[row][i] = (tbl[row][i] / target);
+            tbl[row][i] /= target;
         }
 
 
@@ -218,7 +218,11 @@ var Solver = function () {
             if (i !== row) {
                 pivot_row = tbl[i][col];
                 for (j = 0; j < width; j++) {
-                    tbl[i][j] += -pivot_row * tbl[row][j];
+                    // No point in doing math if you're just adding
+                    // Zero to the thing
+                    if (pivot_row !== 0 && tbl[row][j] !== 0) {
+                        tbl[i][j] += -pivot_row * tbl[row][j];
+                    }
                 }
             }
         }
@@ -391,14 +395,14 @@ var Solver = function () {
 
         // Tell me what the hell this is
         results.result = tbl.slice(-1)[0].slice(-1)[0];
-        
+
         // What is this thing giving
         var feas = obj.min(obj
             .transpose(tbl)
             .slice(-1)[0]
             .slice(0, -1)
         );
-                
+
         results.feasible = feas > -0.001 ? true : false;
 
         return results;
