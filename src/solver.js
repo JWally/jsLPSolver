@@ -386,14 +386,7 @@ var Solver = function () {
             tall = 1,
             wide = 1,
             table;
-            
-            
-        // KILL THESE LATER
-        var build,
-            solf,
-            tbl_build;
-            
-        build = new Date().getTime();
+
 
         //Give all of the variables a self property of 1
         for (v in model.variables) {
@@ -429,24 +422,18 @@ var Solver = function () {
         // FIGURE OUT WIDTH
         wide += tall + vari.length;
 
-        // Create the Tableau
-        
-        tbl_build = new Date().getTime();
-        
+        // BUILD AN EMPTY TABLEAU
         /* jshint ignore:start */
-        table = Array(tall)
-            .join()
-            .split(",")
-            .map(function () {
-                return Array(wide)
-                    .join()
-                    .split(",")
-                    .map(function () {
-                        return 0
-                    })
-            });
+        table = Array(tall);
+        for (i = 0; i < tall; i++) {
+            table[i] = Array(wide);
+
+            for (j = 0; j < wide; j++) {
+                table[i][j] = 0;
+            }
+        }
         /* jshint ignore:end */
-        tbl_build = new Date().getTime() - tbl_build;
+
 
 
         // Because it needs it...
@@ -456,17 +443,21 @@ var Solver = function () {
         //Load up the RHS
         z = 0;
         for (c in model.constraints) {
+            // If this constraint has a max on it,
+            // Put it on this row's RHS
             if (typeof model.constraints[c].max !== "undefined") {
-                // Push the constraint's Max into the RHS
                 table[z][wide - 1] = model.constraints[c].max;
                 table[z][vari.length + 1 + z] = 1;
+                // Move Rows
                 z += 1;
             }
 
+            // If this constraint has a min on it,
+            // Put it in this row's RHS
             if (typeof model.constraints[c].min !== "undefined") {
-                // Push the Constraint's min into the RHS
                 table[z][wide - 1] = -model.constraints[c].min;
                 table[z][vari.length + 1 + z] = 1;
+                // Move Rows
                 z += 1;
             }
         }
@@ -507,12 +498,11 @@ var Solver = function () {
         }
 
 
-        build = new Date().getTime() - build;
-        
-        solf = new Date().getTime();
+        // SOLVE THE PROBLEM
+        // NOW THAT WE FINALLY BUILT IT
         rslts = obj.optimize(table);
-        solf = new Date().getTime() - solf;
-        
+
+
         hsh = {
             feasible: rslts.feasible
         };
@@ -527,8 +517,7 @@ var Solver = function () {
         }
 
         hsh.result = -opType * rslts.result;
-        
-        console.log({tall: tall, wide: wide, build: build, tbl_build: tbl_build, solve: solf});
+
         return hsh;
     };
 

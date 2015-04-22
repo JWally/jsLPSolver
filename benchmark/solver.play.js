@@ -4,7 +4,7 @@
 /*global console*/
 
 
-var problems = require("./all_problems.json"),
+var problems = require("../test/all_problems.json"),
     fs = require("fs"),
     solver = require("../src/solver");
 
@@ -22,23 +22,3 @@ for (var i = 0; i < problems.length; i++) {
     var a = new Date().getTime() - date_0;
     console.log(problems[i].name, i, "--------->", a);
 }
-
-
-/*
-
-console.log("------------------------");
-console.log("-REVERSE-");
-console.log("------------------------");
-
-    var i = 5,
-        j = problems[i];
-
-
-    var date_0 = new Date().getTime();    
-    solver.Solve(j);
-    var a = new Date().getTime() - date_0;
-    console.log(problems[i].name, i, "--------->", a);
-
-
-
-*/
