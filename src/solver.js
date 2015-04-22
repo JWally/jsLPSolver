@@ -8,6 +8,11 @@
 //-------------------------------------------------------------------
 
 
+/*global describe*/
+/*global require*/
+/*global it*/
+/*global console*/
+
 // Place everything under the Solver Name Space
 var Solver = function () {
 
@@ -127,6 +132,26 @@ var Solver = function () {
             }
         }
         return split;
+    };
+    
+    //-------------------------------------------------------------------
+    // Function: doWhilst
+    // Purpose: Copy of doWhilst from Async.js
+    //
+    //-------------------------------------------------------------------    
+    obj.doWhilst = function (iterator, test, callback) {
+        iterator(function (err) {
+            if (err) {
+                return callback(err);
+            }
+            var args = Array.prototype.slice.call(arguments, 1);
+            if (test.apply(null, args)) {
+                obj.doWhilst(iterator, test, callback);
+            }
+            else {
+                callback();
+            }
+        });
     };
 
     //-------------------------------------------------------------------
@@ -540,9 +565,12 @@ var Solver = function () {
         // 1.) Load a model into the queue
         obj.models.push(model);
 
+        // Let it know that we have one open
+        obj.open = 0;
+
         // If all branches have been exhausted, or we've been piddling around
         // for too long, one of these 2 constraints will terminate the loop
-        while (obj.models.length > 0 && y < 1200) {
+        do {        
             // Get a model from the queue
             model = obj.models.pop();
             // Solve it
@@ -600,6 +628,7 @@ var Solver = function () {
                 // }
                 // If neither of these models is feasible because of this constraint,
                 // the model is not integral at this point, and fails.
+                obj.open += -1;
 
             } else if (solution.feasible && solution.result *
                 minmax > minmax * obj.best.result) {
@@ -630,6 +659,7 @@ var Solver = function () {
                 if (!obj.priors[tmp]) {
                     obj.priors[tmp] = 1;
                     obj.models.push(branch_a);
+                    obj.open += 1;
                 }
 
                 iLow = Math.floor(solution[key]);
@@ -642,11 +672,16 @@ var Solver = function () {
                 if (!obj.priors[tmp]) {
                     obj.priors[tmp] = 1;
                     obj.models.push(branch_b);
+                    obj.open += 1;
                 }
 
                 y = y + 1;
+                obj.open += -1;
+
+            } else {
+                obj.open += -1;
             }
-        }
+        } while (obj.models.length > 0 && y < 1200 && obj.open > 0);
         return obj.best;
     };
 
