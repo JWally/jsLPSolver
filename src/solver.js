@@ -58,6 +58,18 @@ var Solver = function () {
         }
         return tmp;
     };
+    //-------------------------------------------------------------------
+    // Cheater Index Of
+    //-------------------------------------------------------------------
+    obj.indexOf = function (target, ary) {
+        for (var i = 0; i < ary.length; i++) {
+            if (ary[i] === target) {
+                return i
+            }
+        }
+
+        return -1;
+    }
 
     //-------------------------------------------------------------------
     // Quick and dirty method to round numbers 
@@ -67,17 +79,6 @@ var Solver = function () {
         return Math.round(num * Math.pow(10, precision - 0)) / (Math.pow(
             10,
             precision - 0));
-    };
-
-    //-------------------------------------------------------------------
-    // Method to quickly transpose a 2d array
-    //-------------------------------------------------------------------    
-    obj.transpose = function (a) {
-        return Object.keys(a[0]).map(function (c) {
-            return a.map(function (r) {
-                return r[c];
-            });
-        });
     };
 
     /****************************************************
@@ -149,9 +150,12 @@ var Solver = function () {
     // Example: obj.spread(5, 4, 1) === [0,0,0,0,1]
     //-------------------------------------------------------------------
     obj.spread = function (l, p, num) {
-        return new Array(l).join().split(",").map(function (e, i) {
+        /* jshint ignore:start */
+        return Array(l).join().split(",").map(function (e, i) {
             return i === p ? num : 0;
         });
+        /* jshint ignore:end */
+
     };
 
     //-------------------------------------------------------------------
@@ -217,11 +221,15 @@ var Solver = function () {
         for (i = 0; i < length; i++) {
             if (i !== row) {
                 pivot_row = tbl[i][col];
-                for (j = 0; j < width; j++) {
-                    // No point in doing math if you're just adding
-                    // Zero to the thing
-                    if (pivot_row !== 0 && tbl[row][j] !== 0) {
-                        tbl[i][j] += -pivot_row * tbl[row][j];
+                // No point Burning Cycles if
+                // Zero to the thing
+                if (pivot_row !== 0) {
+                    for (j = 0; j < width; j++) {
+                        // No point in doing math if you're just adding
+                        // Zero to the thing
+                        if (tbl[row][j] !== 0) {
+                            tbl[i][j] += -pivot_row * tbl[row][j];
+                        }
                     }
                 }
             }
@@ -267,9 +275,9 @@ var Solver = function () {
             // The lowest point on the RHS will be our next
             // pivot row
             row = rhs.indexOf(rhs_min);
+
             // The Smallest negative entry in our next pivot
             // row will be the column we pivot on next
-            // col = obj.min(tbl[row].slice(0, -1));
             col = obj.min(tbl[row], 1);
 
             if (col >= 0) {
@@ -396,15 +404,13 @@ var Solver = function () {
         // Tell me what the hell this is
         results.result = tbl.slice(-1)[0].slice(-1)[0];
 
-        // What is this thing giving
-        var feas = obj.min(obj
-            .transpose(tbl)
-            .slice(-1)[0]
-            .slice(0, -1)
-        );
+        var feas = 1;
+        for (i = 0; i < tbl.length - 1; i++) {
+            feas *= tbl[i][tbl[i].length - 1] > -0.001;
+        }
 
-        results.feasible = feas > -0.001 ? true : false;
 
+        results.feasible = feas;
         return results;
 
     };
@@ -417,8 +423,8 @@ var Solver = function () {
 
         var tbl = [], //The LHS of the Tableau
             rhs = [], //The RHS of the Tableau
-            cstr = Object.keys(model.constraints), //Array with name of each constraint type
-            vari = Object.keys(model.variables), //Array with name of each Variable
+            cstr,
+            vari,
             opType = model.opType === "max" ? -1 : 1,
             hsh,
             len,
@@ -428,7 +434,10 @@ var Solver = function () {
             x,
             c,
             v,
-            rslts;
+            rslts,
+            tall = 1,
+            wide = 1,
+            table;
 
         //Give all of the variables a self property of 1
         for (v in model.variables) {
@@ -449,41 +458,107 @@ var Solver = function () {
         cstr = Object.keys(model.constraints); //Array with name of each constraint type
         vari = Object.keys(model.variables); //Array with name of each Variable
 
-        //Load up the RHS
-        for (c in model.constraints) {
-            if (typeof model.constraints[c].max !== "undefined") {
-                tbl.push([]);
-                rhs.push(model.constraints[c].max);
+
+        // FIGURE OUT HEIGHT
+        for (x in model.constraints) {
+            if (typeof model.constraints[x].min !== "undefined") {
+                tall += 1;
             }
 
-            if (typeof model.constraints[c].min !== "undefined") {
-                tbl.push([]);
-                rhs.push(-model.constraints[c].min);
+            if (typeof model.constraints[x].max !== "undefined") {
+                tall += 1;
             }
         }
 
+        // FIGURE OUT WIDTH
+        wide += tall + vari.length;
+
+        // Create the Tableau
+        table = Array(tall)
+            .join()
+            .split(",")
+            .map(function () {
+                return Array(wide)
+                    .join()
+                    .split(",")
+                    .map(function () {
+                        return 0
+                    })
+            });
+
+        // Because it needs it...
+        table[tall - 1][0] = 1;
+
+
+        //Load up the RHS
+        z = 0;
+        for (c in model.constraints) {
+            if (typeof model.constraints[c].max !== "undefined") {
+                /*
+                tbl.push([]);
+                rhs.push(model.constraints[c].max);
+                */
+                // Push the constraint's Max into the RHS
+                table[z][wide - 1] = model.constraints[c].max;
+                table[z][vari.length + 1 + z] = 1;
+                z += 1;
+            }
+
+            if (typeof model.constraints[c].min !== "undefined") {
+                /*
+                tbl.push([]);
+                rhs.push(-model.constraints[c].min);
+                */
+
+                // Push the Constraint's min into the RHS
+                table[z][wide - 1] = -model.constraints[c].min;
+                table[z][vari.length + 1 + z] = 1;
+                z += 1;
+            }
+        }
+
+
+
+
+
+
+
         //Load up the Tableau
+        z = 0;
         for (i = 0; i < cstr.length; i++) {
             c = cstr[i];
 
-            if (typeof model.constraints[c].max !==
-                "undefined") {
+            if (typeof model.constraints[c].max !== "undefined") {
                 for (j = 0; j < vari.length; j++) {
+                    /*
                     tbl[z][j] = typeof model.variables[vari[j]][c] ===
+                        "undefined" ? 0 : model.variables[vari[j]][c];
+                    */
+                    table[z][j + 1] = typeof model.variables[vari[j]][c] ===
                         "undefined" ? 0 : model.variables[vari[j]][c];
                 }
                 z = z + 1;
             }
 
-            if (typeof model.constraints[c].min !==
-                "undefined") {
+            if (typeof model.constraints[c].min !== "undefined") {
                 for (j = 0; j < vari.length; j++) {
+                    /*
                     tbl[z][j] = typeof model.variables[vari[j]][c] ===
                         "undefined" ? 0 : -model.variables[vari[j]][c];
+                    */
+                    table[z][j + 1] = typeof model.variables[vari[j]][c] ===
+                        "undefined" ? 0 : -model.variables[vari[j]][c];
+
                 }
                 z = z + 1;
             }
         }
+
+
+
+
+
+
 
 
 
@@ -492,22 +567,46 @@ var Solver = function () {
 
         //Add the Objective Function
         for (j = 0; j < vari.length; j++) {
+            /*
             tbl[tbl.length - 1][j] = typeof model.variables[
                     vari[j]]
                 [model.optimize] === "undefined" ? 0 : opType * model.variables[
                     vari[j]][model.optimize];
+            */
+            table[tall - 1][j + 1] =
+                typeof model.variables[vari[j]][model.optimize] ===
+                "undefined" ?
+                0 : opType * model.variables[vari[j]][model.optimize];
         }
+
+
 
         //Add Slack Variables to the Tableau
         obj.slack(tbl);
 
         //Add on the Right Hand Side variables
+        /*
         len = tbl[0].length;
         for (x in rhs) {
             tbl[x][len - 1] = rhs[x];
         }
+        */
 
-        rslts = obj.optimize(tbl);
+        /*
+        var test = JSON.stringify(tbl) === JSON.stringify(table);
+        console.log(test);
+        if(!test){
+            console.log("Good",tbl);
+            console.log("");
+            console.log("");
+            console.log("Yours",table);        
+        }
+        */
+
+
+
+
+        rslts = obj.optimize(table);
         hsh = {
             feasible: rslts.feasible
         };
@@ -645,7 +744,7 @@ var Solver = function () {
                 // This is kind of similar to an MD5 or a SHA1 hash check, but
                 // easier (and faster)
 
-                tmp = JSON.stringify(branch_a);
+                tmp = JSON.stringify(branch_a.constraints);
                 if (!obj.priors[tmp]) {
                     obj.priors[tmp] = 1;
                     obj.models.push(branch_a);
@@ -657,13 +756,14 @@ var Solver = function () {
                 branch_b.constraints[key].max = iLow || 0;
 
 
-                tmp = JSON.stringify(branch_b);
+                tmp = JSON.stringify(branch_b.constraints);
                 if (!obj.priors[tmp]) {
                     obj.priors[tmp] = 1;
                     obj.models.push(branch_b);
                 }
 
                 y = y + 1;
+
             }
         }
         return obj.best;
