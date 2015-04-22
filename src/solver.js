@@ -59,26 +59,13 @@ var Solver = function () {
         return tmp;
     };
     //-------------------------------------------------------------------
-    // Cheater Index Of
-    //-------------------------------------------------------------------
-    obj.indexOf = function (target, ary) {
-        for (var i = 0; i < ary.length; i++) {
-            if (ary[i] === target) {
-                return i;
-            }
-        }
-
-        return -1;
-    };
-
-    //-------------------------------------------------------------------
     // Quick and dirty method to round numbers 
     //-------------------------------------------------------------------
 
     obj.round = function (num, precision) {
-        return Math.round(num * Math.pow(10, precision - 0)) / (Math.pow(
-            10,
-            precision - 0));
+        return Math.round(num *
+            Math.pow(10, precision - 0)) / (Math.pow(10, precision -
+            0));
     };
 
     /****************************************************
@@ -115,6 +102,7 @@ var Solver = function () {
     obj.integral = function (model, solution, precision) {
         var i,
             keys = obj.shared(model.ints, solution);
+
         for (i = 0; i < keys.length; i++) {
             if (!obj.isInt(solution[keys[i]], precision)) {
                 return false;
@@ -205,28 +193,25 @@ var Solver = function () {
     //
     //-------------------------------------------------------------------
     obj.phase1 = function (tbl) {
-        var rhs = [],
-            rhs_min,
+        var rhs_min = 1e99,
             row,
             col,
             len = tbl[0].length - 1;
 
-        // Push the values of the RHS into a 1d array
+        // Find the smallest value and location
+        // in the RHS Since the lowest point on 
+        // the RHS will be our next
+        // pivot row
         for (var i = 0; i < tbl.length - 1; i++) {
-            rhs.push(tbl[i][len]);
+            if (tbl[i][len] < rhs_min) {
+                rhs_min = tbl[i][len];
+                row = i;
+            }
         }
-
-        // Find the minimum of the RHS
-        rhs_min = obj.min(rhs);
-
         // If nothing is less than 0; we're done with phase 1.
         if (rhs_min >= 0) {
             return true;
         } else {
-            // The lowest point on the RHS will be our next
-            // pivot row
-            row = rhs.indexOf(rhs_min);
-
             // The Smallest negative entry in our next pivot
             // row will be the column we pivot on next
             col = obj.min(tbl[row], 1);
@@ -558,14 +543,14 @@ var Solver = function () {
         // If all branches have been exhausted, or we've been piddling around
         // for too long, one of these 2 constraints will terminate the loop
         while (obj.models.length > 0 && y < 1200) {
-
             // Get a model from the queue
             model = obj.models.pop();
             // Solve it
             solution = obj.Solve(model);
 
             // Is the model both integral and feasible?
-            if (obj.integral(model, solution, precision) && solution.feasible) {
+            if (obj.integral(model, solution, precision) &&
+                solution.feasible) {
                 // Is the new result the best that we've ever had?          
                 if (
                     (solution.result * minmax) >
@@ -616,8 +601,8 @@ var Solver = function () {
                 // If neither of these models is feasible because of this constraint,
                 // the model is not integral at this point, and fails.
 
-            } else if (solution.feasible && solution.result * minmax >
-                minmax * obj.best.result) {
+            } else if (solution.feasible && solution.result *
+                minmax > minmax * obj.best.result) {
 
                 // Find out where we want to split the solution
                 key = obj.frac(model, solution);
@@ -660,7 +645,6 @@ var Solver = function () {
                 }
 
                 y = y + 1;
-
             }
         }
         return obj.best;

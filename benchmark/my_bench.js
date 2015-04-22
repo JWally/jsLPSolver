@@ -1,7 +1,6 @@
 var Benchmark = require("benchmark")
     ,suite = new Benchmark.Suite
     ,solver = require("../src/solver.js")
-    ,solver = new solver()
     ;
 
    
@@ -36,4 +35,4 @@ suite.add('Rounding#_helpers', function() {
 })
 
 // run async
-.run({ 'async': true });
+.run({ 'async': false });
