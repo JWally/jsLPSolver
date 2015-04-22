@@ -64,12 +64,12 @@ var Solver = function () {
     obj.indexOf = function (target, ary) {
         for (var i = 0; i < ary.length; i++) {
             if (ary[i] === target) {
-                return i
+                return i;
             }
         }
 
         return -1;
-    }
+    };
 
     //-------------------------------------------------------------------
     // Quick and dirty method to round numbers 
@@ -141,53 +141,6 @@ var Solver = function () {
         return split;
     };
 
-
-    //-------------------------------------------------------------------
-    // Function: spread
-    // Puprose: creates a 1d Array of 'l' length filled with '0's except
-    //          at position 'p' which becomes 'num'
-    //
-    // Example: obj.spread(5, 4, 1) === [0,0,0,0,1]
-    //-------------------------------------------------------------------
-    obj.spread = function (l, p, num) {
-        /* jshint ignore:start */
-        return Array(l).join().split(",").map(function (e, i) {
-            return i === p ? num : 0;
-        });
-        /* jshint ignore:end */
-
-    };
-
-    //-------------------------------------------------------------------
-    // Function: slack
-    // Purpose: Create the base tableau from a 2d Array of Variables
-    //
-    //          *note* The objective row is being pre populated with
-    //          "0" values so we don't have to worry about creating
-    //          it later
-    //
-    // Example: obj.slack([[1,2,3]
-    //                    ,[4,5,6]])
-    //          ==>
-    //              [[0,1,2,3,1,0],
-    //              [0,4,5,6,0,1],
-    //              [1,0,0,0,0,0]]
-    //
-    //-------------------------------------------------------------------
-    obj.slack = function (tbl) {
-        var len = tbl.length,
-            base,
-            p,
-            i;
-
-        for (i = 0; i < len; i++) {
-            base = i !== (len - 1) ? 1 : 0;
-            p = i !== (len - 1) ? 0 : 1;
-
-            tbl[i] = [p].concat(tbl[i].concat(this.spread(len, i, base)));
-        }
-    };
-
     //-------------------------------------------------------------------
     // Function: pivot
     // Purpose: Execute pivot operations over a 2d array,
@@ -217,7 +170,6 @@ var Solver = function () {
         // set the value in the target column = 0 by
         // multiplying the value of all elements in the objective
         // row by ... yuck... just look below; better explanation later
-        //var a = new Date().getTime();
         for (i = 0; i < length; i++) {
             if (i !== row) {
                 pivot_row = tbl[i][col];
@@ -234,7 +186,6 @@ var Solver = function () {
                 }
             }
         }
-        //console.log(new Date().getTime() - a);
     };
 
 
@@ -319,7 +270,6 @@ var Solver = function () {
 
         // Step 1. Identify the smallest entry in the objective row
         //         (the bottom)
-        //objRow = tbl[length - 1].slice(0, -1);
         min = obj.min(tbl[length], 1);
 
         // Step 2a. If its non-negative, stop. A solution has been found
@@ -421,9 +371,7 @@ var Solver = function () {
     //-------------------------------------------------------------------
     obj.Solve = function (model) {
 
-        var tbl = [], //The LHS of the Tableau
-            rhs = [], //The RHS of the Tableau
-            cstr,
+        var cstr,
             vari,
             opType = model.opType === "max" ? -1 : 1,
             hsh,
@@ -438,6 +386,14 @@ var Solver = function () {
             tall = 1,
             wide = 1,
             table;
+            
+            
+        // KILL THESE LATER
+        var build,
+            solf,
+            tbl_build;
+            
+        build = new Date().getTime();
 
         //Give all of the variables a self property of 1
         for (v in model.variables) {
@@ -474,6 +430,10 @@ var Solver = function () {
         wide += tall + vari.length;
 
         // Create the Tableau
+        
+        tbl_build = new Date().getTime();
+        
+        /* jshint ignore:start */
         table = Array(tall)
             .join()
             .split(",")
@@ -485,6 +445,9 @@ var Solver = function () {
                         return 0
                     })
             });
+        /* jshint ignore:end */
+        tbl_build = new Date().getTime() - tbl_build;
+
 
         // Because it needs it...
         table[tall - 1][0] = 1;
@@ -494,10 +457,6 @@ var Solver = function () {
         z = 0;
         for (c in model.constraints) {
             if (typeof model.constraints[c].max !== "undefined") {
-                /*
-                tbl.push([]);
-                rhs.push(model.constraints[c].max);
-                */
                 // Push the constraint's Max into the RHS
                 table[z][wide - 1] = model.constraints[c].max;
                 table[z][vari.length + 1 + z] = 1;
@@ -505,22 +464,12 @@ var Solver = function () {
             }
 
             if (typeof model.constraints[c].min !== "undefined") {
-                /*
-                tbl.push([]);
-                rhs.push(-model.constraints[c].min);
-                */
-
                 // Push the Constraint's min into the RHS
                 table[z][wide - 1] = -model.constraints[c].min;
                 table[z][vari.length + 1 + z] = 1;
                 z += 1;
             }
         }
-
-
-
-
-
 
 
         //Load up the Tableau
@@ -530,10 +479,6 @@ var Solver = function () {
 
             if (typeof model.constraints[c].max !== "undefined") {
                 for (j = 0; j < vari.length; j++) {
-                    /*
-                    tbl[z][j] = typeof model.variables[vari[j]][c] ===
-                        "undefined" ? 0 : model.variables[vari[j]][c];
-                    */
                     table[z][j + 1] = typeof model.variables[vari[j]][c] ===
                         "undefined" ? 0 : model.variables[vari[j]][c];
                 }
@@ -542,10 +487,6 @@ var Solver = function () {
 
             if (typeof model.constraints[c].min !== "undefined") {
                 for (j = 0; j < vari.length; j++) {
-                    /*
-                    tbl[z][j] = typeof model.variables[vari[j]][c] ===
-                        "undefined" ? 0 : -model.variables[vari[j]][c];
-                    */
                     table[z][j + 1] = typeof model.variables[vari[j]][c] ===
                         "undefined" ? 0 : -model.variables[vari[j]][c];
 
@@ -557,22 +498,8 @@ var Solver = function () {
 
 
 
-
-
-
-
-
-        //Add an array to the tableau for the Objective Function
-        tbl.push([]);
-
         //Add the Objective Function
         for (j = 0; j < vari.length; j++) {
-            /*
-            tbl[tbl.length - 1][j] = typeof model.variables[
-                    vari[j]]
-                [model.optimize] === "undefined" ? 0 : opType * model.variables[
-                    vari[j]][model.optimize];
-            */
             table[tall - 1][j + 1] =
                 typeof model.variables[vari[j]][model.optimize] ===
                 "undefined" ?
@@ -580,33 +507,12 @@ var Solver = function () {
         }
 
 
-
-        //Add Slack Variables to the Tableau
-        obj.slack(tbl);
-
-        //Add on the Right Hand Side variables
-        /*
-        len = tbl[0].length;
-        for (x in rhs) {
-            tbl[x][len - 1] = rhs[x];
-        }
-        */
-
-        /*
-        var test = JSON.stringify(tbl) === JSON.stringify(table);
-        console.log(test);
-        if(!test){
-            console.log("Good",tbl);
-            console.log("");
-            console.log("");
-            console.log("Yours",table);        
-        }
-        */
-
-
-
-
+        build = new Date().getTime() - build;
+        
+        solf = new Date().getTime();
         rslts = obj.optimize(table);
+        solf = new Date().getTime() - solf;
+        
         hsh = {
             feasible: rslts.feasible
         };
@@ -621,6 +527,8 @@ var Solver = function () {
         }
 
         hsh.result = -opType * rslts.result;
+        
+        console.log({tall: tall, wide: wide, build: build, tbl_build: tbl_build, solve: solf});
         return hsh;
     };
 

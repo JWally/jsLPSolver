@@ -4,7 +4,7 @@
 /*global console*/
 
 
-var problems = require("./problems.json"),
+var problems = require("./all_problems.json"),
     fs = require("fs"),
     solver = require("../src/solver");
 
