@@ -134,6 +134,68 @@ var Solver = function () {
         return split;
     };
 
+
+    //-------------------------------------------------------------------
+    // Chomppeh!
+    //-------------------------------------------------------------------      
+    obj.chomper = function (arr, iterator, callback) {
+
+        // First Helper function
+        function only_once(fn) {
+            var called = false;
+            return function () {
+                if (called) {
+                    throw new Error(
+                        "Callback was already called.");
+                }
+                called = true;
+                /* jshint ignore:start */
+                fn.apply(root, arguments);
+                /* jshint ignore:end */
+            };
+        }
+
+        // Second helper function
+        var _each = function (arr, iterator) {
+            while (arr.length > 0) {
+                iterator(arr.shift());
+            }
+        };
+
+        callback = callback || function () {};
+        if (!arr.length) {
+            return callback();
+        }
+        var completed = arr.length;
+        _each(arr, function (x) {
+            iterator(x, only_once(done));
+        });
+
+        function done(err) {
+            if (err) {
+                callback(err);
+                callback = function () {};
+            } else {
+                completed -= 1;
+                if (completed === 0) {
+                    if (arr.length > 0) {
+                        obj.chomper(arr, iterator, callback);
+                    } else {
+                        callback();
+                    }
+
+                }
+            }
+        }
+    };
+
+
+
+
+
+
+
+
     //-------------------------------------------------------------------
     // Function: pivot
     // Purpose: Execute pivot operations over a 2d array,
