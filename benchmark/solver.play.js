@@ -2,6 +2,7 @@
 /*global require*/
 /*global it*/
 /*global console*/
+/*global process*/
 
 
 var problems = require("../test/all_problems.json"),
@@ -17,8 +18,8 @@ for (var i = 0; i < problems.length; i++) {
 
     var j = problems[i];
 
-    var date_0 = new Date().getTime();
+    var date_0 = process.hrtime();
     solver.Solve(j);
-    var a = new Date().getTime() - date_0;
-    console.log(problems[i].name, i, "--------->", a);
+    var a = process.hrtime(date_0);
+    console.log(problems[i].name, i, "--------->", a[0] + "s", a[1].toExponential());
 }
