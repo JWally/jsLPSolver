@@ -488,11 +488,15 @@ var Solver = function () {
         /* jshint ignore:end */
 
 
-
-        var time = process.hrtime();
-
         // Because it needs it...
         table[tall - 1][0] = 1;
+        
+        
+        for(var variable in model.variables){
+            for(var attr in model.variables[variable]){
+            
+            }
+        }
 
 
         //Load up the Tableau
@@ -550,7 +554,6 @@ var Solver = function () {
                 0 : opType * model.variables[vari[j]][model.optimize];
         }
 
-        console.log(process.hrtime(time)[1].toExponential());
 
         // SOLVE THE PROBLEM
         // NOW THAT WE FINALLY BUILT IT
