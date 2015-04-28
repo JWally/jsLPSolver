@@ -487,25 +487,14 @@ var Solver = function () {
         }
         /* jshint ignore:end */
 
-
         // Because it needs it...
         table[tall - 1][0] = 1;
-        
-        
-        for(var variable in model.variables){
-            for(var attr in model.variables[variable]){
-            
-            }
-        }
-
 
         //Load up the Tableau
         z = 0;
         for (i = 0; i < cstr.length; i++) {
             c = cstr[i];
-
             if (typeof model.constraints[c].max !== "undefined") {
-
                 // Fill out the RHS
                 table[z][wide - 1] = model.constraints[c].max;
 
@@ -518,14 +507,12 @@ var Solver = function () {
                         "undefined") {
                         table[z][j + 1] = model.variables[vari[j]][c];
                     }
-
                 }
 
                 z = z + 1;
             }
 
             if (typeof model.constraints[c].min !== "undefined") {
-
                 // Fill out RHS
                 table[z][wide - 1] = -model.constraints[c].min;
 

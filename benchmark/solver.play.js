@@ -19,7 +19,7 @@ for (var i = 0; i < problems.length; i++) {
     var j = problems[i];
 
     var date_0 = process.hrtime();
-    solver.Solve(j);
+    var d = solver.Solve(j);
     var a = process.hrtime(date_0);
-    console.log(problems[i].name, i, "--------->", a[0] + "s", a[1].toExponential());
+    console.log(problems[i].name, "--------->", a[0] + "s", a[1].toExponential(),"|||", d.result);
 }
