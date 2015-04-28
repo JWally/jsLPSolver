@@ -12,6 +12,7 @@
 /*global require*/
 /*global it*/
 /*global console*/
+/*global process*/
 
 // Place everything under the Solver Name Space
 var Solver = function () {
@@ -488,31 +489,10 @@ var Solver = function () {
 
 
 
+        var time = process.hrtime();
+
         // Because it needs it...
         table[tall - 1][0] = 1;
-
-
-        //Load up the RHS
-        z = 0;
-        for (c in model.constraints) {
-            // If this constraint has a max on it,
-            // Put it on this row's RHS
-            if (typeof model.constraints[c].max !== "undefined") {
-                table[z][wide - 1] = model.constraints[c].max;
-                table[z][vari.length + 1 + z] = 1;
-                // Move Rows
-                z += 1;
-            }
-
-            // If this constraint has a min on it,
-            // Put it in this row's RHS
-            if (typeof model.constraints[c].min !== "undefined") {
-                table[z][wide - 1] = -model.constraints[c].min;
-                table[z][vari.length + 1 + z] = 1;
-                // Move Rows
-                z += 1;
-            }
-        }
 
 
         //Load up the Tableau
@@ -521,18 +501,39 @@ var Solver = function () {
             c = cstr[i];
 
             if (typeof model.constraints[c].max !== "undefined") {
+
+                // Fill out the RHS
+                table[z][wide - 1] = model.constraints[c].max;
+
+                // Slack Variable
+                table[z][vari.length + 1 + z] = 1;
+
+                // Base Table
                 for (j = 0; j < vari.length; j++) {
-                    table[z][j + 1] = typeof model.variables[vari[j]][c] ===
-                        "undefined" ? 0 : model.variables[vari[j]][c];
+                    if (typeof model.variables[vari[j]][c] !==
+                        "undefined") {
+                        table[z][j + 1] = model.variables[vari[j]][c];
+                    }
+
                 }
+
                 z = z + 1;
             }
 
             if (typeof model.constraints[c].min !== "undefined") {
-                for (j = 0; j < vari.length; j++) {
-                    table[z][j + 1] = typeof model.variables[vari[j]][c] ===
-                        "undefined" ? 0 : -model.variables[vari[j]][c];
 
+                // Fill out RHS
+                table[z][wide - 1] = -model.constraints[c].min;
+
+                // Add Slack Variable
+                table[z][vari.length + 1 + z] = 1;
+
+                // Fill out the base table
+                for (j = 0; j < vari.length; j++) {
+                    if (typeof model.variables[vari[j]][c] !==
+                        "undefined") {
+                        table[z][j + 1] = -model.variables[vari[j]][c];
+                    }
                 }
                 z = z + 1;
             }
@@ -549,6 +550,7 @@ var Solver = function () {
                 0 : opType * model.variables[vari[j]][model.optimize];
         }
 
+        console.log(process.hrtime(time)[1].toExponential());
 
         // SOLVE THE PROBLEM
         // NOW THAT WE FINALLY BUILT IT
