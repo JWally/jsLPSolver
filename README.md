@@ -96,3 +96,78 @@ Say you live in the real world and partial results aren't realistic, or are too 
  });
 
 ```
+
+##How Fast is it?
+
+Below are the results from my home made suite of variable sized LP(s)
+
+```javascript
+------------------------
+-FORWARD-
+------------------------
+{ 'Coffee Problem': { constraints: 2, variables: 2, result: 1985, time: 0.001556093 },
+  'Computer Problem': 
+   { constraints: 2,
+     variables: 2,
+     result: 71818.18181818182,
+     time: 0.000079672 },
+  'Generic Business Problem': { constraints: 2, variables: 2, result: 9500, time: 0.00010392 },
+  'Generic Business Problem 2': { constraints: 2, variables: 2, result: 10000, time: 0.000046187 },
+  'Chocolate Problem': { constraints: 2, variables: 2, result: 18750, time: 0.000035794 },
+  'Wood Shop Problem': { constraints: 2, variables: 2, result: 96, time: 0.000025402 },
+  'Wood Shop Problem II': { constraints: 2, variables: 2, result: 96, time: 0.000022708 },
+  'Integer Wood Problem': 
+   { constraints: 3,
+     variables: 2,
+     ints: 2,
+     result: 88,
+     time: 0.001130025 },
+  'Berlin Air Lift Problem': 
+   { constraints: 3,
+     variables: 2,
+     result: 1024000,
+     time: 0.000062737 },
+  'Integer Wood Shop Problem': 
+   { constraints: 2,
+     variables: 3,
+     ints: 3,
+     result: 1010,
+     time: 0.006328293 },
+  'Integer Sports Complex Problem': 
+   { constraints: 6,
+     variables: 4,
+     ints: 4,
+     result: 700,
+     time: 0.003860021 },
+  'Integer Chocolate Problem': 
+   { constraints: 2,
+     variables: 2,
+     ints: 2,
+     result: 19500,
+     time: 0.001225476 },
+  'Integer Clothing Shop Problem': 
+   { constraints: 2,
+     variables: 2,
+     ints: 2,
+     result: 1460,
+     time: 0.000299057 },
+  'Integer Clothing Shop Problem II': 
+   { constraints: 2,
+     variables: 4,
+     ints: 4,
+     result: 1460,
+     time: 0.000529603 },
+  'Shift Work Problem': { constraints: 6, variables: 6, result: 26, time: 0.000091218 },
+  'Monster Problem': 
+   { constraints: 624,
+     variables: 552,
+     result: 25433,
+     time: 0.088869371 },
+  monster_II: 
+   { constraints: 894,
+     variables: 924,
+     ints: 112,
+     result: 20631,
+     time: 112.507540106 } }
+
+```
