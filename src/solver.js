@@ -457,17 +457,22 @@ var Solver = function () {
             }
         }
 
+
+
         cstr = Object.keys(model.constraints); //Array with name of each constraint type
         vari = Object.keys(model.variables); //Array with name of each Variable
+
 
 
         // FIGURE OUT HEIGHT
         for (x in model.constraints) {
             if (typeof model.constraints[x].min !== "undefined") {
+                model.constraints[x].min_loc = tall - 1;
                 tall += 1;
             }
 
             if (typeof model.constraints[x].max !== "undefined") {
+                model.constraints[x].max_loc = tall - 1;
                 tall += 1;
             }
         }
@@ -487,59 +492,62 @@ var Solver = function () {
         }
         /* jshint ignore:end */
 
+        // LOOP IT AGAIN!!!
+        z = 0;
+        for (x in model.constraints) {
+            if (typeof model.constraints[x].min !== "undefined") {
+                // LOAD SLACK
+                table[z][vari.length + 1 + z] = 1;
+                // DO RHS
+                table[z][wide - 1] = -model.constraints[x].min;
+
+                z += 1;
+            }
+
+            if (typeof model.constraints[x].max !== "undefined") {
+                // LOAD SLACK
+                table[z][vari.length + 1 + z] = 1;
+
+                // DO RHS
+                table[z][wide - 1] = model.constraints[x].max;
+
+                z += 1;
+            }
+        }
+
         // Because it needs it...
         table[tall - 1][0] = 1;
 
-        //Load up the Tableau
-        z = 0;
-        for (i = 0; i < cstr.length; i++) {
-            c = cstr[i];
-            if (typeof model.constraints[c].max !== "undefined") {
-                // Fill out the RHS
-                table[z][wide - 1] = model.constraints[c].max;
 
-                // Slack Variable
-                table[z][vari.length + 1 + z] = 1;
+        // TRY LOADING THE TABLE
+        for (v in model.variables) {
+            // Get the column's location
+            var col = vari.indexOf(v) + 1;
+            for (var a in model.variables[v]) {
+                if (a === model.optimize) {
+                    table[tall - 1][col] = opType *
+                        model.variables[v][a];
+                } else if (typeof model.constraints[a] !== "undefined") {
+                    var row,
+                        val,
+                        cns = model.constraints[a];
 
-                // Base Table
-                for (j = 0; j < vari.length; j++) {
-                    if (typeof model.variables[vari[j]][c] !==
-                        "undefined") {
-                        table[z][j + 1] = model.variables[vari[j]][c];
+                    if (typeof cns.min !== "undefined") {
+                        row = cns.min_loc;
+                        val = -model.variables[v][a];
+                        table[row][col] = val;
+                    }
+
+                    if (typeof cns.max !== "undefined") {
+                        row = cns.max_loc;
+                        val = model.variables[v][a];
+                        table[row][col] = val;
                     }
                 }
-
-                z = z + 1;
-            }
-
-            if (typeof model.constraints[c].min !== "undefined") {
-                // Fill out RHS
-                table[z][wide - 1] = -model.constraints[c].min;
-
-                // Add Slack Variable
-                table[z][vari.length + 1 + z] = 1;
-
-                // Fill out the base table
-                for (j = 0; j < vari.length; j++) {
-                    if (typeof model.variables[vari[j]][c] !==
-                        "undefined") {
-                        table[z][j + 1] = -model.variables[vari[j]][c];
-                    }
-                }
-                z = z + 1;
             }
         }
 
 
-
-
-        //Add the Objective Function
-        for (j = 0; j < vari.length; j++) {
-            table[tall - 1][j + 1] =
-                typeof model.variables[vari[j]][model.optimize] ===
-                "undefined" ?
-                0 : opType * model.variables[vari[j]][model.optimize];
-        }
 
 
         // SOLVE THE PROBLEM
@@ -596,8 +604,10 @@ var Solver = function () {
 
         // And here...we...go!
 
+
         // 1.) Load a model into the queue
         obj.models.push(model);
+
 
         // If all branches have been exhausted, or we've been piddling around
         // for too long, one of these 2 constraints will terminate the loop
@@ -707,7 +717,6 @@ var Solver = function () {
                 }
 
                 y = y + 1;
-
 
             }
         }
