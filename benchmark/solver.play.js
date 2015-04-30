@@ -55,6 +55,8 @@ for( i = 0; i < problems.length; i++){
     
     log[j.name].result = d.result;
     log[j.name].time =  a[0] + a[1] / 1e9;    
+    
+    console.log(log[j.name]);
 }
 
 console.log(log);

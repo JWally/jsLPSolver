@@ -67,7 +67,6 @@ var Solver = function () {
     //-------------------------------------------------------------------
     // Quick and dirty method to round numbers 
     //-------------------------------------------------------------------
-
     obj.round = function (num, precision) {
         return Math.round(num *
             Math.pow(10, precision - 0)) / (Math.pow(10, precision -
@@ -134,68 +133,6 @@ var Solver = function () {
         }
         return split;
     };
-
-
-    //-------------------------------------------------------------------
-    // Chomppeh!
-    //-------------------------------------------------------------------      
-    obj.chomper = function (arr, iterator, callback) {
-
-        // First Helper function
-        function only_once(fn) {
-            var called = false;
-            return function () {
-                if (called) {
-                    throw new Error(
-                        "Callback was already called.");
-                }
-                called = true;
-                /* jshint ignore:start */
-                fn.apply(root, arguments);
-                /* jshint ignore:end */
-            };
-        }
-
-        // Second helper function
-        var _each = function (arr, iterator) {
-            while (arr.length > 0) {
-                iterator(arr.shift());
-            }
-        };
-
-        callback = callback || function () {};
-        if (!arr.length) {
-            return callback();
-        }
-        var completed = arr.length;
-        _each(arr, function (x) {
-            iterator(x, only_once(done));
-        });
-
-        function done(err) {
-            if (err) {
-                callback(err);
-                callback = function () {};
-            } else {
-                completed -= 1;
-                if (completed === 0) {
-                    if (arr.length > 0) {
-                        obj.chomper(arr, iterator, callback);
-                    } else {
-                        callback();
-                    }
-
-                }
-            }
-        }
-    };
-
-
-
-
-
-
-
 
     //-------------------------------------------------------------------
     // Function: pivot
@@ -313,13 +250,12 @@ var Solver = function () {
     obj.phase2 = function (tbl) {
         var col,
             row,
-            quotient,
             length = tbl.length - 1,
             width = tbl[0].length - 1,
-            objRow,
             min,
             i,
-            dividend;
+            test,
+            dividend = 1e99;
 
         // Step 1. Identify the smallest entry in the objective row
         //         (the bottom)
@@ -335,18 +271,19 @@ var Solver = function () {
             // Step 3a. If all entries in the pivot column are <= 0;
             // stop. The solution is unbounded;
 
-            quotient = [];
+
             for (i = 0; i < (length); i++) {
                 if (tbl[i][col] > 0.001) {
-                    quotient.push((tbl[i][width]) / (tbl[i][col]));
-                } else {
-                    quotient.push(1e99);
-                }
+                    test = (tbl[i][width]) / (tbl[i][col]);
+                    if(test < dividend){
+                        row = i;
+                        dividend = test;
+                    }
+                } 
             }
-            dividend = obj.min(quotient);
-            row = quotient.indexOf(dividend);
 
-            if (dividend > -1 && dividend < 1e99) {
+
+            if (dividend > -0.001 && dividend < 1e99) {            
                 return {
                     row: row,
                     col: col
