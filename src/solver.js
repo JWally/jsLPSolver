@@ -144,19 +144,20 @@ var Solver = function () {
     //
     //-------------------------------------------------------------------
     obj.pivot = function (tbl, row, col, tracker) {
+
         var target = tbl[row][col],
             length = tbl.length,
             width = tbl[0].length,
             pivot_row,
             i,
             j;
-            
-            
+
+
         tracker[row] = col - 1;
         // Divide everything in the target row by the element @
         // the target column
         for (i = 0; i < width; i++) {
-            if(tbl[row][i] !== 0){
+            if (tbl[row][i] !== 0) {
                 tbl[row][i] /= target;
             }
         }
@@ -182,10 +183,10 @@ var Solver = function () {
                 }
             }
         }
-        
+
 
     };
-    
+
 
 
 
@@ -317,8 +318,8 @@ var Solver = function () {
             results = {},
             i,
             test,
-            length = tbl.length -1,
-            width = tbl[0].length -1;
+            length = tbl.length - 1,
+            width = tbl[0].length - 1;
 
         // Create a transposition of the array to track changes;
 
@@ -495,12 +496,10 @@ var Solver = function () {
         }
 
 
-
-
         // SOLVE THE PROBLEM
         // NOW THAT WE FINALLY BUILT IT
         rslts = obj.optimize(table);
-        
+
 
 
         hsh = {
@@ -516,7 +515,8 @@ var Solver = function () {
             }
         }
 
-        hsh.result = -opType * rslts.result;   
+        hsh.result = -opType * rslts.result;
+
         return hsh;
     };
 

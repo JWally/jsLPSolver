@@ -2,42 +2,28 @@ var solver = require("../src/solver"),
     helpers = solver._helpers;
 
 var problem = {
-        "name": "Integer Clothing Shop Problem II",
-        "optimize": "profit",
+        "name": "CURRENCY ARB PROBLEM",
+        "optimize": "NOTHING",
         "opType": "max",
         "constraints": {
-            "yards": {
-                "max": 150
-            },
-            "hours": {
-                "max": 200
-            }
+            "DOLLARS": {"max": 1,"min": 1},
+            "EUROS": {"max": 0,"min": 0},
+            "POUNDS": {"max": 0,"min": 0},
+            "YEN": {"max": 0,"min": 0}
         },
         "variables": {
-            "coat": {
-                "hours": 10,
-                "yards": 3,
-                "profit": 50,
-                "coat": 1
-            },
-            "pants": {
-                "hours": 4,
-                "yards": 5,
-                "profit": 40,
-                "pants": 1
-            },
-            "hat": {
-                "hours": 12,
-                "yards": 1,
-                "profit": 10,
-                "hat": 1
-            },
-            "socks": {
-                "hours": 0.5,
-                "yards": 0.5,
-                "profit": 0.5,
-                "socks": 1
-            }
+            "DOLLARS -> EUROS": {"DOLLARS": -1,"EUROS": 1.1486},
+            "DOLLARS -> POUNDS": {"DOLLARS": -1,"POUNDS": 0.7003},
+            "DOLLARS -> YEN": {"DOLLARS": -1,"YEN": 133.33},
+            "EUROS -> DOLLARS": {"EUROS": -1,"DOLLARS": 0.8706},
+            "EUROS -> POUNDS": {"EUROS": -1,"POUNDS": 0.6097},
+            "EUROS -> YEN": {"EUROS": -1,"YEN": 116.14},
+            "POUNDS -> DOLLARS": {"POUNDS": -1,"DOLLARS": 1.4279},
+            "POUNDS -> EUROS": {"POUNDS": -1,"EUROS": 1.6401},
+            "POUNDS -> YEN": {"POUNDS": -1,"YEN": 190.48},
+            "YEN -> DOLLARS": {"YEN": -1,"DOLLARS": 0.0075},
+            "YEN -> EUROS": {"YEN": -1,"EUROS": 0.00861},
+            "YEN -> POUNDS": {"YEN": -1,"POUNDS": 0.00525}
         }
     }
 
