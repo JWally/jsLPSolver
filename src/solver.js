@@ -150,12 +150,15 @@ var Solver = function () {
             pivot_row,
             i,
             j;
-
+            
+            
         tracker[row] = col - 1;
         // Divide everything in the target row by the element @
         // the target column
         for (i = 0; i < width; i++) {
-            tbl[row][i] /= target;
+            if(tbl[row][i] !== 0){
+                tbl[row][i] /= target;
+            }
         }
 
 
@@ -179,7 +182,11 @@ var Solver = function () {
                 }
             }
         }
+        
+
     };
+    
+
 
 
     // NOTE!!!
@@ -254,6 +261,7 @@ var Solver = function () {
             width = tbl[0].length - 1,
             min,
             i,
+            tCol,
             test,
             dividend = 1e99;
 
@@ -273,17 +281,18 @@ var Solver = function () {
 
 
             for (i = 0; i < (length); i++) {
-                if (tbl[i][col] > 0.001) {
-                    test = (tbl[i][width]) / (tbl[i][col]);
-                    if(test < dividend){
+                tCol = tbl[i][col];
+                if (tCol > 0.001) {
+                    test = (tbl[i][width]) / (tCol);
+                    if (test < dividend) {
                         row = i;
                         dividend = test;
                     }
-                } 
+                }
             }
 
 
-            if (dividend > -0.001 && dividend < 1e99) {            
+            if (dividend > -0.001 && dividend < 1e99) {
                 return {
                     row: row,
                     col: col
@@ -307,7 +316,9 @@ var Solver = function () {
         var tracker = [],
             results = {},
             i,
-            test;
+            test,
+            length = tbl.length -1,
+            width = tbl[0].length -1;
 
         // Create a transposition of the array to track changes;
 
@@ -338,17 +349,16 @@ var Solver = function () {
 
         // Describe whats going on here
         for (i = 0; i < tracker.length; i++) {
-            results[tracker[i]] = tbl[i].slice(-1)[0];
+            results[tracker[i]] = tbl[i][width];
         }
 
-        // Tell me what the hell this is
-        results.result = tbl.slice(-1)[0].slice(-1)[0];
+        // Store the result of the problem
+        results.result = tbl[length][width];
 
         var feas = 1;
-        for (i = 0; i < tbl.length - 1; i++) {
-            feas *= tbl[i][tbl[i].length - 1] > -0.001;
+        for (i = 0; i < length; i++) {
+            feas *= tbl[i][width] > -0.001;
         }
-
 
         results.feasible = feas;
         return results;
@@ -359,7 +369,7 @@ var Solver = function () {
     //Function: Solve
     //Detail: Main function, linear programming solver
     //-------------------------------------------------------------------
-    obj.Solve = function (model) {
+    obj.Solve = function (model, gomory) {
 
         var cstr,
             vari,
@@ -490,6 +500,7 @@ var Solver = function () {
         // SOLVE THE PROBLEM
         // NOW THAT WE FINALLY BUILT IT
         rslts = obj.optimize(table);
+        
 
 
         hsh = {
@@ -505,8 +516,7 @@ var Solver = function () {
             }
         }
 
-        hsh.result = -opType * rslts.result;
-
+        hsh.result = -opType * rslts.result;   
         return hsh;
     };
 

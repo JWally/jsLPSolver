@@ -1,26 +1,49 @@
 var solver = require("../src/solver"),
-    helper = solver._helpers;
+    helpers = solver._helpers;
 
-
-
-function dork(){
-    var ary = new Array(100).join().split(",").map(function(o,i){return i});
-
-     helper.chomper(ary, 
-        function(i, c){
-            setTimeout(function(){
-                console.log(i);
-                if(Math.random() > 0.75){
-                    ary.push(100 + i);
-                }
-                c();
-            }, 0);
+var problem = {
+        "name": "Integer Clothing Shop Problem II",
+        "optimize": "profit",
+        "opType": "max",
+        "constraints": {
+            "yards": {
+                "max": 150
+            },
+            "hours": {
+                "max": 200
+            }
+        },
+        "variables": {
+            "coat": {
+                "hours": 10,
+                "yards": 3,
+                "profit": 50,
+                "coat": 1
+            },
+            "pants": {
+                "hours": 4,
+                "yards": 5,
+                "profit": 40,
+                "pants": 1
+            },
+            "hat": {
+                "hours": 12,
+                "yards": 1,
+                "profit": 10,
+                "hat": 1
+            },
+            "socks": {
+                "hours": 0.5,
+                "yards": 0.5,
+                "profit": 0.5,
+                "socks": 1
+            }
         }
-        ,function(){
-            return "One-Hundo buddy!";
-        }
-    );
-}
+    }
 
-console.log(dork());
+
+var a = solver.Solve(problem);
+console.log("\n\n");
+console.log(a);
+
 
