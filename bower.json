@@ -1,8 +1,8 @@
 {
   "name": "jsLPSolver",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "homepage": "https://github.com/JWally/jsLPSolver",
-  "description": "Easy OOP Linear Programming and Mixed Int. Programming Solver",
+  "description": "Easy to use, JSON oriented Linear Programming and Mixed Int. Programming Solver",
   "main": "src/solver.js",
   "moduleType": [
     "globals",
@@ -13,7 +13,12 @@
     "Programming",
     "Integer",
     "Programming",
-    "Solver"
+    "Solver",
+    "Linear Programming",
+    "Linear Optimization",
+    "Simplex",
+    "Mixed Integer Optimization",
+    "Mixed Integer Programming"
   ],
   "authors": [
     "Justin W. Wolcott"
