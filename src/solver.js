@@ -41,7 +41,7 @@ var Solver = function () {
         offset = offset || 0;
 
         for (i = 0; i < len - offset; i++) {
-            tmp = ary[i] > tmp ? ary[i] : tmp;
+            tmp = ary[i] > tmp ? (ary[i] || 0) : tmp;
         }
         return tmp;
     };
@@ -60,7 +60,7 @@ var Solver = function () {
         offset = offset || 0;
 
         for (i = 0; i < len - offset; i++) {
-            tmp = ary[i] < tmp ? ary[i] : tmp;
+            tmp = ary[i] < tmp ? (ary[i] || 0) : tmp;
         }
         return tmp;
     };
@@ -122,13 +122,12 @@ var Solver = function () {
     obj.frac = function (model, solution) {
         var best = 10,
             split = "",
+            val = 0.49, // No idea why, but 0.49 || 0.51 seem to work better than 0.5
             key;
         for (key in model.ints) {
-            if (model.ints.hasOwnProperty(key)) {
-                if (best > Math.abs(solution[key] % 1 - 0.5)) {
-                    best = Math.abs((solution[key] % 1 - 0.5));
-                    split = key;
-                }
+            if (best > Math.abs(solution[key] % 1 - val)) {
+                best = Math.abs((solution[key] % 1 - val));
+                split = key;
             }
         }
         return split;
@@ -542,6 +541,8 @@ var Solver = function () {
             branch_b,
             tmp;
 
+
+
         // This is the default result
         // If nothing is both *integral* and *feasible*
         obj.best = {
@@ -647,26 +648,39 @@ var Solver = function () {
                 if (!obj.priors[tmp]) {
                     obj.priors[tmp] = 1;
                     obj.models.push(branch_a);
-
                 }
 
+                // Round down
                 iLow = Math.floor(solution[key]);
+                // Copy the old model into the new branch_a variable                
                 branch_b = JSON.parse(JSON.stringify(model));
+                // If there was already a constraint on this variable, keep it; else add one                
                 branch_b.constraints[key] = branch_b.constraints[key] || {};
+                // Set the new constraint on this variable                
                 branch_b.constraints[key].max = iLow || 0;
 
+                // We don't want the same models popping up all the time.
+                // If it's been run once, we don't want to check it again,
+                // and go through a possible infinite branching...
+                // 
+                // To prevent this, we have a hash on the `obj` object
+                // which uses the stringified version of the new model as the key.
+                //
+                // This is kind of similar to an MD5 or a SHA1 hash check, but
+                // easier (and faster)
 
                 tmp = JSON.stringify(branch_b.constraints);
                 if (!obj.priors[tmp]) {
                     obj.priors[tmp] = 1;
                     obj.models.push(branch_b);
-
                 }
 
-                y = y + 1;
-
+                // Keep Track of how many cycles
+                // we've gone through
+                y++;
             }
         }
+        obj.best.iter = y;
         return obj.best;
     };
 

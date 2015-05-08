@@ -43,8 +43,6 @@ for (var i = 0; i < problems.length; i++) {
             log[j.name].ints = Object.keys(j.ints).length;        
         }
 
-
-
 }
 
 for( i = 0; i < problems.length; i++){
@@ -54,9 +52,9 @@ for( i = 0; i < problems.length; i++){
     var a = process.hrtime(date_0);
     
     log[j.name].result = d.result;
-    log[j.name].time =  a[0] + a[1] / 1e9;    
+    log[j.name].time =  a[0] + a[1] / 1e9;  
+    log[j.name].iter = d.iter ? d.iter : undefined;
     
-    console.log(log[j.name]);
 }
 
 console.log(log);
