@@ -507,7 +507,7 @@ var Solver = function () {
 
         for (x in rslts) {
             if (typeof vari[x] !== "undefined") {
-                if (rslts[x] < 0) {
+                if (rslts[x] < -1e-10) {
                     hsh.feasible = false;
                 }
                 hsh[vari[x]] = rslts[x];
