@@ -382,7 +382,7 @@ var Solver = function () {
     //Function: Solve
     //Detail: Main function, linear programming solver
     //-------------------------------------------------------------------
-    obj.Solve = function (model, gomory) {
+    obj.Solve = function (model) {
 
         var cstr,
             vari,
@@ -567,8 +567,6 @@ var Solver = function () {
         };
 
         // And here...we...go!
-        var orig = obj.Solve(model);
-
 
         // 1.) Load a model into the queue
         obj.models.push(model);
