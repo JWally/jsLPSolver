@@ -65,7 +65,7 @@ var Solver = function () {
         return tmp;
     };
     //-------------------------------------------------------------------
-    // Quick and dirty method to round numbers 
+    // Quick and dirty method to round numbers
     //-------------------------------------------------------------------
     obj.round = function (num, precision) {
         return Math.round(num *
@@ -88,14 +88,14 @@ var Solver = function () {
         b = Object.keys(b);
 
         return a.filter(function (d) {
-            return b.indexOf(d) !== -1;
+            return obj.indexOf(b, d) !== -1;
         });
     };
 
 
     //-------------------------------------------------------------------
     // Function to see if a number is an integer or not
-    //-------------------------------------------------------------------    
+    //-------------------------------------------------------------------
     obj.isInt = function (num, precision) {
         precision = precision || 5;
         return Math.round(num) === obj.round(num, precision);
@@ -103,7 +103,7 @@ var Solver = function () {
 
     //-------------------------------------------------------------------
     // Function to check the intregrality of the solution
-    //-------------------------------------------------------------------    
+    //-------------------------------------------------------------------
     obj.integral = function (model, solution, precision) {
         var i,
             keys = obj.shared(model.ints, solution);
@@ -118,7 +118,7 @@ var Solver = function () {
 
     //-------------------------------------------------------------------
     // Function to find the most fractional variable of the 'ints' constraints
-    //-------------------------------------------------------------------    
+    //-------------------------------------------------------------------
     obj.frac = function (model, solution) {
         var best = 10,
             split = "",
@@ -134,6 +134,18 @@ var Solver = function () {
     };
 
     //-------------------------------------------------------------------
+    // Function to find the most fractional variable of the 'ints' constraints
+    //-------------------------------------------------------------------
+    obj.indexOf = function (ary, fin) {
+        for (var i = 0; i < ary.length; i++) {
+            if (ary[i] === fin) {
+                return i;
+            }
+        }
+        return -1;
+    };
+
+    //-------------------------------------------------------------------
     // Function: pivot
     // Purpose: Execute pivot operations over a 2d array,
     //          on a given row, and column
@@ -142,7 +154,7 @@ var Solver = function () {
     //          [[-0.6,0,0.6],[0.8,1,1.2],[0.6,0,-0.6]]
     //
     //-------------------------------------------------------------------
-    obj.pivot = function (tbl, row, col, tracker) {
+    obj.pivot = function (tbl, row, col) {
 
         var target = tbl[row][col],
             length = tbl.length,
@@ -152,7 +164,6 @@ var Solver = function () {
             j;
 
 
-        tracker[row] = col - 1;
         // Divide everything in the target row by the element @
         // the target column
         for (i = 0; i < width; i++) {
@@ -211,7 +222,7 @@ var Solver = function () {
             len = tbl[0].length - 1;
 
         // Find the smallest value and location
-        // in the RHS Since the lowest point on 
+        // in the RHS Since the lowest point on
         // the RHS will be our next
         // pivot row
         for (var i = 0; i < tbl.length - 1; i++) {
@@ -234,7 +245,7 @@ var Solver = function () {
                 return true;
             } else {
                 // Identify the column
-                col = tbl[row].indexOf(col);
+                col = obj.indexOf(tbl[row], col);
                 // Return an object telling us which
                 // row and column to pivot on
                 return {
@@ -274,7 +285,7 @@ var Solver = function () {
             return true;
         } else {
             // Step 2b. Otherwise, we have our pivot column
-            col = tbl[length].indexOf(min);
+            col = obj.indexOf(tbl[length], min);
 
             // Step 3a. If all entries in the pivot column are <= 0;
             // stop. The solution is unbounded;
@@ -328,7 +339,8 @@ var Solver = function () {
             if (test === true) {
                 break;
             } else {
-                obj.pivot(tbl, test.row, test.col, tracker);
+                tracker[test.row] = test.col - 1;
+                obj.pivot(tbl, test.row, test.col);
             }
         }
 
@@ -336,6 +348,7 @@ var Solver = function () {
         for (i = 0; i < 1000; i++) {
             test = obj.phase2(tbl);
             if (typeof test === "object") {
+                tracker[test.row] = test.col - 1;
                 obj.pivot(tbl, test.row, test.col, tracker);
             } else {
                 if (test === true) {
@@ -385,6 +398,7 @@ var Solver = function () {
             rslts,
             tall = 1,
             wide = 1,
+            tmpRow,
             table;
 
 
@@ -427,15 +441,17 @@ var Solver = function () {
         // FIGURE OUT WIDTH
         wide += tall + vari.length;
 
+        // BUILD A FAKE ROW OF THAT WIDTH
+        tmpRow = new Array(wide);
+        for (i = 0; i < wide; i++) {
+            tmpRow[i] = 0;
+        }
+
         // BUILD AN EMPTY TABLEAU
         /* jshint ignore:start */
-        table = Array(tall);
+        table = new Array(tall);
         for (i = 0; i < tall; i++) {
-            table[i] = Array(wide);
-
-            for (j = 0; j < wide; j++) {
-                table[i][j] = 0;
-            }
+            table[i] = tmpRow.slice();
         }
         /* jshint ignore:end */
 
@@ -447,7 +463,7 @@ var Solver = function () {
                 table[z][vari.length + 1 + z] = 1;
                 // DO RHS
                 table[z][wide - 1] = -model.constraints[x].min;
-
+                // COUNTER += 1...
                 z += 1;
             }
 
@@ -469,7 +485,7 @@ var Solver = function () {
         // TRY LOADING THE TABLE
         for (v in model.variables) {
             // Get the column's location
-            var col = vari.indexOf(v) + 1;
+            var col = obj.indexOf(vari, v) + 1;
             for (var a in model.variables[v]) {
                 if (a === model.optimize) {
                     table[tall - 1][col] = opType *
@@ -524,8 +540,8 @@ var Solver = function () {
     // Function: MILP
     // Detail: Main function, my attempt at a mixed integer linear programming
     //         solver
-    // Plan: 
-    //      What we're aiming at here is to 
+    // Plan:
+    //      What we're aiming at here is to
     //-------------------------------------------------------------------
     obj.MILP = function (model, precision) {
         obj.models = [];
@@ -551,6 +567,7 @@ var Solver = function () {
         };
 
         // And here...we...go!
+        var orig = obj.Solve(model);
 
 
         // 1.) Load a model into the queue
@@ -568,7 +585,7 @@ var Solver = function () {
             // Is the model both integral and feasible?
             if (obj.integral(model, solution, precision) &&
                 solution.feasible) {
-                // Is the new result the best that we've ever had?          
+                // Is the new result the best that we've ever had?
                 if (
                     (solution.result * minmax) >
                     (obj.best.result * minmax)
@@ -609,7 +626,7 @@ var Solver = function () {
                 //   ...
                 // }
                 //
-                // while the constraints on the high model would look like: 
+                // while the constraints on the high model would look like:
                 //
                 // constraints: {...
                 //   lamb: {min: 4}
@@ -637,7 +654,7 @@ var Solver = function () {
                 // We don't want the same models popping up all the time.
                 // If it's been run once, we don't want to check it again,
                 // and go through a possible infinite branching...
-                // 
+                //
                 // To prevent this, we have a hash on the `obj` object
                 // which uses the stringified version of the new model as the key.
                 //
@@ -652,17 +669,17 @@ var Solver = function () {
 
                 // Round down
                 iLow = Math.floor(solution[key]);
-                // Copy the old model into the new branch_a variable                
+                // Copy the old model into the new branch_a variable
                 branch_b = JSON.parse(JSON.stringify(model));
-                // If there was already a constraint on this variable, keep it; else add one                
+                // If there was already a constraint on this variable, keep it; else add one
                 branch_b.constraints[key] = branch_b.constraints[key] || {};
-                // Set the new constraint on this variable                
+                // Set the new constraint on this variable
                 branch_b.constraints[key].max = iLow || 0;
 
                 // We don't want the same models popping up all the time.
                 // If it's been run once, we don't want to check it again,
                 // and go through a possible infinite branching...
-                // 
+                //
                 // To prevent this, we have a hash on the `obj` object
                 // which uses the stringified version of the new model as the key.
                 //
@@ -681,6 +698,8 @@ var Solver = function () {
             }
         }
         obj.best.iter = y;
+        //obj.best.orig = orig;
+
         return obj.best;
     };
 
