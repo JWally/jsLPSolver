@@ -1,11 +1,17 @@
 var solver = require("../src/solver"),
-    problem = require("../test/problems.json")[7];
-    helpers = solver._helpers;
+    model = require("../../opt/testing/SPY.json")[1],
+    //model = require("../test/all_problems.json")[0],
+    fs = require("fs");
+    
 
-delete problem.expects;
+var a = solver.Model(model);
 
-console.log(problem);
+fs.writeFile("./lp_model.lp", a.join("\n"));
 
-var a = solver.Solve(problem);
+/*
+    
+
+var a = solver.Solve(model);
 console.log("\n\n");
 console.log(a);
+*/
