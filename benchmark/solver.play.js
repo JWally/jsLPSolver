@@ -17,7 +17,7 @@ console.log("------------------------");
 var log = {};
 
 
-for (var i = problems.length - 1; i < problems.length; i++) {
+for (var i = 0; i < problems.length; i++) {
 
     var k = 0,
         j = problems[i];
@@ -45,7 +45,7 @@ for (var i = problems.length - 1; i < problems.length; i++) {
 
 }
 
-for( i = problems.length - 1; i < problems.length; i++){
+for( i = 0; i < problems.length; i++){
     j = problems[i];
     var date_0 = process.hrtime();
     var d = solver.Solve(j);

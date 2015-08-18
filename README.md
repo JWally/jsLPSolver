@@ -7,23 +7,23 @@ jsLPSolver
 You can solve problems that fit the following fact pattern like this one
 from [this](http://math.stackexchange.com/questions/59429/berlin-airlift-linear-optimization-problem) site.
 
->On June 24, 1948, the former Soviet Union blocked all land and water routes through East Germany to Berlin. 
->A gigantic airlift was organized using American and British planes to supply food, clothing and other supplies 
->to more than 2 million people in West Berlin. 
+>On June 24, 1948, the former Soviet Union blocked all land and water routes through East Germany to Berlin.
+>A gigantic airlift was organized using American and British planes to supply food, clothing and other supplies
+>to more than 2 million people in West Berlin.
 >
->The cargo capacity was 30,000 cubic feet for an American plane and 20,000 cubic feet for a British plane. 
->To break the Soviet blockade, the Western Allies had to maximize cargo capacity, 
->but were subject to the following restrictions: No more than 44 planes could be used. The larger American planes required 16 
->personnel per flight; double that of the requirement for the British planes. The total number of personnel 
->available could not exceed 512. The cost of an American flight was $9000 and the cost of a British flight was $5000. 
->The total weekly costs could note exceed $300,000. 
+>The cargo capacity was 30,000 cubic feet for an American plane and 20,000 cubic feet for a British plane.
+>To break the Soviet blockade, the Western Allies had to maximize cargo capacity,
+>but were subject to the following restrictions: No more than 44 planes could be used. The larger American planes required 16
+>personnel per flight; double that of the requirement for the British planes. The total number of personnel
+>available could not exceed 512. The cost of an American flight was $9000 and the cost of a British flight was $5000.
+>The total weekly costs could note exceed $300,000.
 >Find the number of American and British planes that were used to maximize cargo capacity.
 
 
 
 ##So How Would I Do This?
 Part of the reason I built this library is that I wanted to do as little thinking / setup as possible
-to solve the actual problem. Instead of tinkering with arrays to solve this problem, you would create a 
+to solve the actual problem. Instead of tinkering with arrays to solve this problem, you would create a
 model in a JavaScript object, and solver it through the object's `solve` function; like this:
 
 ```javascript
@@ -102,23 +102,37 @@ Say you live in the real world and partial results aren't realistic, or are too 
 Below are the results from my home made suite of variable sized LP(s)
 
 ```javascript
-{ 
-  'Coffee Problem': { constraints: 2, variables: 2, result: 1985, time: 0.001556093 },
-  'Computer Problem': { constraints: 2, variables: 2, result: 71818.18181818182, time: 0.000079672 },
-  'Generic Business Problem': { constraints: 2, variables: 2, result: 9500, time: 0.00010392 },
-  'Generic Business Problem 2': { constraints: 2, variables: 2, result: 10000, time: 0.000046187 },
-  'Chocolate Problem': { constraints: 2, variables: 2, result: 18750, time: 0.000035794 },
-  'Wood Shop Problem': { constraints: 2, variables: 2, result: 96, time: 0.000025402 },
-  'Wood Shop Problem II': { constraints: 2, variables: 2, result: 96, time: 0.000022708 },
-  'Integer Wood Problem': { constraints: 3, variables: 2, ints: 2, result: 88, time: 0.001130025 },
-  'Berlin Air Lift Problem': { constraints: 3, variables: 2, result: 1024000, time: 0.000062737 },
-  'Integer Wood Shop Problem': { constraints: 2, variables: 3, ints: 3, result: 1010, time: 0.006328293 },
-  'Integer Sports Complex Problem': { constraints: 6, variables: 4, ints: 4, result: 700, time: 0.003860021 },
-  'Integer Chocolate Problem':  { constraints: 2, variables: 2, ints: 2, result: 19500, time: 0.001225476 },
-  'Integer Clothing Shop Problem':  { constraints: 2, variables: 2, ints: 2, result: 1460, time: 0.000299057 },
-  'Integer Clothing Shop Problem II': { constraints: 2, variables: 4, ints: 4, result: 1460, time: 0.000529603 },
-  'Shift Work Problem': { constraints: 6, variables: 6, result: 26, time: 0.000091218 },
-  'Monster Problem': { constraints: 624, variables: 552, result: 25433, time: 0.088869371 },
-  monster_II: { constraints: 894, variables: 924, ints: 112, result: 20631, time: 112.507540106 } 
-  }
+{ 'Coffee Problem':{ constraints: 2, variables: 2, result: 1985, time: 0.00097189 },
+  'Computer Problem':{ constraints: 2, variables: 2, result: 71818.18181818182, time: 0.000083931},
+  'Generic Business Problem':{ constraints: 2, variables: 2, result: 9500, time: 0.000093317 },
+  'Generic Business Problem 2':{ constraints: 2, variables: 2, result: 10000, time: 0.000035299 },
+  'Chocolate Problem':{ constraints: 2, variables: 2, result: 18750, time: 0.000030907 },
+  'Wood Shop Problem': { constraints: 2, variables: 2, result: 96, time: 0.000024994},
+  'Wood Shop Problem II': { constraints: 2, variables: 2, result: 96, time: 0.000021994 },
+  'Integer Wood Problem': { constraints: 3, variables: 2,ints: 2, result: 88, time: 0.001034486, iter: 2 },
+  'Berlin Air Lift Problem': { constraints: 3, variables: 2, result: 1024000, time: 0.00005718},
+  'Integer Wood Shop Problem': { constraints: 2, variables: 3, ints: 3, result: 1010, time: 0.006214069, iter: 16 },
+  'Integer Sports Complex Problem':{ constraints: 6,variables: 4,ints: 4,result: 700,time: 0.001319043,iter: 4 },
+  'Integer Chocolate Problem':{ constraints: 2,variables: 2,ints: 2,result: 19500,time: 0.000301197,iter: 2 },
+  'Integer Clothing Shop Problem':{ constraints: 2,variables: 2,ints: 2,result: 1460,time: 0.000152802,iter: 1 },
+  'Integer Clothing Shop Problem II':{ constraints: 2,variables: 4,ints: 4,result: 1460,time: 0.000323052,iter: 2 },
+  'Shift Work Problem':{ constraints: 6,variables: 6,result: 26,time: 0.000058054 },
+  'Monster Problem':{ constraints: 624, variables: 552, result: 25433,time: 0.109093596 },
+  'monster_II':{ constraints: 894, variables: 924, ints: 112, result: 20631,  time: 37.54, iter: 230 }
+}
 ```
+
+##Incorporating a "Big-Boy" Solver
+
+Part of the reason that I build this library is because I *hate* setting up
+tableaus. Unfortunately, I'm not a CS wizard, and this solver probably should not
+be used for real calculation intensive problems. However, I'm in the process of
+building out functionality to convert a JSON object into a tableau. Its in a pretty
+primitive state right now, but if you
+
+```javascript
+var awesome = solver.ReformatLP(model);
+```
+
+you will be given an array of equations as strings that fits the requirements
+of lp_solve.
