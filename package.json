@@ -1,11 +1,11 @@
 {
     "name": "javascript-lp-solver",
     "description": "Easy to use, JSON oriented Linear Programming and Mixed Int. Programming Solver",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "private": false,
     "authors": [
         "Justin W. Wolcott"
-    ],    
+    ],
     "repository": {
         "type": "git",
         "url": "https://github.com/JWally/jsLPSolver"
@@ -33,7 +33,3 @@
     ],
     "license": "MIT"
 }
-
-
-
-

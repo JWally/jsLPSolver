@@ -1,6 +1,6 @@
 {
   "name": "jsLPSolver",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "homepage": "https://github.com/JWally/jsLPSolver",
   "description": "Easy to use, JSON oriented Linear Programming and Mixed Int. Programming Solver",
   "main": "src/solver.js",
