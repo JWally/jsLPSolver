@@ -384,22 +384,13 @@ var Solver = function () {
     //-------------------------------------------------------------------
     obj.Solve = function (model) {
 
-        var cstr,
-            vari,
-            opType = model.opType === "max" ? -1 : 1,
-            hsh,
-            len,
-            z = 0,
-            i,
-            j,
-            x,
-            c,
-            v,
-            rslts,
+        var cstr, vari, hsh, len,
+            i, j, x, c, v,
+            rslts, tmpRow, table,
             tall = 1,
             wide = 1,
-            tmpRow,
-            table;
+            z = 0,
+            opType = model.opType === "max" ? -1 : 1;
 
 
         //Give all of the variables a self property of 1
@@ -727,32 +718,23 @@ var Solver = function () {
      * Method: Model
      * Scope: Public:
      * Agruments: model: The model we want solver to operate on
-     * Purpose: Convert a friendly JSON model into a model for a 
-     *          real solving library 
+     * Purpose: Convert a friendly JSON model into a model for a
+     *          real solving library...in this case
+     *          lp_solver
      **************************************************************/
-    this.Model = function (model, fx) {
+    this.ReformatLP = function (model, fx) {
         // Make sure we at least have a model
         if (!model) {
             throw new Error("Solver requires a model to operate on");
         }
 
-        var cstr,
-            vari,
-            opType = model.opType === "max" ? -1 : 1,
-            hsh,
-            len,
-            z = 0,
-            i,
-            j,
-            x,
-            c,
-            v,
-            rslts,
+        var cstr, vari, hsh, len, i, j, x, c, v,
+            rslts, tmpRow, table, val,
             tall = 1,
             wide = 1,
-            tmpRow,
-            table,
-            val;
+            z = 0,
+            opType = model.opType === "max" ? -1 : 1,
+            rxClean = new RegExp("[^A-Za-z0-9]+", "gi");
 
 
         //Give all of the variables a self property of 1
@@ -771,12 +753,8 @@ var Solver = function () {
             }
         }
 
-
-
         cstr = Object.keys(model.constraints); //Array with name of each constraint type
         vari = Object.keys(model.variables); //Array with name of each Variable
-
-
 
         // FIGURE OUT HEIGHT
         for (x in model.constraints) {
@@ -837,11 +815,9 @@ var Solver = function () {
                         } else {
                             val = " - " + -val;
                         }
-                    } else {
-                        val = model.opType + ": " + val;
                     }
-                    table[tall - 1][col] = val + " " + v.replace(
-                        /[^A-Za-z0-9]+/gi, "_");
+                    table[tall - 1][col] = val + " ";
+                    table[tall - 1][col] += v.replace(rxClean, "_");
                 } else if (typeof model.constraints[a] !== "undefined") {
                     var row,
                         cns = model.constraints[a];
@@ -856,8 +832,9 @@ var Solver = function () {
                                 val = " - " + -val;
                             }
                         }
-                        table[row][col] = val + " " + v.replace(
-                            /[^A-Za-z0-9]+/gi, "_");
+                        table[row][col] = val;
+                        table[row][col] += " ";
+                        table[row][col] += v.replace(rxClean, "_");
                     }
 
                     if (typeof cns.max !== "undefined") {
@@ -870,35 +847,40 @@ var Solver = function () {
                                 val = " - " + -val;
                             }
                         }
-                        table[row][col] = val + " " + v.replace(
-                            /[^A-Za-z0-9]+/gi, "_");
+                        table[row][col] = val;
+                        table[row][col] += " ";
+                        table[row][col] += v.replace(rxClean, "_");
                     }
                 }
             }
         }
 
-        var rslts2 = [];
+        var outTbl = [];
 
+        // ADD ALL OF THE EQUATIONS TO THE NEW TABLE
+        // IN REVERSE (SINCE MY OBJECTIVE ROW IS AT BOTTOM)
+        // AND JOIN THEM ALL TOGETHER, LAZILY CLEANING
+        // IT UP AS WE GO
         for (i = table.length - 1; i >= 0; i--) {
-            rslts2.push((table[i].join("") + ";").replace(/^ \+ /gi, ""));
+            outTbl.push((table[i].join("") + ";")
+                .replace(/^ \+ /gi, ""));
         }
+
+        // BECAUSE IT SEEMS TO SCREW UP...
+        outTbl[0] = model.opType + ": " + outTbl[0];
 
         // ADD INTS IF THERE ARE IN FACT ANY...
         if (model.ints) {
             var ary = Object.keys(model.ints);
             // Push in a blank row to the rslts array
-            rslts2.push("");
+            outTbl.push("");
             for (i = 0; i < ary.length; i++) {
-                rslts2.push("int " + ary[i].replace(/[^A-Za-z0-9]+/gi,
+                outTbl.push("int " + ary[i].replace(/[^A-Za-z0-9]+/gi,
                     "_") + ";");
             }
-
         }
-
-        return rslts2;
-
+        return outTbl;
     };
-
 };
 
 // Determine the environment we're in.
