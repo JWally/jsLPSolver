@@ -41,29 +41,42 @@ var Solver = function () {
         offset = offset || 0;
 
         for (i = 0; i < len - offset; i++) {
-            tmp = ary[i] > tmp ? (ary[i] || 0) : tmp;
+            // tmp = ary[i] > tmp ? (ary[i] || 0) : tmp;
+            val = ary[i];
+            tmp = val < tmp ? val : tmp;
         }
         return tmp;
+    };
+
+    function MinData(value, index) {
+        this.value = value;
+        this.index = index;
     };
 
     //-------------------------------------------------------------------
     // Function: min
     // Puprose: Iterate over a 1d array to find its min
     //
-    // Example: obj.min([1,3,4,5,6]) === 1
+    // Example: obj.min([1,3,4,5,6], 1) === 1
+    // Example: obj.min([3,4,5,6,1], 1) === 3
     //-------------------------------------------------------------------
-    obj.min = function (ary, offset) {
-        var i,
-            tmp = 1e99,
-            len = ary.length;
+    obj.min = function (array, offset) {
+        var last = array.length - offset;
 
-        offset = offset || 0;
+        var min = array[0];
+        var minIndex = 0;
 
-        for (i = 0; i < len - offset; i++) {
-            tmp = ary[i] < tmp ? (ary[i] || 0) : tmp;
+        for (var i = 0; i < last; i++) {
+            var val = array[i];
+            if (val < min) {
+                min = val;
+                minIndex = i;
+            }
         }
-        return tmp;
+
+        return new MinData(min, minIndex);
     };
+
     //-------------------------------------------------------------------
     // Quick and dirty method to round numbers
     //-------------------------------------------------------------------
@@ -186,15 +199,19 @@ var Solver = function () {
                     for (j = 0; j < width; j++) {
                         // No point in doing math if you're just adding
                         // Zero to the thing
-                        if (tbl[row][j] !== 0) {
-                            tbl[i][j] += -pivot_row * tbl[row][j];
+                        var v0 = tbl[row][j];
+                        if (v0 !== 0) {
+                            var v1 = tbl[i][j] - pivot_row * v0;
+                            if (-1e-9 < v1 && v1 < 1e-9) {
+                                tbl[i][j] = 0;
+                            } else {
+                                tbl[i][j] = v1;
+                            }
                         }
                     }
                 }
             }
         }
-
-
     };
 
 
@@ -205,6 +222,12 @@ var Solver = function () {
     // and track what pivots have been made. The grunt work is done by
     // the pivot function.
 
+    function Pivot(row, column, feasibility, optimality) {
+        this.row = row;
+        this.column = column;
+        this.feasibility = feasibility;
+        this.optimality = optimality;
+    }
 
     //-------------------------------------------------------------------
     // Function: phase1
@@ -233,25 +256,19 @@ var Solver = function () {
         }
         // If nothing is less than 0; we're done with phase 1.
         if (rhs_min >= 0) {
-            return true;
+            return new Pivot(0, 0, true, false);
         } else {
             // The Smallest negative entry in our next pivot
             // row will be the column we pivot on next
-            col = obj.min(tbl[row], 1);
-
-            if (col >= 0) {
+            var minColumnData = obj.min(tbl[row], 1);
+            if (minColumnData.value >= 0) {
                 // If everything in this row is > 0
                 // we need to hop out of phase 1
-                return true;
+                return new Pivot(0, 0, true, false);
             } else {
-                // Identify the column
-                col = obj.indexOf(tbl[row], col);
                 // Return an object telling us which
                 // row and column to pivot on
-                return {
-                    row: row,
-                    col: col
-                };
+                return new Pivot(row, minColumnData.index, false, false);
             }
         }
     };
@@ -266,8 +283,7 @@ var Solver = function () {
     //
     //-------------------------------------------------------------------
     obj.phase2 = function (tbl) {
-        var col,
-            row,
+        var row,
             length = tbl.length - 1,
             width = tbl[0].length - 1,
             min,
@@ -278,14 +294,14 @@ var Solver = function () {
 
         // Step 1. Identify the smallest entry in the objective row
         //         (the bottom)
-        min = obj.min(tbl[length], 1);
+        var minColumnData = obj.min(tbl[length], 1);
 
         // Step 2a. If its non-negative, stop. A solution has been found
-        if (min >= 0) {
-            return true;
+        if (minColumnData.value >= 0) {
+            return new Pivot(0, 0, true, true);
         } else {
             // Step 2b. Otherwise, we have our pivot column
-            col = obj.indexOf(tbl[length], min);
+            var col = minColumnData.index;
 
             // Step 3a. If all entries in the pivot column are <= 0;
             // stop. The solution is unbounded;
@@ -304,12 +320,9 @@ var Solver = function () {
 
 
             if (dividend > -0.001 && dividend < 1e99) {
-                return {
-                    row: row,
-                    col: col
-                };
+                return new Pivot(row, col, true, false);
             } else {
-                return false;
+                return new Pivot(row, col, false, false);
             }
         }
     };
@@ -327,7 +340,7 @@ var Solver = function () {
         var tracker = [],
             results = {},
             i,
-            test,
+            pivot,
             length = tbl.length - 1,
             width = tbl[0].length - 1;
 
@@ -335,28 +348,26 @@ var Solver = function () {
 
         // Execute Phase 1 to Normalize the tableau;
         for (i = 0; i < 1000; i++) {
-            test = obj.phase1(tbl);
-            if (test === true) {
+            pivot = obj.phase1(tbl);
+            if (pivot.feasibility === true) {
                 break;
             } else {
-                tracker[test.row] = test.col - 1;
-                obj.pivot(tbl, test.row, test.col);
+                tracker[pivot.row] = pivot.column - 1;
+                obj.pivot(tbl, pivot.row, pivot.column);
             }
         }
 
         // Execute Phase 2 to Finish;
         for (i = 0; i < 1000; i++) {
-            test = obj.phase2(tbl);
-            if (typeof test === "object") {
-                tracker[test.row] = test.col - 1;
-                obj.pivot(tbl, test.row, test.col, tracker);
+            pivot = obj.phase2(tbl);
+            if (pivot.optimality === false) {
+                tracker[pivot.row] = pivot.column - 1;
+                obj.pivot(tbl, pivot.row, pivot.column, tracker);
             } else {
-                if (test === true) {
-                    break;
-                } else if (test === false) {
+                if (pivot.feasibility === false) {
                     results.feasible = false;
-                    break;
                 }
+                break;
             }
         }
 
@@ -383,143 +394,153 @@ var Solver = function () {
     //Detail: Main function, linear programming solver
     //-------------------------------------------------------------------
     obj.Solve = function (model) {
+        var opType = model.opType === "max" ? -1 : 1;
 
-        var cstr, vari, hsh, len,
-            i, j, x, c, v,
-            rslts, tmpRow, table,
-            tall = 1,
-            wide = 1,
-            z = 0,
-            opType = model.opType === "max" ? -1 : 1;
+        var variables   = model.variables;
+        var constraints = model.constraints;
 
+        var variableIds   = Object.keys(variables);   //Array with name of each Variable
+        var constraintIds = Object.keys(constraints); //Array with name of each constraint type
 
-        //Give all of the variables a self property of 1
-        for (v in model.variables) {
-            model.variables[v][v] = 1;
+        var nVariables   = variableIds.length;
+        var nConstraints = constraintIds.length;
+
+        // Give all of the variables a self property of 1
+        for (var v = 0; v < nVariables; v += 1) {
+            var variableId = variableIds[v];
+            variables[variableId][variableId] = 1;
+
             //if a min or max exists in the variables;
             //add it to the constraints
-            if (typeof model.variables[v].max !== "undefined") {
-                model.constraints[v] = model.constraints[v] || {};
-                model.constraints[v].max = model.variables[v].max;
+            if (variables[variableId].max !== undefined) {
+                constraints[variableId]     = constraints[variableId] || {};
+                constraints[variableId].max = variables[variableId].max;
             }
 
-            if (typeof model.variables[v].min !== "undefined") {
-                model.constraints[v] = model.constraints[v] || {};
-                model.constraints[v].min = model.variables[v].min;
+            if (variables[variableId].min !== undefined) {
+                constraints[variableId]     = constraints[variableId] || {};
+                constraints[variableId].min = variables[variableId].min;
             }
         }
 
-
-
-        cstr = Object.keys(model.constraints); //Array with name of each constraint type
-        vari = Object.keys(model.variables); //Array with name of each Variable
-
-
-
         // FIGURE OUT HEIGHT
-        for (x in model.constraints) {
-            if (typeof model.constraints[x].min !== "undefined") {
-                model.constraints[x].min_loc = tall - 1;
-                tall += 1;
+        var height = 1;
+        for (var c = 0; c < nConstraints; c += 1) {
+            var constraintId = constraintIds[c];
+            if (constraints[constraintId].min !== undefined) {
+                constraints[constraintId].min_loc = height - 1;
+                height += 1;
             }
 
-            if (typeof model.constraints[x].max !== "undefined") {
-                model.constraints[x].max_loc = tall - 1;
-                tall += 1;
+            if (constraints[constraintId].max !== undefined) {
+                constraints[constraintId].max_loc = height - 1;
+                height += 1;
             }
         }
 
         // FIGURE OUT WIDTH
-        wide += tall + vari.length;
+        var width  = 1 + height + nVariables;
 
         // BUILD A FAKE ROW OF THAT WIDTH
-        tmpRow = new Array(wide);
-        for (i = 0; i < wide; i++) {
+        var tmpRow = new Array(width);
+        for (var i = 0; i < width; i++) {
             tmpRow[i] = 0;
         }
 
         // BUILD AN EMPTY TABLEAU
         /* jshint ignore:start */
-        table = new Array(tall);
-        for (i = 0; i < tall; i++) {
-            table[i] = tmpRow.slice();
+        var table = new Array(height);
+        for (var j = 0; j < height; j++) {
+            table[j] = tmpRow.slice();
         }
         /* jshint ignore:end */
 
         // LOOP IT AGAIN!!!
-        z = 0;
-        for (x in model.constraints) {
-            if (typeof model.constraints[x].min !== "undefined") {
+        var z = 0;
+        for (var c = 0; c < nConstraints; c += 1) {
+            var constraintId = constraintIds[c];
+            if (constraints[constraintId].min !== undefined) {
                 // LOAD SLACK
-                table[z][vari.length + 1 + z] = 1;
+                table[z][nVariables + 1 + z] = 1;
                 // DO RHS
-                table[z][wide - 1] = -model.constraints[x].min;
+                table[z][width - 1] = -constraints[constraintId].min;
                 // COUNTER += 1...
                 z += 1;
             }
 
-            if (typeof model.constraints[x].max !== "undefined") {
+            if (constraints[constraintId].max !== undefined) {
                 // LOAD SLACK
-                table[z][vari.length + 1 + z] = 1;
+                table[z][nVariables + 1 + z] = 1;
 
                 // DO RHS
-                table[z][wide - 1] = model.constraints[x].max;
+                table[z][width - 1] = constraints[constraintId].max;
 
                 z += 1;
             }
         }
 
         // Because it needs it...
-        table[tall - 1][0] = 1;
-
+        table[height - 1][0] = 1;
 
         // TRY LOADING THE TABLE
-        for (v in model.variables) {
+        var optimizerName = model.optimize;
+        for (v = 0; v < nVariables; v += 1) {
             // Get the column's location
-            var col = obj.indexOf(vari, v) + 1;
-            for (var a in model.variables[v]) {
-                if (a === model.optimize) {
-                    table[tall - 1][col] = opType *
-                        model.variables[v][a];
-                } else if (typeof model.constraints[a] !== "undefined") {
-                    var row,
-                        val,
-                        cns = model.constraints[a];
+            var column = v + 1;
 
-                    if (typeof cns.min !== "undefined") {
-                        row = cns.min_loc;
-                        val = -model.variables[v][a];
-                        table[row][col] = val;
+            var variableConstraints = variables[variableIds[v]];
+            // for (var constraintName in variableConstraints) {
+
+            var constraintNames = Object.keys(variableConstraints);
+            for (c = 0; c < constraintNames.length; c += 1) {
+                var constraintName = constraintNames[c];
+
+                var coefficient = variableConstraints[constraintName];
+                if (constraintName === optimizerName) {
+                    table[height - 1][column] = opType * coefficient;
+                } else if (constraints[constraintName] !== undefined) {
+                    var row,
+                        value,
+                        constraint = constraints[constraintName];
+
+                    if (constraint.min !== undefined) {
+                        row = constraint.min_loc;
+                        table[row][column] = -coefficient;
                     }
 
-                    if (typeof cns.max !== "undefined") {
-                        row = cns.max_loc;
-                        val = model.variables[v][a];
-                        table[row][col] = val;
+                    if (constraint.max !== undefined) {
+                        row = constraint.max_loc;
+                        table[row][column] = coefficient;
                     }
                 }
             }
         }
+
         // SOLVE THE PROBLEM
         // NOW THAT WE FINALLY BUILT IT
-        rslts = obj.optimize(table);
+        var solution = obj.optimize(table);
 
-        hsh = {
-            feasible: rslts.feasible
+        var output = {
+            feasible: solution.feasible
         };
 
-        for (x in rslts) {
-            if (typeof vari[x] !== "undefined") {
-                if (rslts[x] < -1e-10) {
-                    hsh.feasible = false;
+        var variableIndexes = Object.keys(solution);
+        var nVariableIndexes = variableIndexes.length;
+        for (v = 0; v < nVariableIndexes; v += 1) {
+            var variableIndex = variableIndexes[v];
+            var variableId = variableIds[variableIndex];
+            if (variableId !== undefined) {
+                var variableValue = solution[variableIndex];
+                if (variableValue < -1e-10) {
+                    output.feasible = false;
                 }
-                hsh[vari[x]] = rslts[x];
+                output[variableId] = variableValue;
             }
         }
 
-        hsh.result = -opType * rslts.result;
+        output.result = -opType * solution.result;
 
-        return hsh;
+        return output;
     };
 
 
@@ -557,7 +578,6 @@ var Solver = function () {
 
         // 1.) Load a model into the queue
         obj.models.push(model);
-
 
         // If all branches have been exhausted, or we've been piddling around
         // for too long, one of these 2 constraints will terminate the loop
@@ -705,7 +725,6 @@ var Solver = function () {
             throw new Error("Solver requires a model to operate on");
         }
 
-
         precision = precision || 5;
         if (model.ints) {
             return obj.MILP(model, precision);
@@ -728,7 +747,7 @@ var Solver = function () {
             throw new Error("Solver requires a model to operate on");
         }
 
-        var cstr, vari, hsh, len, i, j, x, c, v,
+        var constraints, variables, hash, len, i, j, x, c, v,
             rslts, tmpRow, table, val,
             tall = 1,
             wide = 1,
@@ -753,8 +772,8 @@ var Solver = function () {
             }
         }
 
-        cstr = Object.keys(model.constraints); //Array with name of each constraint type
-        vari = Object.keys(model.variables); //Array with name of each Variable
+        constraints = Object.keys(model.constraints); //Array with name of each constraint type
+        variables = Object.keys(model.variables); //Array with name of each Variable
 
         // FIGURE OUT HEIGHT
         for (x in model.constraints) {
@@ -770,7 +789,7 @@ var Solver = function () {
         }
 
         // FIGURE OUT WIDTH
-        wide += vari.length;
+        wide += variables.length;
 
         // BUILD A FAKE ROW OF THAT WIDTH
         tmpRow = new Array(wide);
@@ -804,7 +823,7 @@ var Solver = function () {
         // TRY LOADING THE TABLE
         for (v in model.variables) {
             // Get the column's location
-            var col = vari.indexOf(v);
+            var col = variables.indexOf(v);
             for (var a in model.variables[v]) {
                 // This is the thing we're trying to optimize...
                 if (a === model.optimize) {
