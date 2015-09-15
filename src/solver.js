@@ -204,8 +204,7 @@ var Solver = function () {
                             var v1 = tbl[i][j] - pivot_row * v0;
 
                             // Optimising out variable coefficients that are virtually 0
-                            // N.B the order of magnitude of rounding errors is up to 1e-14
-                            if (-1e-13 < v1 && v1 < 1e-13) {
+                            if (-1e-10 < v1 && v1 < 1e-10) {
                                 tbl[i][j] = 0;
                             } else {
                                 tbl[i][j] = v1;
