@@ -36,7 +36,7 @@ var Solver = function () {
      *                   (defaults to 1e-9)
      **************************************************************/
     function Tableau(precision) {
-            this.optimizationType = 'min'; // or 'max'
+            this.optimizationType = "min"; // or 'max'
 
             this.matrix = null;
             this.width = 0;
@@ -249,7 +249,7 @@ var Solver = function () {
             if (leavingRow === 0) {
                 // Feasible, champagne!
                 this.feasible = true;
-                return iterations
+                return iterations;
             }
 
             // Selecting entering variable
@@ -429,15 +429,31 @@ var Solver = function () {
         console.log("this.nonBasicIndexes", this.nonBasicIndexes);
         console.log("this.rows", this.rows);
         console.log("this.cols", this.cols);
-        var varNameRowString = "";
-        var spacePerColumn = [" "];
-        for (var c = 1; c < this.width; c += 1) {
-            var varName = this.variableIds[this.nonBasicIndexes[c]];
-            var varNameLength = varName.length;
-            var nSpaces = Math.abs(varNameLength - 5);
-            var valueSpace = " ";
-            var nameSpace = " ";
-            for (var s = 0; s < nSpaces; s += 1) {
+
+        // Variable declaration
+        var varNameRowString = "",
+            spacePerColumn = [" "],
+            j,
+            c,
+            s,
+            r,
+            varName,
+            varNameLength,
+            nSpaces,
+            valueSpace,
+            nameSpace;
+
+        var row,
+            rowString;
+
+        for (c = 1; c < this.width; c += 1) {
+            varName = this.variableIds[this.nonBasicIndexes[c]];
+            varNameLength = varName.length;
+            nSpaces = Math.abs(varNameLength - 5);
+            valueSpace = " ";
+            nameSpace = " ";
+
+            for (s = 0; s < nSpaces; s += 1) {
                 if (varNameLength > 5) {
                     valueSpace += " ";
                 } else {
@@ -455,10 +471,10 @@ var Solver = function () {
         // Displaying feasibility row
         var firstRow = this.matrix[this.feasbilityRowIndex];
         var firstRowString = "";
-        for (var j = 1; j < this.width; j += 1) {
+        for (j = 1; j < this.width; j += 1) {
             signSpace = firstRow[j] < 0 ? "" : " ";
             firstRowString += signSpace + spacePerColumn[j] + firstRow[
-                j].toFixed(2)
+                j].toFixed(2);
         }
         signSpace = firstRow[0] < 0 ? "" : " ";
         firstRowString += signSpace + spacePerColumn[0] + firstRow[0].toFixed(
@@ -466,12 +482,13 @@ var Solver = function () {
         console.log(firstRowString + " W");
 
         // Displaying objective
-        var firstRow = this.matrix[this.objectiveRowIndex];
-        var firstRowString = "";
-        for (var j = 1; j < this.width; j += 1) {
+        firstRow = this.matrix[this.objectiveRowIndex];
+        firstRowString = "";
+        for (j = 1; j < this.width; j += 1) {
             signSpace = firstRow[j] < 0 ? "" : " ";
-            firstRowString += signSpace + spacePerColumn[j] + firstRow[
-                j].toFixed(2)
+            firstRowString += signSpace;
+            firstRowString += spacePerColumn[j];
+            firstRowString += firstRow[j].toFixed(2);
         }
         signSpace = firstRow[0] < 0 ? "" : " ";
         firstRowString += signSpace + spacePerColumn[0] + firstRow[0].toFixed(
@@ -479,13 +496,13 @@ var Solver = function () {
         console.log(firstRowString + " Z");
 
         // Then the basic variable rows
-        for (var r = 2; r < this.height; r += 1) {
-            var row = this.matrix[r];
-            var rowString = "";
-            for (var c = 1; c < this.width; c += 1) {
+        for (r = 2; r < this.height; r += 1) {
+            row = this.matrix[r];
+            rowString = "";
+            for (c = 1; c < this.width; c += 1) {
                 signSpace = row[c] < 0 ? "" : " ";
                 rowString += signSpace + spacePerColumn[c] + row[c].toFixed(
-                    2)
+                    2);
             }
             signSpace = row[0] < 0 ? "" : " ";
             rowString += signSpace + spacePerColumn[0] + row[0].toFixed(
@@ -514,11 +531,24 @@ var Solver = function () {
 
         var nSlackVars = 0;
 
+        // Misc. Variable Declaration:
+        var c,
+            constraintId,
+            constraint,
+            v,
+            variableId,
+            rhs,
+            column,
+            variableConstraints,
+            constraintNames,
+            constraintName,
+            coefficient;
+
         // FIGURE OUT HEIGHT
         var height = 2;
-        for (var c = 0; c < nConstraints; c += 1) {
-            var constraintId = constraintIds[c];
-            var constraint = constraints[constraintId];
+        for (c = 0; c < nConstraints; c += 1) {
+            constraintId = constraintIds[c];
+            constraint = constraints[constraintId];
 
             if (constraint.equal !== undefined) {
                 constraint.min = constraint.equal;
@@ -561,8 +591,8 @@ var Solver = function () {
         var integerIndexes = this.integerIndexes;
 
         // Give all of the variables a self property of 1
-        for (var v = 0; v < nObjectiveVars; v += 1) {
-            var variableId = variableIds[v];
+        for (v = 0; v < nObjectiveVars; v += 1) {
+            variableId = variableIds[v];
             variables[variableId][variableId] = 1;
 
             //if a min or max exists in the variables;
@@ -593,10 +623,10 @@ var Solver = function () {
         var ai = 0; // Artificial variable index
 
         var nbi = 2 + nObjectiveVars; // non-basic variable index
-        for (var c = 0; c < nConstraints; c += 1) {
-            var rhs;
-            var constraintId = constraintIds[c];
-            var constraint = constraints[constraintId];
+        for (c = 0; c < nConstraints; c += 1) {
+
+            constraintId = constraintIds[c];
+            constraint = constraints[constraintId];
 
             if (constraint.min !== undefined) {
                 rhs = constraint.min;
@@ -632,20 +662,20 @@ var Solver = function () {
 
         // LOADING THE TABLE
         var objectiveName = model.optimize;
-        for (var v = 0; v < nObjectiveVars; v += 1) {
-            var column = v + 1;
+        for (v = 0; v < nObjectiveVars; v += 1) {
+            column = v + 1;
 
-            var variableConstraints = variables[variableIds[v]];
-            var constraintNames = Object.keys(variableConstraints);
+            variableConstraints = variables[variableIds[v]];
+            constraintNames = Object.keys(variableConstraints);
             for (c = 0; c < constraintNames.length; c += 1) {
-                var constraintName = constraintNames[c];
+                constraintName = constraintNames[c];
 
-                var coefficient = variableConstraints[constraintName];
+                coefficient = variableConstraints[constraintName];
                 if (constraintName === objectiveName) {
                     objectiveCoefficients[column] = -opCoeff *
                         coefficient;
                 } else {
-                    var constraint = constraints[constraintName];
+                    constraint = constraints[constraintName];
                     if (constraint !== undefined) {
                         var row;
 
@@ -913,7 +943,7 @@ var Solver = function () {
         bestSolution.iter = iterations;
 
         return bestSolution;
-    };
+    }
 
 
     /*************************************************************
