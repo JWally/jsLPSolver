@@ -66,7 +66,8 @@ var Solver = function () {
 
         this.precision = precision || 1e-9;
     }
-
+    //-------------------------------------------------------------------
+    //-------------------------------------------------------------------
     Tableau.prototype.initialize = function (width, height, variableIds, nObjectiveVars, nSlackVars) {
         this.variableIds = variableIds;
 
@@ -104,7 +105,8 @@ var Solver = function () {
             this.cols[v] = -1;
         }
     };
-
+    //-------------------------------------------------------------------
+    //-------------------------------------------------------------------
     Tableau.prototype.getNumberOfNonIntegralValue = function () {
         var nIntegerVars = this.integerIndexes.length;
         var nbNonIntegralValues = 0;
@@ -122,16 +124,19 @@ var Solver = function () {
         }
         return nbNonIntegralValues;
     };
-
+    //-------------------------------------------------------------------
+    //-------------------------------------------------------------------
     Tableau.prototype.getNumberOfIntegerVariables = function () {
         return this.integerIndexes.length;
     };
-
+    //-------------------------------------------------------------------
+    //-------------------------------------------------------------------
     function Variable(index, value) {
         this.index = index;
         this.value = value;
     }
-
+    //-------------------------------------------------------------------
+    //-------------------------------------------------------------------
     Tableau.prototype.getMostFractionalVar = function () {
         var biggestFraction = 1;
         var mostFractionalVarIndex = null;
@@ -157,7 +162,8 @@ var Solver = function () {
 
         return new Variable(mostFractionalVarIndex, mostFractionalVarValue);
     };
-
+    //-------------------------------------------------------------------
+    //-------------------------------------------------------------------
     Tableau.prototype.setFeasibility = function () {
         // All the basic variables should be equal or greater than 0
         var lastRow = this.height - 1;
@@ -172,7 +178,8 @@ var Solver = function () {
         this.feasible = true;
         return true;
     };
-
+    //-------------------------------------------------------------------
+    //-------------------------------------------------------------------
     Tableau.prototype.finalize = function () {
         // Rounding objective value
         var value = this.matrix[this.objectiveRowIndex][this.rhsColumn];
@@ -183,7 +190,8 @@ var Solver = function () {
 
         this.objectiveValue = this.matrix[this.objectiveRowIndex][this.rhsColumn];
     };
-
+    //-------------------------------------------------------------------
+    //-------------------------------------------------------------------
     Tableau.prototype.compileSolution = function () {
         var lastRow  = this.height - 1;
         for (var r = 2; r <= lastRow; r += 1) {
@@ -476,7 +484,8 @@ var Solver = function () {
         }
         console.log('');
     };
-
+    //-------------------------------------------------------------------
+    //-------------------------------------------------------------------
     Tableau.prototype.parseModel = function (model) {
         this.optimizationType = model.opType;
         var opCoeff = (this.optimizationType === 'max') ? -1 : 1;
@@ -726,13 +735,15 @@ var Solver = function () {
         this.finalize();
         return this;
     };
-
+    //-------------------------------------------------------------------
+    //-------------------------------------------------------------------
     function Cut(type, varIndex, value) {
         this.type = type;
         this.varIndex = varIndex;
         this.value = value;
     }
-
+    //-------------------------------------------------------------------
+    //-------------------------------------------------------------------
     function Branch(tableau, lowerBound, nbNonIntegralValues, cuts) {
         this.tableau = tableau;
         this.lowerBound = lowerBound;
