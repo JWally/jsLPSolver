@@ -896,7 +896,7 @@ var Solver = function () {
      *                   that 20.000000000000001 is not an integer.
      *                   (defaults to 1e-9)
      **************************************************************/
-    this.Solve = function (model, precision) {
+    this.Solve = function (model, precision, full) {
         // Make sure we at least have a model
         if (!model) {
             throw new Error("Solver requires a model to operate on");
@@ -912,7 +912,32 @@ var Solver = function () {
         }
 
         tableau.compileSolution();
-        return tableau;
+        // If the user asks for a full breakdown
+        // of the tableau (e.g. full === true)
+        // this will return it
+        if (full) {
+            return tableau;
+        } else {
+        // Otherwise; give the user the bare
+        // minimum of info necessary to carry on
+        
+            var store = {};
+
+            // 1.) Add in feasibility to store;
+            store.feasible = tableau.feasible;
+
+            // 2.) Add in the objective value
+            store.result = tableau.objectiveValue;
+
+            // 3.) Load all of the variable values
+            Object.keys(tableau.solutionSet)
+                .map(function (d) {
+                    store[d] = tableau.solutionSet[d];
+                });
+
+            return store;
+        }
+
     };
 
     /*************************************************************
