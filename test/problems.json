@@ -26,8 +26,8 @@
         },
         "expects": {
             "feasible": true,
-            "Yusip": 269.99999999999994,
-            "Exotic": 260.00000000000006,
+            "Yusip": 270,
+            "Exotic": 260,
             "result": 1985
         }
     }, {
@@ -258,8 +258,7 @@
             "feasible": true,
             "table": 4,
             "chair": 8,
-            "result": 88,
-            "iter": 2
+            "result": 88
         }
     }, {
         "name": "Currency Arbitrage Problem",
@@ -426,8 +425,7 @@
             "press": 1,
             "lathe": 5,
             "drill": 2,
-            "result": 1010,
-            "iter": 16
+            "result": 1010
         }
     }, {
         "name": "Integer Sports Complex Problem",
@@ -491,8 +489,7 @@
             "tennis": 0,
             "field": 1,
             "gym": 0,
-            "result": 700,
-            "iter": 4
+            "result": 700
         }
     }, {
         "name": "Integer Chocolate Problem",
@@ -528,8 +525,7 @@
             "feasible": true,
             "Kansas": 9,
             "Oklahoma": 7,
-            "result": 19500,
-            "iter": 2
+            "result": 19500
         }
     }, {
         "name": "Integer Clothing Shop Problem",
@@ -565,8 +561,7 @@
             "feasible": true,
             "coat": 10,
             "pants": 24,
-            "result": 1460,
-            "iter": 1
+            "result": 1460
         }
     }, {
         "name": "Integer Clothing Shop Problem II",
@@ -617,8 +612,7 @@
             "coat": 10,
             "pants": 24,
             "hat": 0,
-            "result": 1460,
-            "iter": 2
+            "result": 1460
         }
     }, {
         "name": "Shift Work Problem",
