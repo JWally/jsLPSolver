@@ -36,45 +36,46 @@ var Solver = function () {
      *                   (defaults to 1e-9)
      **************************************************************/
     function Tableau(precision) {
-        this.optimizationType = 'min'; // or 'max'
+            this.optimizationType = 'min'; // or 'max'
 
-        this.matrix = null;
-        this.width  = 0;
-        this.height = 0;
+            this.matrix = null;
+            this.width = 0;
+            this.height = 0;
 
-        this.nObjectiveVars = 0;
-        this.nSlackVars = 0;
+            this.nObjectiveVars = 0;
+            this.nSlackVars = 0;
 
-        this.feasbilityRowIndex = 0;
-        this.objectiveRowIndex = 1;
-        this.rhsColumn = 0;
+            this.feasbilityRowIndex = 0;
+            this.objectiveRowIndex = 1;
+            this.rhsColumn = 0;
 
-        this.variableIds = null;
+            this.variableIds = null;
 
-        this.integerIndexes = [];
+            this.integerIndexes = [];
 
-        // Solution attributes
-        this.feasible = true; // until proven guilty
-        this.solutionSet = {};
-        this.objectiveValue = 0;
+            // Solution attributes
+            this.feasible = true; // until proven guilty
+            this.solutionSet = {};
+            this.objectiveValue = 0;
 
-        this.basicIndexes    = null;
-        this.nonBasicIndexes = null;
+            this.basicIndexes = null;
+            this.nonBasicIndexes = null;
 
-        this.rows = null;
-        this.cols = null;
+            this.rows = null;
+            this.cols = null;
 
-        this.precision = precision || 1e-9;
-    }
-    //-------------------------------------------------------------------
-    //-------------------------------------------------------------------
-    Tableau.prototype.initialize = function (width, height, variableIds, nObjectiveVars, nSlackVars) {
+            this.precision = precision || 1e-9;
+        }
+        //-------------------------------------------------------------------
+        //-------------------------------------------------------------------
+    Tableau.prototype.initialize = function (width, height, variableIds,
+        nObjectiveVars, nSlackVars) {
         this.variableIds = variableIds;
 
         this.nObjectiveVars = nObjectiveVars;
-        this.nSlackVars     = nSlackVars;
+        this.nSlackVars = nSlackVars;
 
-        this.width  = width;
+        this.width = width;
         this.height = height;
 
         // BUILD AN EMPTY ARRAY OF THAT WIDTH
@@ -132,11 +133,11 @@ var Solver = function () {
     //-------------------------------------------------------------------
     //-------------------------------------------------------------------
     function Variable(index, value) {
-        this.index = index;
-        this.value = value;
-    }
-    //-------------------------------------------------------------------
-    //-------------------------------------------------------------------
+            this.index = index;
+            this.value = value;
+        }
+        //-------------------------------------------------------------------
+        //-------------------------------------------------------------------
     Tableau.prototype.getMostFractionalVar = function () {
         var biggestFraction = 1;
         var mostFractionalVarIndex = null;
@@ -160,7 +161,8 @@ var Solver = function () {
             }
         }
 
-        return new Variable(mostFractionalVarIndex, mostFractionalVarValue);
+        return new Variable(mostFractionalVarIndex,
+            mostFractionalVarValue);
     };
     //-------------------------------------------------------------------
     //-------------------------------------------------------------------
@@ -185,7 +187,8 @@ var Solver = function () {
         var value = this.matrix[this.objectiveRowIndex][this.rhsColumn];
         var roundedValue = Math.round(value);
         if (Math.abs(value - roundedValue) < this.precision) {
-            this.matrix[this.objectiveRowIndex][this.rhsColumn] = roundedValue;
+            this.matrix[this.objectiveRowIndex][this.rhsColumn] =
+                roundedValue;
         }
 
         this.objectiveValue = this.matrix[this.objectiveRowIndex][this.rhsColumn];
@@ -193,7 +196,7 @@ var Solver = function () {
     //-------------------------------------------------------------------
     //-------------------------------------------------------------------
     Tableau.prototype.compileSolution = function () {
-        var lastRow  = this.height - 1;
+        var lastRow = this.height - 1;
         for (var r = 2; r <= lastRow; r += 1) {
             var varIndex = this.basicIndexes[r];
             if (varIndex >= this.nObjectiveVars) {
@@ -212,8 +215,9 @@ var Solver = function () {
             }
         }
 
-        var opCoeff = (this.optimizationType === 'max') ? -1 : 1;
-        this.objectiveValue = opCoeff * this.matrix[this.objectiveRowIndex][this.rhsColumn];
+        var opCoeff = (this.optimizationType === "max") ? -1 : 1;
+        this.objectiveValue = opCoeff * this.matrix[this.objectiveRowIndex]
+            [this.rhsColumn];
     };
 
     //-------------------------------------------------------------------
@@ -221,17 +225,17 @@ var Solver = function () {
     //              used as phase1 of the simplex
     //
     //-------------------------------------------------------------------
-    Tableau.prototype.simplexLeavingFirst = function() {
-        var matrix     = this.matrix;
-        var rhsColumn  = this.rhsColumn;
+    Tableau.prototype.simplexLeavingFirst = function () {
+        var matrix = this.matrix;
+        var rhsColumn = this.rhsColumn;
         var lastColumn = this.width - 1;
-        var lastRow    = this.height - 1;
+        var lastRow = this.height - 1;
 
         var iterations = 0;
         while (true) {
             // Selecting leaving variable (feasibility condition):
             // Basic variable with most negative value
-            var leavingRow   = 0;
+            var leavingRow = 0;
             var leavingValue = 0;
             for (var r = 2; r <= lastRow; r++) {
                 var value = matrix[r][rhsColumn];
@@ -250,7 +254,7 @@ var Solver = function () {
 
             // Selecting entering variable
             var enteringColumn = 0;
-            var minQuotient    = Infinity;
+            var minQuotient = Infinity;
 
             var row = matrix[leavingRow];
             var rhsValue = row[rhsColumn];
@@ -262,7 +266,7 @@ var Solver = function () {
 
                 var quotient = rhsValue / colValue;
                 if (quotient >= 0 && minQuotient > quotient) {
-                    minQuotient    = quotient;
+                    minQuotient = quotient;
                     enteringColumn = c;
                 }
             }
@@ -284,11 +288,11 @@ var Solver = function () {
     //              used as phase2 of the simplex
     //
     //-------------------------------------------------------------------
-    Tableau.prototype.simplexEnteringFirst = function() {
-        var matrix     = this.matrix;
-        var rhsColumn  = this.rhsColumn;
+    Tableau.prototype.simplexEnteringFirst = function () {
+        var matrix = this.matrix;
+        var rhsColumn = this.rhsColumn;
         var lastColumn = this.width - 1;
-        var lastRow    = this.height - 1;
+        var lastRow = this.height - 1;
 
         var iterations = 0;
         while (true) {
@@ -296,11 +300,11 @@ var Solver = function () {
 
             // Selecting entering variable (optimality condition)
             var enteringColumn = 0;
-            var enteringValue  = 0;
+            var enteringValue = 0;
             for (var c = 1; c <= lastColumn; c++) {
                 var value = objectiveRow[c];
                 if (value > enteringValue) {
-                    enteringValue  = value;
+                    enteringValue = value;
                     enteringColumn = c;
                 }
             }
@@ -311,7 +315,7 @@ var Solver = function () {
             }
 
             // Selecting leaving variable
-            var leavingRow  = 0;
+            var leavingRow = 0;
             var minQuotient = Infinity;
 
             for (var r = 2; r <= lastRow; r++) {
@@ -319,14 +323,14 @@ var Solver = function () {
                 var colValue = matrix[r][enteringColumn];
                 if (rhsValue === 0 && colValue > 0) {
                     minQuotient = 0;
-                    leavingRow  = r;
+                    leavingRow = r;
                     break;
                 }
 
                 var quotient = rhsValue / colValue;
                 if (quotient > 0 && minQuotient > quotient) {
                     minQuotient = quotient;
-                    leavingRow  = r;
+                    leavingRow = r;
                 }
             }
 
@@ -346,23 +350,23 @@ var Solver = function () {
     //          on a given row, and column
     //
     //-------------------------------------------------------------------
-    Tableau.prototype.pivot = function(pivotRowIndex, pivotColumnIndex) {
-        var matrix     = this.matrix;
-        var quotient   = matrix[pivotRowIndex][pivotColumnIndex];
-        var lastRow    = this.height - 1;
+    Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex) {
+        var matrix = this.matrix;
+        var quotient = matrix[pivotRowIndex][pivotColumnIndex];
+        var lastRow = this.height - 1;
         var lastColumn = this.width - 1;
 
-        var leavingBasicIndex  = this.basicIndexes[pivotRowIndex];
+        var leavingBasicIndex = this.basicIndexes[pivotRowIndex];
         var enteringBasicIndex = this.nonBasicIndexes[pivotColumnIndex];
 
-        this.basicIndexes[pivotRowIndex]       = enteringBasicIndex;
+        this.basicIndexes[pivotRowIndex] = enteringBasicIndex;
         this.nonBasicIndexes[pivotColumnIndex] = leavingBasicIndex;
 
         this.rows[enteringBasicIndex] = pivotRowIndex;
-        this.rows[leavingBasicIndex]  = -1;
+        this.rows[leavingBasicIndex] = -1;
 
         this.cols[enteringBasicIndex] = -1;
-        this.cols[leavingBasicIndex]  = pivotColumnIndex;
+        this.cols[leavingBasicIndex] = pivotColumnIndex;
 
         // Divide everything in the target row by the element @
         // the target column
@@ -393,7 +397,7 @@ var Solver = function () {
                         var v0 = pivotRow[c];
                         if (v0 !== 0) {
                             var v1 = row[c] - coefficient * v0;
-                            
+
                             // Optimising out variable coefficients that are virtually 0
                             if (-1e-9 < v1 && v1 < 1e-9) {
                                 row[c] = 0;
@@ -419,25 +423,25 @@ var Solver = function () {
             return;
         }
 
-        console.log('****', message, '****');
-        console.log('this.variableIds', this.variableIds, this.width);
-        console.log('this.basicIndexes', this.basicIndexes);
-        console.log('this.nonBasicIndexes', this.nonBasicIndexes);
-        console.log('this.rows', this.rows);
-        console.log('this.cols', this.cols);
-        var varNameRowString = '';
-        var spacePerColumn = [' '];
+        console.log("****", message, "****");
+        console.log("this.variableIds", this.variableIds, this.width);
+        console.log("this.basicIndexes", this.basicIndexes);
+        console.log("this.nonBasicIndexes", this.nonBasicIndexes);
+        console.log("this.rows", this.rows);
+        console.log("this.cols", this.cols);
+        var varNameRowString = "";
+        var spacePerColumn = [" "];
         for (var c = 1; c < this.width; c += 1) {
             var varName = this.variableIds[this.nonBasicIndexes[c]];
             var varNameLength = varName.length;
             var nSpaces = Math.abs(varNameLength - 5);
-            var valueSpace = ' ';
-            var nameSpace = ' ';
+            var valueSpace = " ";
+            var nameSpace = " ";
             for (var s = 0; s < nSpaces; s += 1) {
                 if (varNameLength > 5) {
-                    valueSpace += ' ';
+                    valueSpace += " ";
                 } else {
-                    nameSpace += ' ';
+                    nameSpace += " ";
                 }
             }
             spacePerColumn[c] = valueSpace;
@@ -450,52 +454,59 @@ var Solver = function () {
 
         // Displaying feasibility row
         var firstRow = this.matrix[this.feasbilityRowIndex];
-        var firstRowString = '';
+        var firstRowString = "";
         for (var j = 1; j < this.width; j += 1) {
-            signSpace = firstRow[j] < 0 ? '' : ' ';
-            firstRowString += signSpace + spacePerColumn[j] + firstRow[j].toFixed(2)
+            signSpace = firstRow[j] < 0 ? "" : " ";
+            firstRowString += signSpace + spacePerColumn[j] + firstRow[
+                j].toFixed(2)
         }
-        signSpace = firstRow[0] < 0 ? '' : ' ';
-        firstRowString += signSpace + spacePerColumn[0] + firstRow[0].toFixed(2);
-        console.log(firstRowString + ' W');
+        signSpace = firstRow[0] < 0 ? "" : " ";
+        firstRowString += signSpace + spacePerColumn[0] + firstRow[0].toFixed(
+            2);
+        console.log(firstRowString + " W");
 
         // Displaying objective
         var firstRow = this.matrix[this.objectiveRowIndex];
-        var firstRowString = '';
+        var firstRowString = "";
         for (var j = 1; j < this.width; j += 1) {
-            signSpace = firstRow[j] < 0 ? '' : ' ';
-            firstRowString += signSpace + spacePerColumn[j] + firstRow[j].toFixed(2)
+            signSpace = firstRow[j] < 0 ? "" : " ";
+            firstRowString += signSpace + spacePerColumn[j] + firstRow[
+                j].toFixed(2)
         }
-        signSpace = firstRow[0] < 0 ? '' : ' ';
-        firstRowString += signSpace + spacePerColumn[0] + firstRow[0].toFixed(2);
-        console.log(firstRowString + ' Z');
+        signSpace = firstRow[0] < 0 ? "" : " ";
+        firstRowString += signSpace + spacePerColumn[0] + firstRow[0].toFixed(
+            2);
+        console.log(firstRowString + " Z");
 
         // Then the basic variable rows
         for (var r = 2; r < this.height; r += 1) {
             var row = this.matrix[r];
-            var rowString = '';
+            var rowString = "";
             for (var c = 1; c < this.width; c += 1) {
-                signSpace = row[c] < 0 ? '' : ' ';
-                rowString += signSpace + spacePerColumn[c] + row[c].toFixed(2)
+                signSpace = row[c] < 0 ? "" : " ";
+                rowString += signSpace + spacePerColumn[c] + row[c].toFixed(
+                    2)
             }
-            signSpace = row[0] < 0 ? '' : ' ';
-            rowString += signSpace + spacePerColumn[0] + row[0].toFixed(2);
-            console.log(rowString + ' ' + this.variableIds[this.basicIndexes[r]]);
+            signSpace = row[0] < 0 ? "" : " ";
+            rowString += signSpace + spacePerColumn[0] + row[0].toFixed(
+                2);
+            console.log(rowString + " " + this.variableIds[this.basicIndexes[
+                r]]);
         }
-        console.log('');
+        console.log("");
     };
     //-------------------------------------------------------------------
     //-------------------------------------------------------------------
     Tableau.prototype.parseModel = function (model) {
         this.optimizationType = model.opType;
-        var opCoeff = (this.optimizationType === 'max') ? -1 : 1;
+        var opCoeff = (this.optimizationType === "max") ? -1 : 1;
 
-        var variables   = model.variables;
+        var variables = model.variables;
         var constraints = model.constraints;
 
         var integerVarIds = model.ints || {};
 
-        var variableIds   = Object.keys(variables);   //Array with name of each Variable
+        var variableIds = Object.keys(variables); //Array with name of each Variable
         var constraintIds = Object.keys(constraints); //Array with name of each constraint type
 
         var nObjectiveVars = variableIds.length;
@@ -533,17 +544,18 @@ var Solver = function () {
         var articialColumn = slackColumn + nSlackVars;
         var width = 1 + nObjectiveVars + nSlackVars - height + 2;
 
-        this.initialize(width, height, variableIds, nObjectiveVars, nSlackVars);
+        this.initialize(width, height, variableIds, nObjectiveVars,
+            nSlackVars);
 
         var matrix = this.matrix;
 
         var rows = this.rows;
         var cols = this.cols;
 
-        var basicIndexes    = this.basicIndexes;
+        var basicIndexes = this.basicIndexes;
         var nonBasicIndexes = this.nonBasicIndexes;
 
-        var objectiveCoefficients  = matrix[this.objectiveRowIndex];
+        var objectiveCoefficients = matrix[this.objectiveRowIndex];
         var feasbilityCoefficients = matrix[this.feasbilityRowIndex];
 
         var integerIndexes = this.integerIndexes;
@@ -556,12 +568,12 @@ var Solver = function () {
             //if a min or max exists in the variables;
             //add it to the constraints
             if (variables[variableId].max !== undefined) {
-                constraints[variableId]     = constraints[variableId] || {};
+                constraints[variableId] = constraints[variableId] || {};
                 constraints[variableId].max = variables[variableId].max;
             }
 
             if (variables[variableId].min !== undefined) {
-                constraints[variableId]     = constraints[variableId] || {};
+                constraints[variableId] = constraints[variableId] || {};
                 constraints[variableId].min = variables[variableId].min;
             }
 
@@ -597,7 +609,7 @@ var Solver = function () {
 
                 basicIndexes[ci] = slackColumn + si - 1;
 
-                variableIds[slackColumn + si - 1] = 's' + si;
+                variableIds[slackColumn + si - 1] = "s" + si;
 
                 ci += 1; // One more constraint
                 si += 1; // One more slack varaible
@@ -611,7 +623,7 @@ var Solver = function () {
                 rows[slackColumn + si - 1] = ci;
                 cols[slackColumn + si - 1] = -1;
 
-                variableIds[slackColumn + si - 1] = 's' + si;
+                variableIds[slackColumn + si - 1] = "s" + si;
 
                 ci += 1;
                 si += 1;
@@ -630,7 +642,8 @@ var Solver = function () {
 
                 var coefficient = variableConstraints[constraintName];
                 if (constraintName === objectiveName) {
-                    objectiveCoefficients[column] = - opCoeff * coefficient;
+                    objectiveCoefficients[column] = -opCoeff *
+                        coefficient;
                 } else {
                     var constraint = constraints[constraintName];
                     if (constraint !== undefined) {
@@ -639,7 +652,8 @@ var Solver = function () {
                         if (constraint.min !== undefined) {
                             row = constraint.min_loc;
                             matrix[row][column] = -coefficient;
-                            feasbilityCoefficients[column] += coefficient;
+                            feasbilityCoefficients[column] +=
+                                coefficient;
                         }
 
                         if (constraint.max !== undefined) {
@@ -660,7 +674,7 @@ var Solver = function () {
         }
         this.matrix.push(row);
 
-        if (cut.type === 'min') {
+        if (cut.type === "min") {
             // Min constraint
             row[this.rhsColumn] = -cut.value;
             row[this.cols[cut.varIndex]] = -1;
@@ -676,7 +690,7 @@ var Solver = function () {
         this.rows.push(rowIndex);
         this.cols.push(-1);
 
-        this.variableIds[newVarIndex] = 's' + this.nSlackVars;
+        this.variableIds[newVarIndex] = "s" + this.nSlackVars;
         this.nSlackVars += 1;
 
         this.height += 1;
@@ -686,19 +700,19 @@ var Solver = function () {
     Tableau.prototype.copy = function () {
         var copy = new Tableau(this.precision);
 
-        copy.width  = this.width;
+        copy.width = this.width;
         copy.height = this.height;
 
         copy.nVars = this.nVars;
 
         copy.nObjectiveVars = this.nObjectiveVars;
-        copy.nSlackVars     = this.nSlackVars;
+        copy.nSlackVars = this.nSlackVars;
 
         // Making a shallow copy of integer variable indexes
         copy.integerIndexes = this.integerIndexes;
 
         // All the other arrays are deep copied
-        copy.basicIndexes    = this.basicIndexes.slice();
+        copy.basicIndexes = this.basicIndexes.slice();
         copy.nonBasicIndexes = this.nonBasicIndexes.slice();
 
         copy.rows = this.rows.slice();
@@ -738,12 +752,12 @@ var Solver = function () {
     //-------------------------------------------------------------------
     //-------------------------------------------------------------------
     function Cut(type, varIndex, value) {
-        this.type = type;
-        this.varIndex = varIndex;
-        this.value = value;
-    }
-    //-------------------------------------------------------------------
-    //-------------------------------------------------------------------
+            this.type = type;
+            this.varIndex = varIndex;
+            this.value = value;
+        }
+        //-------------------------------------------------------------------
+        //-------------------------------------------------------------------
     function Branch(tableau, lowerBound, nbNonIntegralValues, cuts) {
         this.tableau = tableau;
         this.lowerBound = lowerBound;
@@ -789,7 +803,8 @@ var Solver = function () {
 
         // 1.) Load a model into the queue
         var nbIntegerVariables = originalTableau.getNumberOfIntegerVariables();
-        var branch = new Branch(originalTableau, -Infinity, nbIntegerVariables, []);
+        var branch = new Branch(originalTableau, -Infinity,
+            nbIntegerVariables, []);
         branches.push(branch);
 
         // If all branches have been exhausted terminate the loop
@@ -872,18 +887,22 @@ var Solver = function () {
                 // Find out where we want to split the solution
                 var variable = solution.getMostFractionalVar();
 
-                var cutHigh = new Cut('min', variable.index, Math.ceil(variable.value));
-                var cutLow  = new Cut('max', variable.index, Math.floor(variable.value));
+                var cutHigh = new Cut("min", variable.index, Math.ceil(
+                    variable.value));
+                var cutLow = new Cut("max", variable.index, Math.floor(
+                    variable.value));
 
                 var cutsHigh = cuts.slice();
-                var cutsLow  = cuts.slice();
+                var cutsLow = cuts.slice();
 
                 cutsHigh.push(cutHigh);
                 cutsLow.push(cutLow);
 
                 var lowerBound = solution.objectiveValue;
-                branches.push(new Branch(tableau, lowerBound, nbNonIntegralValues, cutsHigh));
-                branches.push(new Branch(tableau, lowerBound, nbNonIntegralValues, cutsLow));
+                branches.push(new Branch(tableau, lowerBound,
+                    nbNonIntegralValues, cutsHigh));
+                branches.push(new Branch(tableau, lowerBound,
+                    nbNonIntegralValues, cutsLow));
 
                 // Sorting branches
                 // Branches with the most promising lower bounds
@@ -929,9 +948,9 @@ var Solver = function () {
         if (full) {
             return tableau;
         } else {
-        // Otherwise; give the user the bare
-        // minimum of info necessary to carry on
-        
+            // Otherwise; give the user the bare
+            // minimum of info necessary to carry on
+
             var store = {};
 
             // 1.) Add in feasibility to store;
@@ -991,7 +1010,7 @@ var Solver = function () {
         }
 
         constraints = Object.keys(model.constraints); //Array with name of each constraint type
-        variables   = Object.keys(model.variables);   //Array with name of each Variable
+        variables = Object.keys(model.variables); //Array with name of each Variable
 
         // FIGURE OUT HEIGHT
         for (x in model.constraints) {
