@@ -1,4 +1,216 @@
-[{
+[ {
+        "name": "Chevalier 1",
+        "optimize": "objective",
+        "opType": "min",
+        "constraints": {
+            "c0": {
+                "min": 50
+            },
+            "c1": {
+                "min": 8
+            },
+            "c2": {
+                "min": 7
+            },
+            "c3": {
+                "min": 6.5
+            },
+            "c4": {
+                "min": 200
+            }
+        },
+        "variables": {
+            "x1": {
+                "c0": 100,
+                "c1": 4,
+                "c2": 2,
+                "c3": 1,
+                "c4": 25,
+                "objective": 2
+            },
+            "x2": {
+                "c0": 1,
+                "c1": 1,
+                "c2": 1,
+                "c3": 1,
+                "c4": 40,
+                "objective": 1
+            }
+        },
+        "expects": {
+            "feasible": true,
+            "x1": 0.5,
+            "x2": 6,
+            "result": 7
+        }
+    }, {
+        "name": "Artificial",
+        "optimize": "objective",
+        "background": "https://en.wikibooks.org/wiki/Operations_Research/The_Simplex_Method",
+        "opType": "min",
+        "constraints": {
+            "c1": {
+                "equal": 3
+            },
+            "c2": {
+                "min": 6
+            },
+            "c3": {
+                "max": 4
+            }
+        },
+        "variables": {
+            "x1": {
+                "c1": 3,
+                "c2": 4,
+                "c3": 1,
+                "objective": 4
+            },
+            "x2": {
+                "c1": 1,
+                "c2": 3,
+                "c3": 2,
+                "objective": 1
+            }
+        },
+        "expects": {
+            "feasible": true,
+            "x1": 0.4,
+            "x2": 1.8,
+            "result": 3.4
+        }
+    }, {
+        "name": "Wiki 1",
+        "optimize": "objective",
+        "background": "https://en.wikipedia.org/wiki/Simplex_algorithm",
+        "opType": "max",
+        "constraints": {
+            "c1": {
+                "equal": 10
+            },
+            "c2": {
+                "equal": 15
+            }
+        },
+        "variables": {
+            "x": {
+                "c1": 3,
+                "c2": 2,
+                "objective": 2
+            },
+            "y": {
+                "c1": 2,
+                "c2": 5,
+                "objective": 3
+            },
+            "z": {
+                "c1": 1,
+                "c2": 3,
+                "objective": 4
+            }
+        },
+        "expects": {
+            "feasible": true,
+            "x": 2.142857142857143,
+            "y": 0,
+            "z": 3.5714285714285716,
+            "result": 18.571428571428573
+        }
+    }, {
+        "name": "Degenerate Min",
+        "optimize": "objective",
+        "background": "http://arxiv.org/pdf/1304.2107.pdf",
+        "opType": "min",
+        "constraints": {
+            "c1": {
+                "max": 4
+            },
+            "c2": {
+                "min": 6
+            },
+            "c3": {
+                "min": 8
+            },
+            "c4": {
+                "min": 18
+            },
+            "c5": {
+                "min": 32
+            }
+        },
+        "variables": {
+            "x1": {
+                "c1": 1,
+                "c2": 0,
+                "c3": 1,
+                "c4": 3,
+                "c5": 5,
+                "objective": 3
+            },
+            "x2": {
+                "c1": 0,
+                "c2": 1,
+                "c3": 1,
+                "c4": 2,
+                "c5": 4,
+                "objective": 5
+            }
+        },
+        "expects": {
+            "feasible": true,
+            "x1": 2,
+            "x2": 6,
+            "result": 36
+        }
+    }, {
+        "name": "Degenerate Max",
+        "optimize": "objective",
+        "background": "http://arxiv.org/pdf/1304.2107.pdf",
+        "opType": "max",
+        "constraints": {
+            "c1": {
+                "max": 4
+            },
+            "c2": {
+                "min": 6
+            },
+            "c3": {
+                "min": 18
+            },
+            "c4": {
+                "min": 8
+            },
+            "c5": {
+                "min": 32
+            }
+        },
+        "variables": {
+            "x1": {
+                "c1": 1,
+                "c2": 0,
+                "c3": 3,
+                "c4": 1,
+                "c5": 5,
+                "c6": 4,
+                "objective": 3
+            },
+            "x2": {
+                "c1": 0,
+                "c2": 1,
+                "c3": 2,
+                "c4": 1,
+                "c5": 4,
+                "c6": -1,
+                "objective": 5
+            }
+        },
+        "expects": {
+            "feasible": true,
+            "x1": 4,
+            "x2": 12,
+            "result": 72
+        }
+    }, {
         "name": "Coffee Problem",
         "optimize": "profit",
         "opType": "max",
@@ -26,8 +238,8 @@
         },
         "expects": {
             "feasible": true,
-            "Yusip": 269.99999999999994,
-            "Exotic": 260.00000000000006,
+            "Yusip": 267,
+            "Exotic": 260,
             "result": 1985
         }
     }, {
@@ -190,38 +402,6 @@
             "result": 96
         }
     }, {
-        "name": "Wood Shop Problem II",
-        "optimize": "profit",
-        "opType": "max",
-        "constraints": {
-            "wood": {
-                "max": 300
-            },
-            "labor": {
-                "max": 110
-            }
-        },
-        "variables": {
-            "table": {
-                "wood": 30,
-                "labor": 5,
-                "profit": 6,
-                "table": 1
-            },
-            "chair": {
-                "wood": 20,
-                "labor": 10,
-                "profit": 8,
-                "chair": 1
-            }
-        },
-        "expects": {
-            "feasible": true,
-            "table": 4,
-            "chair": 9,
-            "result": 96
-        }
-    }, {
         "name": "Integer Wood Problem",
         "optimize": "profit",
         "opType": "max",
@@ -274,9 +454,8 @@
             "cost": {
                 "max": 300
             },
-            "yank": {
-                "max": 0,
-                "min": 0
+            "yankees": {
+                "equal": 0
             }
         },
         "variables": {
@@ -285,16 +464,14 @@
                 "plane": 1,
                 "person": 8,
                 "cost": 5,
-                "yank": -2,
-                "brit": 1
+                "yankees": -2
             },
             "yank": {
                 "capacity": 30000,
                 "plane": 1,
                 "person": 16,
                 "cost": 9,
-                "brit": -1,
-                "yank": 1
+                "yankees": 1
             }
         },
         "expects": {
@@ -302,6 +479,96 @@
             "brit": 12.8,
             "yank": 25.6,
             "result": 1024000
+        }
+    }, {
+        "name": "Integer Berlin Air Lift Problem",
+        "optimize": "capacity",
+        "opType": "max",
+        "constraints": {
+            "plane": {
+                "max": 44
+            },
+            "person": {
+                "max": 512
+            },
+            "cost": {
+                "max": 300
+            },
+            "yankees": {
+                "equal": 0
+            }
+        },
+        "variables": {
+            "brit": {
+                "capacity": 20000,
+                "plane": 1,
+                "person": 8,
+                "cost": 5,
+                "yankees": -2
+            },
+            "yank": {
+                "capacity": 30000,
+                "plane": 1,
+                "person": 16,
+                "cost": 9,
+                "yankees": 1
+            }
+        },
+        "ints": {
+            "brit": 1,
+            "yank": 1
+        },
+        "expects": {
+            "feasible": true,
+            "brit": 12,
+            "yank": 24,
+            "result": 960000
+        }
+    }, {
+        "name": "Infeasible Berlin Air Lift Problem",
+        "optimize": "capacity",
+        "opType": "max",
+        "constraints": {
+            "plane": {
+                "max": 44
+            },
+            "person": {
+                "max": 512
+            },
+            "cost": {
+                "max": 300
+            },
+            "yankees": {
+                "equal": 0
+            },
+            "brit": {
+                "min": 13
+            },
+            "yank": {
+                "max": 25
+            }
+        },
+        "variables": {
+            "brit": {
+                "capacity": 20000,
+                "plane": 1,
+                "person": 8,
+                "cost": 5,
+                "yankees": -2
+            },
+            "yank": {
+                "capacity": 30000,
+                "plane": 1,
+                "person": 16,
+                "cost": 9,
+                "yankees": 1
+            }
+        },
+        "expects": {
+            "feasible": true,
+            "brit": 12,
+            "yank": 24,
+            "result": 960000
         }
     }, {
         "name": "Integer Wood Shop Problem",
@@ -2342,100 +2609,76 @@
             },
 
             "Norway demand": {
-                "max": 100,
-                "min": 100
+                "equal": 100
             },
             "UK demand": {
-                "max": 600,
-                "min": 600
+                "equal": 600
             },
             "Germany demand": {
-                "max": 700,
-                "min": 700
+                "equal": 700
             },
             "France demand": {
-                "max": 650,
-                "min": 650
+                "equal": 650
             },
             "Belarus demand": {
-                "max": 100,
-                "min": 100
+                "equal": 100
             },
             "Ukraine demand": {
-                "max": 400,
-                "min": 400
+                "equal": 400
             },
             "Belgium demand": {
-                "max": 60,
-                "min": 60
+                "equal": 60
             },
             "Luxemburg demand": {
-                "max": 50,
-                "min": 50
+                "equal": 50
             },
             "Italy demand": {
-                "max": 600,
-                "min": 600
+                "equal": 600
             },
             "Greece demand": {
-                "max": 300,
-                "min": 300
+                "equal": 300
             },
             "Spain demand": {
-                "max": 500,
-                "min": 500
+                "equal": 500
             },
             "Portugal demand": {
-                "max": 200,
-                "min": 200
+                "equal": 200
             },
             "Sweden demand": {
-                "max": 200,
-                "min": 200
+                "equal": 200
             },
             "Russia demand": {
-                "max": 400,
-                "min": 400
+                "equal": 400
             },
             "Switzerland demand": {
-                "max": 200,
-                "min": 200
+                "equal": 200
             },
             "Ireland demand": {
-                "max": 350,
-                "min": 350
+                "equal": 350
             },
             "Austria demand": {
-                "max": 300,
-                "min": 300
+                "equal": 300
             },
             "Slovakia demand": {
-                "max": 340,
-                "min": 340
+                "equal": 340
             },
             "Denmark demand": {
-                "max": 230,
-                "min": 230
+                "equal": 230
             },
             "Algeria demand": {
-                "max": 300,
-                "min": 300
+                "equal": 300
             },
             "Morrocco demand": {
-                "max": 250,
-                "min": 250
+                "equal": 250
             },
             "Egypt demand": {
-                "max": 440,
-                "min": 440
+                "equal": 440
             },
             "Turkey demand": {
-                "max": 600,
-                "min": 600
+                "equal": 600
             },
             "Albania demand": {
-                "max": 130,
-                "min": 130
+                "equal": 130
             }
 
         },
@@ -8254,64 +8497,49 @@
                 "max": 473
             },
             "Norway port call": {
-                "max": 0,
-                "min": 0
+                "equal": 0
             },
             "Mexico port call": {
-                "max": 0,
-                "min": 0
+                "equal": 0
             },
             "United States port call": {
-                "max": 0,
-                "min": 0
+                "equal": 0
             },
             "Russia port call": {
-                "max": 0,
-                "min": 0
+                "equal": 0
             },
             "Australia port call": {
-                "max": 0,
-                "min": 0
+                "equal": 0
             },
             "Nigeria port call": {
-                "max": 0,
-                "min": 0
+                "equal": 0
             },
             "Indonesia port call": {
-                "max": 0,
-                "min": 0
+                "equal": 0
             },
             "China port call": {
-                "max": 0,
-                "min": 0
+                "equal": 0
             },
             "Japan port call": {
-                "max": 0,
-                "min": 0
+                "equal": 0
             },
             "UK port call": {
-                "max": 0,
-                "min": 0
+                "equal": 0
             },
             "France port call": {
-                "max": 0,
-                "min": 0
+                "equal": 0
             },
             "Germany port call": {
-                "max": 0,
-                "min": 0
+                "equal": 0
             },
             "Spain port call": {
-                "max": 0,
-                "min": 0
+                "equal": 0
             },
             "Italy port call": {
-                "max": 0,
-                "min": 0
+                "equal": 0
             },
             "Denmark port call": {
-                "max": 0,
-                "min": 0
+                "equal": 0
             },
             "Norway supply": {
                 "max": 1200
@@ -8401,128 +8629,97 @@
                 "max": 100000000
             },
             "Norway demand": {
-                "max": 100,
-                "min": 100
+                "equal": 100
             },
             "UK demand": {
-                "max": 600,
-                "min": 600
+                "equal": 600
             },
             "Germany demand": {
-                "max": 700,
-                "min": 700
+                "equal": 700
             },
             "France demand": {
-                "max": 650,
-                "min": 650
+                "equal": 650
             },
             "Belarus demand": {
-                "max": 100,
-                "min": 100
+                "equal": 100
             },
             "Ukraine demand": {
-                "max": 400,
-                "min": 400
+                "equal": 400
             },
             "Belgium demand": {
-                "max": 60,
-                "min": 60
+                "equal": 60
             },
             "Luxemburg demand": {
-                "max": 50,
-                "min": 50
+                "equal": 50
             },
             "Italy demand": {
-                "max": 600,
-                "min": 600
+                "equal": 600
             },
             "Greece demand": {
-                "max": 300,
-                "min": 300
+                "equal": 300
             },
             "Spain demand": {
-                "max": 500,
-                "min": 500
+                "equal": 500
             },
             "Portugal demand": {
-                "max": 200,
-                "min": 200
+                "equal": 200
             },
             "Sweden demand": {
-                "max": 200,
-                "min": 200
+                "equal": 200
             },
             "Russia demand": {
-                "max": 400,
-                "min": 400
+                "equal": 400
             },
             "Switzerland demand": {
-                "max": 200,
-                "min": 200
+                "equal": 200
             },
             "Ireland demand": {
-                "max": 350,
-                "min": 350
+                "equal": 350
             },
             "Austria demand": {
-                "max": 300,
-                "min": 300
+                "equal": 300
             },
             "Slovakia demand": {
-                "max": 340,
-                "min": 340
+                "equal": 340
             },
             "Denmark demand": {
-                "max": 230,
-                "min": 230
+                "equal": 230
             },
             "Algeria demand": {
-                "max": 300,
-                "min": 300
+                "equal": 300
             },
             "Morrocco demand": {
-                "max": 250,
-                "min": 250
+                "equal": 250
             },
             "Egypt demand": {
-                "max": 440,
-                "min": 440
+                "equal": 440
             },
             "Turkey demand": {
-                "max": 600,
-                "min": 600
+                "equal": 600
             },
             "Albania demand": {
-                "max": 130,
-                "min": 130
+                "equal": 130
             },
             "Mexico demand": {
-                "max": 0,
-                "min": 0
+                "equal": 0
             },
             "United States demand": {
-                "max": 0,
-                "min": 0
+                "equal": 0
             },
             "Australia demand": {
-                "max": 0,
-                "min": 0
+                "equal": 0
             },
             "Nigeria demand": {
-                "max": 0,
-                "min": 0
+                "equal": 0
             },
             "Indonesia demand": {
-                "max": 0,
-                "min": 0
+                "equal": 0
             },
             "China demand": {
-                "max": 100,
-                "min": 100
+                "equal": 100
             },
             "Japan demand": {
-                "max": 100,
-                "min": 100
+                "equal": 100
             }
         },
         "variables": {
@@ -14411,60 +14608,67 @@
             "Cargo Ship: Denmark -> Indonesia": 1
         },
         "expects": {
-            "feasible": 1,
-            "Norway -> Belarus": 100,
-            "Norway -> Ukraine": 395,
-            "Norway -> Denmark": 158,
-            "Norway -> Morrocco": 250,
-            "Norway -> Albania": 106,
-            "UK -> Germany": 396,
-            "UK -> Greece": 150,
-            "Germany -> Italy": 214,
-            "Germany -> Greece": 39,
-            "Germany -> Russia": 347,
-            "Germany -> Austria": 300,
-            "France -> UK": 116,
-            "France -> Germany": 171,
-            "France -> Switzerland": 40,
-            "France -> Slovakia": 73,
-            "Belarus -> Norway": 100,
-            "Belarus -> Germany": 122,
-            "Belarus -> Ireland": 80,
-            "Belarus -> Algeria": 300,
-            "Ukraine -> Switzerland": 160,
-            "Belgium -> Russia": 53,
-            "Belgium -> Turkey": 57,
-            "Luxemburg -> Egypt": 110,
-            "Italy -> Turkey": 265,
-            "Italy -> Albania": 24,
-            "Greece -> Germany": 11,
+            "feasible": true,
+            "Cargo Ship: Japan -> Indonesia": 4,
+            "Italy -> Egypt": 313,
+            "UK -> Turkey": 118,
+            "UK -> Albania": 130,
+            "Russia -> Ireland": 36,
+            "Austria -> Ireland": 29,
+            "Greece -> Algeria": 300,
+            "Egypt -> Austria": 242,
+            "Germany -> Turkey": 351,
+            "France -> Portugal": 200,
+            "Cargo Ship: China -> Indonesia": 4,
+            "UK -> Switzerland": 200,
+            "Algeria -> Belarus": 100,
+            "Belarus -> Greece": 129,
+            "Slovakia -> Belgium": 60,
+            "Switzerland -> Slovakia": 100,
+            "Cargo Ship: Norway -> France": 11,
+            "Cargo Ship: Russia -> UK": 24,
+            "Cargo Ship: Indonesia -> Japan": 4,
+            "Cargo Ship: Denmark -> Russia": 9,
+            "Cargo Ship: UK -> Russia": 24,
+            "Cargo Ship: Mexico -> France": 15,
+            "Italy -> Russia": 290,
+            "Cargo Ship: France -> Mexico": 15,
+            "Ukraine -> Luxemburg": 50,
+            "Cargo Ship: Spain -> Mexico": 20,
+            "Cargo Ship: Italy -> Mexico": 24,
+            "Cargo Ship: Norway -> Germany": 28,
+            "Ukraine -> Denmark": 5,
+            "Belarus -> Morrocco": 250,
+            "Austria -> Ukraine": 271,
+            "Luxemburg -> Russia": 110,
+            "Germany -> Norway": 100,
+            "Portugal -> Slovakia": 140,
+            "Cargo Ship: Nigeria -> Denmark": 0,
+            "Italy -> Ireland": 285,
+            "Albania -> Ukraine": 129,
+            "Cargo Ship: France -> Russia": 0,
+            "Cargo Ship: Mexico -> Spain": 20,
+            "Cargo Ship: Russia -> Denmark": 9,
             "Greece -> Sweden": 200,
-            "Greece -> Ireland": 270,
-            "Spain -> UK": 100,
-            "Portugal -> France": 10,
-            "Portugal -> Egypt": 130,
-            "Sweden -> Belgium": 60,
-            "Sweden -> Greece": 108,
-            "Sweden -> Slovakia": 146,
-            "Sweden -> Turkey": 234,
-            "Russia -> France": 412,
-            "Russia -> Spain": 310,
-            "Switzerland -> Luxemburg": 50,
-            "Ireland -> Portugal": 200,
-            "Ireland -> Denmark": 72,
-            "Ireland -> Turkey": 44,
-            "Austria -> UK": 144,
-            "Austria -> Spain": 156,
-            "Slovakia -> Egypt": 200,
-            "Denmark -> France": 228,
-            "Denmark -> Italy": 194,
-            "Algeria -> Spain": 34,
-            "Morrocco -> UK": 240,
-            "Egypt -> Slovakia": 121,
-            "Turkey -> Ukraine": 5,
-            "Turkey -> Italy": 192,
-            "Turkey -> Greece": 3,
-            "result": 25433
+            "Cargo Ship: Australia -> Japan": 0,
+            "Cargo Ship: Mexico -> Italy": 24,
+            "Cargo Ship: France -> Norway": 11,
+            "Italy -> Austria": 58,
+            "Germany -> Slovakia": 100,
+            "Cargo Ship: Norway -> Denmark": 0,
+            "Sweden -> Greece": 171,
+            "Norway -> Egypt": 30,
+            "Slovakia -> Turkey": 131,
+            "Cargo Ship: Russia -> China": 0,
+            "Cargo Ship: Mexico -> Denmark": 0,
+            "Cargo Ship: Indonesia -> China": 4,
+            "Cargo Ship: Germany -> Norway": 28,
+            "Cargo Ship: United States -> Denmark": 0,
+            "Cargo Ship: UK -> Nigeria": 0,
+            "Spain -> Egypt": 97,
+            "Cargo Ship: Norway -> UK": 0,
+            "Cargo Ship: Norway -> Spain": 0,
+            "result": 20631
         }
     }
 
