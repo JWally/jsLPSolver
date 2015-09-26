@@ -18,11 +18,6 @@
 var Solver = function () {
 
     "use strict";
-    //-------------------------------------------------------------------
-    // I'm putting an object inside of this function to house
-    // all private methods
-    //-------------------------------------------------------------------
-    var obj = {};
 
     /*************************************************************
      * Class: Tableau
@@ -36,38 +31,39 @@ var Solver = function () {
      *                   (defaults to 1e-9)
      **************************************************************/
     function Tableau(precision) {
-            this.optimizationType = "min"; // or 'max'
+        this.optimizationType = "min"; // or 'max'
 
-            this.matrix = null;
-            this.width = 0;
-            this.height = 0;
+        this.matrix = null;
+        this.width = 0;
+        this.height = 0;
 
-            this.nObjectiveVars = 0;
-            this.nSlackVars = 0;
+        this.nObjectiveVars = 0;
+        this.nSlackVars = 0;
 
-            this.feasbilityRowIndex = 0;
-            this.objectiveRowIndex = 1;
-            this.rhsColumn = 0;
+        this.feasbilityRowIndex = 0;
+        this.objectiveRowIndex = 1;
+        this.rhsColumn = 0;
 
-            this.variableIds = null;
+        this.variableIds = null;
 
-            this.integerIndexes = [];
+        this.integerIndexes = [];
 
-            // Solution attributes
-            this.feasible = true; // until proven guilty
-            this.solutionSet = {};
-            this.objectiveValue = 0;
+        // Solution attributes
+        this.feasible = true; // until proven guilty
+        this.solutionSet = {};
+        this.objectiveValue = 0;
 
-            this.basicIndexes = null;
-            this.nonBasicIndexes = null;
+        this.basicIndexes = null;
+        this.nonBasicIndexes = null;
 
-            this.rows = null;
-            this.cols = null;
+        this.rows = null;
+        this.cols = null;
 
-            this.precision = precision || 1e-9;
-        }
-        //-------------------------------------------------------------------
-        //-------------------------------------------------------------------
+        this.precision = precision || 1e-9;
+    }
+
+    //-------------------------------------------------------------------
+    //-------------------------------------------------------------------
     Tableau.prototype.initialize = function (width, height, variableIds,
         nObjectiveVars, nSlackVars) {
         this.variableIds = variableIds;
@@ -106,6 +102,7 @@ var Solver = function () {
             this.cols[v] = -1;
         }
     };
+
     //-------------------------------------------------------------------
     //-------------------------------------------------------------------
     Tableau.prototype.getNumberOfNonIntegralValue = function () {
@@ -125,19 +122,22 @@ var Solver = function () {
         }
         return nbNonIntegralValues;
     };
+
     //-------------------------------------------------------------------
     //-------------------------------------------------------------------
     Tableau.prototype.getNumberOfIntegerVariables = function () {
         return this.integerIndexes.length;
     };
+
     //-------------------------------------------------------------------
     //-------------------------------------------------------------------
     function Variable(index, value) {
-            this.index = index;
-            this.value = value;
-        }
-        //-------------------------------------------------------------------
-        //-------------------------------------------------------------------
+        this.index = index;
+        this.value = value;
+    }
+
+    //-------------------------------------------------------------------
+    //-------------------------------------------------------------------
     Tableau.prototype.getMostFractionalVar = function () {
         var biggestFraction = 1;
         var mostFractionalVarIndex = null;
@@ -164,6 +164,7 @@ var Solver = function () {
         return new Variable(mostFractionalVarIndex,
             mostFractionalVarValue);
     };
+
     //-------------------------------------------------------------------
     //-------------------------------------------------------------------
     Tableau.prototype.setFeasibility = function () {
@@ -180,6 +181,7 @@ var Solver = function () {
         this.feasible = true;
         return true;
     };
+
     //-------------------------------------------------------------------
     //-------------------------------------------------------------------
     Tableau.prototype.finalize = function () {
@@ -193,6 +195,7 @@ var Solver = function () {
 
         this.objectiveValue = this.matrix[this.objectiveRowIndex][this.rhsColumn];
     };
+
     //-------------------------------------------------------------------
     //-------------------------------------------------------------------
     Tableau.prototype.compileSolution = function () {
@@ -221,11 +224,13 @@ var Solver = function () {
     };
 
     //-------------------------------------------------------------------
-    // Description: Apply simplex to obtain a BFS
-    //              used as phase1 of the simplex
+    // Description: Convert a non standard form tableau
+    //              to a standard form tableau by eliminating
+    //              all negative values in the Right Hand Side (RHS)
+    //              This results in a Basic Feasible Solution (BFS)
     //
     //-------------------------------------------------------------------
-    Tableau.prototype.simplexLeavingFirst = function () {
+    Tableau.prototype.phase1 = function() {
         var matrix = this.matrix;
         var rhsColumn = this.rhsColumn;
         var lastColumn = this.width - 1;
@@ -288,7 +293,7 @@ var Solver = function () {
     //              used as phase2 of the simplex
     //
     //-------------------------------------------------------------------
-    Tableau.prototype.simplexEnteringFirst = function () {
+    Tableau.prototype.phase2 = function() {
         var matrix = this.matrix;
         var rhsColumn = this.rhsColumn;
         var lastColumn = this.width - 1;
@@ -382,6 +387,7 @@ var Solver = function () {
         // set the value in the pivot column = 0 by
         // multiplying the value of all elements in the objective
         // row by ... yuck... just look below; better explanation later
+        var precision = this.precision;
         for (var r = 0; r <= lastRow; r++) {
             var row = matrix[r];
             if (r === pivotRowIndex) {
@@ -399,7 +405,7 @@ var Solver = function () {
                             var v1 = row[c] - coefficient * v0;
 
                             // Optimising out variable coefficients that are virtually 0
-                            if (-1e-9 < v1 && v1 < 1e-9) {
+                            if (-precision < v1 && v1 < precision) {
                                 row[c] = 0;
                             } else {
                                 row[c] = v1;
@@ -735,6 +741,8 @@ var Solver = function () {
 
         copy.nVars = this.nVars;
 
+        copy.optimizationType = this.optimizationType;
+
         copy.nObjectiveVars = this.nObjectiveVars;
         copy.nSlackVars = this.nSlackVars;
 
@@ -762,37 +770,59 @@ var Solver = function () {
     };
 
     //-------------------------------------------------------------------
-    // Function: Solve
+    // Function: solve
     // Detail: Main function, linear programming solver
     //-------------------------------------------------------------------
     Tableau.prototype.solve = function () {
         // Execute Phase 1 to obtain a Basic Feasible Solution (BFS)
-        this.simplexLeavingFirst();
+        this.phase1();
 
         // Execute Phase 2
         if (this.feasible === true) {
             // Running simplex on Initial Basic Feasible Solution (BFS)
             // N.B current solution is feasible
-            this.simplexEnteringFirst();
+            this.phase2();
         }
 
         this.finalize();
         return this;
     };
+
     //-------------------------------------------------------------------
     //-------------------------------------------------------------------
     function Cut(type, varIndex, value) {
-            this.type = type;
-            this.varIndex = varIndex;
-            this.value = value;
-        }
-        //-------------------------------------------------------------------
-        //-------------------------------------------------------------------
+        this.type = type;
+        this.varIndex = varIndex;
+        this.value = value;
+    }
+
+    //-------------------------------------------------------------------
+    //-------------------------------------------------------------------
     function Branch(tableau, lowerBound, nbNonIntegralValues, cuts) {
         this.tableau = tableau;
         this.lowerBound = lowerBound;
         this.nbNonIntegralValues = nbNonIntegralValues;
         this.cuts = cuts;
+    }
+
+    //-------------------------------------------------------------------
+    // Branch sorting strategies
+    //-------------------------------------------------------------------
+    function sortByLowerBound(a, b) {
+        return b.lowerBound - a.lowerBound;
+    }
+
+    function sortByNbIntegralValues(a, b) {
+        return b.nbNonIntegralValues - a.nbNonIntegralValues;
+    }
+
+    function sortAdvanced(a, b) {
+        var cmp = b.nbNonIntegralValues - a.nbNonIntegralValues;
+        if (cmp === 0) {
+            return b.lowerBound - a.lowerBound;
+        } else {
+            return cmp;
+        }
     }
 
     //-------------------------------------------------------------------
@@ -811,23 +841,6 @@ var Solver = function () {
             objectiveValue: 1e99,
             feasible: false
         };
-
-        function sortByLowerBound(a, b) {
-            return b.lowerBound - a.lowerBound;
-        }
-
-        function sortByNbIntegralValues(a, b) {
-            return b.nbNonIntegralValues - a.nbNonIntegralValues;
-        }
-
-        function sortAdvanced(a, b) {
-            var cmp = b.nbNonIntegralValues - a.nbNonIntegralValues;
-            if (cmp === 0) {
-                return b.lowerBound - a.lowerBound;
-            } else {
-                return cmp;
-            }
-        }
 
         // And here...we...go!
 
