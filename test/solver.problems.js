@@ -5,6 +5,10 @@
 var assert = require("assert"),
     problems = require("./problems.json");
 
+problems = problems.concat(require("./all_problems.json"));
+
+problems.splice(-1,1);
+
 // For testing, Function to sort an object
 function sortObject(theObj) {
     var finalObj = {};
@@ -28,8 +32,11 @@ describe("The Solve method takes a problem and solves it",
                     var a = d.expects,
                         b = solver.Solve(d);
 
-                    assert.deepEqual(sortObject(a), sortObject(
-                        b));
+                    assert.deepEqual(
+                        sortObject(b),
+                        sortObject(a)
+
+                    );
                 });
         });
     });
