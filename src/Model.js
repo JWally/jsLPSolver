@@ -1,8 +1,8 @@
-var Constraint = require('./Constraint.js');
-var primitives = require('./primitives.js');
-var Variable = primitives.Variable;
-var Numeral = primitives.Numeral;
-var Term = primitives.Term;
+var expressions = require('./expressions.js');
+var Constraint = expressions.Constraint;
+var Variable = expressions.Variable;
+var Numeral = expressions.Numeral;
+var Term = expressions.Term;
 
 
 /*************************************************************
@@ -23,14 +23,47 @@ function Model() {
     this.nConstraints = 0;
     this.nVariables = 0;
 
-    this.optimizationType = 'min'; // or 'max'
+    this.minimize = true;
 }
 module.exports = Model;
 
+Model.prototype.minimize = function () {
+    this.minimize = true;
+    return this;
+};
+
+Model.prototype.maximize = function () {
+    this.minimize = false;
+    return this;
+};
+
 Model.prototype.addConstraint = function (constraint) {
+    // TODO: make sure that the constraint does not belong do another model
+    // and make 
     this.constraints.push(constraint);
     this.nConstraints += 1;
     return this;
+};
+
+Model.prototype.smallerThan = function (rhs) {
+    var constraint = new Constraint(rhs, true, false);
+    this.constraints.push(constraint);
+    this.nConstraints += 1;
+    return constraint;
+};
+
+Model.prototype.greaterThan = function (rhs) {
+    var constraint = new Constraint(rhs, false, true);
+    this.constraints.push(constraint);
+    this.nConstraints += 1;
+    return constraint;
+};
+
+Model.prototype.equal = function (rhs) {
+    var constraint = new Constraint(rhs, true, true);
+    this.constraints.push(constraint);
+    this.nConstraints += 1;
+    return constraint;
 };
 
 Model.prototype.createVariable = function (name, objectiveCoefficient, isInteger) {
@@ -42,25 +75,26 @@ Model.prototype.createVariable = function (name, objectiveCoefficient, isInteger
         this.integerVarIndexes.push(varIndex);
     }
 
-    this.objectiveCosts[varIndex] = objectiveCoefficient;
+    this.objectiveCosts[varIndex] = Numeral(objectiveCoefficient);
     this.nVariables += 1;
 
     return variable;
 };
 
 Model.prototype.setObjectiveCoefficient = function (variable, objectiveCoefficient) {
-    this.objectiveCosts[variable.index] = objectiveCoefficient;
+    this.objectiveCosts[variable.index] = Numeral(objectiveCoefficient);
     return this;
 };
 
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
 Model.prototype.loadJson = function (jsonModel) {
-    this.optimizationType = jsonModel.opType;
+    this.minimize = (jsonModel.opType === 'min');
 
     var variables = jsonModel.variables;
     var constraints = jsonModel.constraints;
 
+    var constraintsEqualIndexes = {};
     var constraintsMinIndexes = {};
     var constraintsMaxIndexes = {};
 
@@ -73,23 +107,20 @@ Model.prototype.loadJson = function (jsonModel) {
 
         var equal = constraint.equal;
         if (equal !== undefined) {
-            constraintsMinIndexes[constraintId] = this.constraints.length;
-            this.constraints.push(new Constraint('min', equal));
-
-            constraintsMaxIndexes[constraintId] = this.constraints.length;
-            this.constraints.push(new Constraint('max', equal));
+            constraintsEqualIndexes[constraintId] = this.constraints.length;
+            this.constraints.push(new Constraint(equal, true, true));
         }
 
         var min = constraint.min;
         if (min !== undefined) {
             constraintsMinIndexes[constraintId] = this.constraints.length;
-            this.constraints.push(new Constraint('min', min));
+            this.constraints.push(new Constraint(min, false, true));
         }
 
         var max = constraint.max;
         if (max !== undefined) {
             constraintsMaxIndexes[constraintId] = this.constraints.length;
-            this.constraints.push(new Constraint('max', max));
+            this.constraints.push(new Constraint(max, true, false));
         }
     }
 
@@ -115,11 +146,16 @@ Model.prototype.loadJson = function (jsonModel) {
         for (c = 0; c < constraintNames.length; c += 1) {
             var constraintName = constraintNames[c];
 
-            var coefficient = variableConstraints[constraintName];
+            var coefficient = Numeral(variableConstraints[constraintName]);
             if (constraintName === objectiveName) {
-                this.objectiveCosts[v] = new Numeral(coefficient);
+                this.objectiveCosts[v] = coefficient;
             } else {
                 var term = new Term(coefficient, variable);
+
+                var constraintEqualIndex = constraintsEqualIndexes[constraintName];
+                if (constraintEqualIndex !== undefined) {
+                    this.constraints[constraintEqualIndex].addTerm(term);
+                }
 
                 var constraintMinIndex = constraintsMinIndexes[constraintName];
                 if (constraintMinIndex !== undefined) {

@@ -44,6 +44,7 @@ function MILP(tableau) {
 
     // Running solver a first time to obtain an initial solution
     tableau.solve();
+
     // Saving initial solution
     tableau.save();
 
@@ -80,7 +81,7 @@ function MILP(tableau) {
         // Adding cut constraints
         var cuts = branch.cuts;
 // console.log('Applying cuts', cuts);
-        tableau.resetWithCutConstraints(cuts);
+        tableau.addCutConstraints(cuts);
 
         // Solving using initial relaxed solution
         // and addition cut constraints

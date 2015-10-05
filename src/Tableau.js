@@ -1,5 +1,3 @@
-var primitives = require('./primitives.js');
-var Variable = primitives.Variable;
 
 /*************************************************************
  * Class: Tableau
@@ -76,23 +74,16 @@ Tableau.prototype.initialize = function (width, height, variableIds) {
 // Detail: Main function, linear programming solver
 //-------------------------------------------------------------------
 Tableau.prototype.solve = function () {
-// console.log('Before', this.density());
-// this.log('Before phase 1');
     // Execute Phase 1 to obtain a Basic Feasible Solution (BFS)
-// console.time('phase1')
     this.phase1();
-// console.timeEnd('phase1')
 
     // Execute Phase 2
     if (this.feasible === true) {
         // Running simplex on Initial Basic Feasible Solution (BFS)
         // N.B current solution is feasible
-// console.time('phase2')
         this.phase2();
-// console.timeEnd('phase2')
     }
-// this.log('Final Tableau');
-// console.log('After', this.density());
+
     return this;
 };
 
@@ -124,8 +115,8 @@ Tableau.prototype.compileSolution = function () {
         }
     }
 
-    var evaluation = (this.model.optimizationType === 'max') ?
-        -this.evaluation : this.evaluation;
+    var evaluation = (this.model.minimize === true) ?
+        this.evaluation : -this.evaluation;
 
     return new Solution(evaluation, solutionSet, this.feasible);
 };
@@ -287,7 +278,6 @@ Tableau.prototype.phase1 = function() {
         if (leavingRowIndex === 0) {
             // Feasible, champagne!
             this.feasible = true;
-            // console.log('Feasible!!', iterations);
             return iterations;
         }
 
@@ -295,7 +285,6 @@ Tableau.prototype.phase1 = function() {
         var enteringColumn = 0;
         var minQuotient = Infinity;
 
-// console.log('Row', leavingRowIndex);
         var leavingRow = matrix[leavingRowIndex];
         for (var c = 1; c <= lastColumn; c++) {
             var colValue = leavingRow[c];
@@ -303,7 +292,6 @@ Tableau.prototype.phase1 = function() {
                 continue;
             }
 
-// console.log('Considering', c);
             var quotient = rhsValue / colValue;
             if (quotient >= 0 && minQuotient > quotient) {
                 minQuotient = quotient;
@@ -314,14 +302,10 @@ Tableau.prototype.phase1 = function() {
         if (minQuotient === Infinity) {
             // Not feasible
             this.feasible = false;
-            // console.log('Infeasible!!', iterations);
             return iterations;
         }
-// console.log('obtained', minQuotient, rhsValue);
+
         this.pivot(leavingRowIndex, enteringColumn);
-// console.log('leavingRowIndex', leavingRowIndex);
-// console.log('enteringColumn', enteringColumn);
-// this.log('After pivoting');
         iterations += 1;
     }
 };
@@ -357,7 +341,6 @@ Tableau.prototype.phase2 = function() {
         // If nothing is greater than 0; we're done with phase 2.
         if (enteringColumn === 0) {
             this.setEvaluation();
-            // console.log('Bounded!!', iterations);
             return;
         }
 
@@ -406,9 +389,6 @@ var nonZeroColumns = [];
 Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex) {
     var matrix = this.matrix;
     var quotient = matrix[pivotRowIndex][pivotColumnIndex];
-// console.log('pivotRowIndex', pivotRowIndex);
-// console.log('pivotColumnIndex', pivotColumnIndex);
-// console.log('quotient is', quotient);
 
     var lastRow = this.height - 1;
     var lastColumn = this.width - 1;
@@ -458,12 +438,7 @@ Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex) {
                     var v0 = pivotRow[c];
                     if (v0 !== 0) {
                         var v1 = row[c] - coefficient * v0;
-                        // Optimising out variable coefficients that are virtually 0
-                        // if (-precision < v1 && v1 < precision) {
-                        //     row[c] = 0;
-                        // } else {
-                            row[c] = v1;
-                        // }
+                        row[c] = v1;
                     }
                 }
 
@@ -473,7 +448,6 @@ Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex) {
     }
 
     pivotRow[pivotColumnIndex] = 1 / quotient;
-// this.log('After Pivot');
 };
 
 Tableau.prototype.copy = function () {
@@ -566,35 +540,26 @@ Tableau.prototype.restore = function () {
         this.rows[v] = savedRows[v];
         this.cols[v] = savedCols[v];
     }
-
-    // this.log('After Restoring');
 };
 
-Tableau.prototype.resetWithCutConstraints = function (cutConstraints) {
+Tableau.prototype.addCutConstraints = function (cutConstraints) {
     var nCutConstraints = cutConstraints.length;
 
     var heightWithoutCuts = this.model.nConstraints + 1;
     var heightWithCuts = heightWithoutCuts + nCutConstraints;
 
+    // Adding rows to hold cut constraints
     for (var h = heightWithoutCuts; h < heightWithCuts; h += 1) {
         if (this.matrix[h] === undefined) {
             this.matrix[h] = this.matrix[h - 1].slice();
         }
     }
 
-    var nRows = heightWithCuts;
-    var nCols = this.width;
-
-    // Resetting the matrix, excluding the cut constraints
-    // this._resetMatrix();
-
     // Adding cut constraints
     this.height = heightWithCuts;
 
     var nObjectiveVars = this.model.nVariables;
     this.nVars = this.model.nConstraints + nObjectiveVars + nCutConstraints;
-// console.log('Adding cuts', cutConstraints, heightWithoutCuts);
-// console.log('this.rows', this.rows);
     for (var i = 0; i < nCutConstraints; i += 1) {
         var cut = cutConstraints[i];
 
@@ -619,14 +584,11 @@ Tableau.prototype.resetWithCutConstraints = function (cutConstraints) {
             // Variable is basic
             var varRow = this.matrix[varRowIndex];
             var varValue = varRow[this.rhsColumn];
-// console.log('var value', varRowIndex, varValue);
             constraintRow[this.rhsColumn] = sign * (cut.value - varValue);
             for (var c = 1; c <= nObjectiveVars; c += 1) {
                 constraintRow[c] = - sign * varRow[c];
             }
         }
-
-        // console.log('Adding cut constraint', constraintRow);
 
         // Creating slack variable
         var slackVarIndex = nObjectiveVars + r - 1;
@@ -635,7 +597,6 @@ Tableau.prototype.resetWithCutConstraints = function (cutConstraints) {
         this.rows[slackVarIndex] = r;
         this.cols[slackVarIndex] = -1;
     }
-// console.log('Matrix after adding cuts', this.matrix);
 };
 
 Tableau.prototype.density = function () {
@@ -669,17 +630,19 @@ Tableau.prototype._resetMatrix = function () {
         var t, term;
         var terms = constraint.terms;
         var nTerms = terms.length;
-        if (constraint.type === 'max') {
+        if (constraint.isUpperBound) {
             for (t = 0; t < nTerms; t += 1) {
                 term = terms[t];
-                row[term.variable.index + 1] = term.coefficient;
+                row[term.variable.index + 1] = term.coefficient.value;
             }
 
             row[0] = constraint.rhs.value;
-        } else {
+        }
+
+        if (constraint.isLowerBound) {
             for (t = 0; t < nTerms; t += 1) {
                 term = terms[t];
-                row[term.variable.index + 1] = -term.coefficient;
+                row[term.variable.index + 1] = -term.coefficient.value;
             }
 
             row[0] = -constraint.rhs.value;
@@ -693,13 +656,13 @@ Tableau.prototype._resetMatrix = function () {
     var objectiveCosts = this.model.objectiveCosts;
 
     var objectiveRow = this.matrix[0];
-    if (this.model.optimizationType === "max") {
+    if (this.model.minimize === true) {
         for (v = 0; v < nObjectiveVars; v += 1) {
-            objectiveRow[v + 1] = objectiveCosts[v].value;
+            objectiveRow[v + 1] = -objectiveCosts[v].value;
         }
     } else {
         for (v = 0; v < nObjectiveVars; v += 1) {
-            objectiveRow[v + 1] = -objectiveCosts[v].value;
+            objectiveRow[v + 1] = objectiveCosts[v].value;
         }
     }
 
@@ -718,7 +681,6 @@ Tableau.prototype._resetMatrix = function () {
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
 Tableau.prototype.generateFromModel = function (model) {
-// console.time('generateFromModel')
     this.model = model;
 
     var width = model.nVariables + 1;
@@ -726,8 +688,6 @@ Tableau.prototype.generateFromModel = function (model) {
 
     this.initialize(width, height, model.variableIds);
     this._resetMatrix();
-
-// console.timeEnd('generateFromModel')
 };
 
 
