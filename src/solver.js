@@ -1,3 +1,11 @@
+/*global describe*/
+/*global require*/
+/*global module*/
+/*global it*/
+/*global console*/
+/*global process*/
+
+
 //-------------------------------------------------------------------
 // SimplexJS
 // https://github.com/
@@ -10,12 +18,6 @@
 var Tableau = require("./Tableau");
 var Model = require("./Model");
 var MILP = require("./MILP");
-
-/*global describe*/
-/*global require*/
-/*global it*/
-/*global console*/
-/*global process*/
 
 // Place everything under the Solver Name Space
 var Solver = function () {

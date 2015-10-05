@@ -1,3 +1,10 @@
+/*global describe*/
+/*global require*/
+/*global module*/
+/*global it*/
+/*global console*/
+/*global process*/
+
 var expressions = require("./expressions.js");
 var Constraint = expressions.Constraint;
 var Variable = expressions.Variable;

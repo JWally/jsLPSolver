@@ -1,3 +1,10 @@
+/*global describe*/
+/*global require*/
+/*global module*/
+/*global it*/
+/*global console*/
+/*global process*/
+
 /*************************************************************
  * Class: Tableau
  * Description: Simplex tableau, holding a the tableau matrix
