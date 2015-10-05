@@ -58,19 +58,6 @@ function MILP(tableau) {
         // Get a model from the queue
         branch = branches.pop();
 
-// console.log('REMAINING', branches.length);
-// var evals = '';
-// for (var b = 0; b < branches.length; b += 1) {
-// evals += ' ' + branches[b].relaxedEvaluation;
-// }
-// console.log('Branches', evals);
-// var evals = '';
-// for (var b = 0; b < branches.length; b += 1) {
-// // evals += ' ' + branches[b].nbNonIntegralValues;
-// evals += ' ' + branches[b].relaxedEvaluation;
-// }
-// console.log('Branches', evals);
-// console.log('Best So Far', bestEvaluation);
         if (branch.relaxedEvaluation >= bestEvaluation) {
             continue;
         }
@@ -80,7 +67,6 @@ function MILP(tableau) {
 
         // Adding cut constraints
         var cuts = branch.cuts;
-// console.log('Applying cuts', cuts);
         tableau.addCutConstraints(cuts);
 
         // Solving using initial relaxed solution
@@ -90,9 +76,6 @@ function MILP(tableau) {
         // Keep Track of how many cycles
         // we've gone through
         iterations++;
-// if (iterations === 2) {
-//     return solution;
-// }
 
         if (tableau.feasible === false) {
             continue;
@@ -159,12 +142,8 @@ function MILP(tableau) {
 
             // Find out where we want to split the solution
             // var variable = tableau.getMostFractionalVar();
-// var solution = tableau.compileSolution();
-// console.log('Result', solution.solutionSet);
             var variable = tableau.getFractionalVarWithLowestCost();
             var varIndex = variable.index;
-// console.log('variable', variable);
-// console.log('Evaluation', relaxedEvaluation);
 
             var cutsHigh = [];
             var cutsLow = [];
