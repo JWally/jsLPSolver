@@ -255,6 +255,7 @@ var Solver = function () {
 // if we're in node, offer a friendly exports
 // otherwise, Solver's going global
 /* jshint ignore:start */
+/*
 (function () {
     if (typeof module !== "undefined" && module.exports) {
         module.exports = new Solver();
@@ -264,4 +265,18 @@ var Solver = function () {
         });
     }
 })();
+*/
+(function(){
+    // If define exists; use it
+    if (typeof define === "function") {       
+        define([], function () {
+            return new Solver();
+        });
+    } else if(typeof window === "object"){
+        window.solver = new Solver();
+    } else {
+        module.exports =  new Solver();
+    }   
+})()
+
 /* jshint ignore:end */
