@@ -98,6 +98,8 @@ Model.prototype.setObjectiveCoefficient = function (variable,
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
 Model.prototype.loadJson = function (jsonModel) {
+    var variableId;
+
     this.minimize = (jsonModel.opType === "min");
 
     var variables = jsonModel.variables;
@@ -144,7 +146,7 @@ Model.prototype.loadJson = function (jsonModel) {
         var column = v + 1;
 
         // Creation of the variables
-        var variableId = this.variableIds[v];
+        variableId = this.variableIds[v];
         var variable = new Variable(variableId, v);
         this.variables[v] = variable;
 
