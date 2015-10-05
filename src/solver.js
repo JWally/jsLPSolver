@@ -7,9 +7,9 @@
 // Licensed under the MIT License.
 //-------------------------------------------------------------------
 
-var Tableau = require('./Tableau');
-var Model = require('./Model');
-var MILP = require('./MILP');
+var Tableau = require("./Tableau");
+var Model = require("./Model");
+var MILP = require("./MILP");
 
 /*global describe*/
 /*global require*/
@@ -39,10 +39,8 @@ var Solver = function () {
         }
 
         var tableau = new Tableau(precision);
-        // tableau.parseModel(model);
-
         if (model instanceof Model === false) {
-            model = new Model().loadJson(problem);
+            model = new Model().loadJson(model);
         }
         tableau.generateFromModel(model);
 

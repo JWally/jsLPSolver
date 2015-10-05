@@ -1,4 +1,3 @@
-
 /*************************************************************
  * Class: Tableau
  * Description: Simplex tableau, holding a the tableau matrix
@@ -254,7 +253,7 @@ Tableau.prototype.setEvaluation = function () {
 //              This results in a Basic Feasible Solution (BFS)
 //
 //-------------------------------------------------------------------
-Tableau.prototype.phase1 = function() {
+Tableau.prototype.phase1 = function () {
     var matrix = this.matrix;
     var rhsColumn = this.rhsColumn;
     var lastColumn = this.width - 1;
@@ -315,7 +314,7 @@ Tableau.prototype.phase1 = function() {
 //              used as phase2 of the simplex
 //
 //-------------------------------------------------------------------
-Tableau.prototype.phase2 = function() {
+Tableau.prototype.phase2 = function () {
     var matrix = this.matrix;
     var rhsColumn = this.rhsColumn;
     var lastColumn = this.width - 1;
@@ -490,7 +489,7 @@ Tableau.prototype.save = function () {
 
 Tableau.prototype.restore = function () {
     if (this.savedState === null) {
-        console.warn('[Tableau.restore] No saved state!');
+        console.warn("[Tableau.restore] No saved state!");
         return;
     }
 
@@ -560,6 +559,7 @@ Tableau.prototype.addCutConstraints = function (cutConstraints) {
 
     var nObjectiveVars = this.model.nVariables;
     this.nVars = this.model.nConstraints + nObjectiveVars + nCutConstraints;
+    var c;
     for (var i = 0; i < nCutConstraints; i += 1) {
         var cut = cutConstraints[i];
 
@@ -576,7 +576,7 @@ Tableau.prototype.addCutConstraints = function (cutConstraints) {
         if (varRowIndex === -1) {
             // Variable is non basic
             constraintRow[this.rhsColumn] = sign * cut.value;
-            for (var c = 1; c <= nObjectiveVars; c += 1) {
+            for (c = 1; c <= nObjectiveVars; c += 1) {
                 constraintRow[c] = 0;
             }
             constraintRow[this.cols[varIndex]] = sign;
@@ -585,8 +585,8 @@ Tableau.prototype.addCutConstraints = function (cutConstraints) {
             var varRow = this.matrix[varRowIndex];
             var varValue = varRow[this.rhsColumn];
             constraintRow[this.rhsColumn] = sign * (cut.value - varValue);
-            for (var c = 1; c <= nObjectiveVars; c += 1) {
-                constraintRow[c] = - sign * varRow[c];
+            for (c = 1; c <= nObjectiveVars; c += 1) {
+                constraintRow[c] = -sign * varRow[c];
             }
         }
 

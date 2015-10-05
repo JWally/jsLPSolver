@@ -152,7 +152,7 @@ function MILP(tableau) {
             for (var c = 0; c < nCuts; c += 1) {
                 var cut = cuts[c];
                 if (cut.varIndex === varIndex) {
-                    if (cut.type === 'min') {
+                    if (cut.type === "min") {
                         cutsLow.push(cut);
                     } else {
                         cutsHigh.push(cut);

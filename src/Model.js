@@ -1,4 +1,4 @@
-var expressions = require('./expressions.js');
+var expressions = require("./expressions.js");
 var Constraint = expressions.Constraint;
 var Variable = expressions.Variable;
 var Numeral = expressions.Numeral;
@@ -66,7 +66,8 @@ Model.prototype.equal = function (rhs) {
     return constraint;
 };
 
-Model.prototype.createVariable = function (name, objectiveCoefficient, isInteger) {
+Model.prototype.createVariable = function (name, objectiveCoefficient,
+    isInteger) {
     var varIndex = this.variables.length;
     var variable = new Variable(name, varIndex);
     this.variables.push(variable);
@@ -81,7 +82,8 @@ Model.prototype.createVariable = function (name, objectiveCoefficient, isInteger
     return variable;
 };
 
-Model.prototype.setObjectiveCoefficient = function (variable, objectiveCoefficient) {
+Model.prototype.setObjectiveCoefficient = function (variable,
+    objectiveCoefficient) {
     this.objectiveCosts[variable.index] = Numeral(objectiveCoefficient);
     return this;
 };
@@ -89,7 +91,7 @@ Model.prototype.setObjectiveCoefficient = function (variable, objectiveCoefficie
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
 Model.prototype.loadJson = function (jsonModel) {
-    this.minimize = (jsonModel.opType === 'min');
+    this.minimize = (jsonModel.opType === "min");
 
     var variables = jsonModel.variables;
     var constraints = jsonModel.constraints;
@@ -152,17 +154,20 @@ Model.prototype.loadJson = function (jsonModel) {
             } else {
                 var term = new Term(coefficient, variable);
 
-                var constraintEqualIndex = constraintsEqualIndexes[constraintName];
+                var constraintEqualIndex = constraintsEqualIndexes[
+                    constraintName];
                 if (constraintEqualIndex !== undefined) {
                     this.constraints[constraintEqualIndex].addTerm(term);
                 }
 
-                var constraintMinIndex = constraintsMinIndexes[constraintName];
+                var constraintMinIndex = constraintsMinIndexes[
+                    constraintName];
                 if (constraintMinIndex !== undefined) {
                     this.constraints[constraintMinIndex].addTerm(term);
                 }
 
-                var constraintMaxIndex = constraintsMaxIndexes[constraintName];
+                var constraintMaxIndex = constraintsMaxIndexes[
+                    constraintName];
                 if (constraintMaxIndex !== undefined) {
                     this.constraints[constraintMaxIndex].addTerm(term);
                 }

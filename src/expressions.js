@@ -1,4 +1,3 @@
-
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
 function Numeral(value) {
@@ -78,5 +77,3 @@ module.exports = {
 // var cst1 = model.smallerThan(-3).addTerm(Term(-1, var1)).addTerm(Term(-1, var2)).addTerm(Term( 2, var3));
 // var cst2 = model.smallerThan(-4).addTerm(Term(-4, var1)).addTerm(Term(-2, var2)).addTerm(Term( 1, var3));
 // var cst2 = model.smallerThan( 2).addTerm(Term( 1, var1)).addTerm(Term( 1, var2)).addTerm(Term(-4, var3));
-
-
