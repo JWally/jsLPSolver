@@ -1,35 +1,36 @@
 {
-    "name": "javascript-lp-solver",
-    "description": "Easy to use, JSON oriented Linear Programming and Mixed Int. Programming Solver",
-    "version": "0.3.0",
-    "private": false,
-    "authors": [
-        "Justin W. Wolcott"
-    ],
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/JWally/jsLPSolver"
-    },
-    "main": "./src/solver",
-    "devDependencies": {
-        "grunt": "*",
-        "grunt-contrib-jshint": "~0.9",
-        "grunt-mocha-test": "*",
-        "grunt-contrib-uglify": "*",
-        "grunt-jsbeautifier": "*",
-        "benchmark": "*"
-    },
-    "keywords": [
-        "Linear",
-        "Programming",
-        "Integer",
-        "Programming",
-        "Solver",
-        "Linear Programming",
-        "Linear Optimization",
-        "Simplex",
-        "Mixed Integer Optimization",
-        "Mixed Integer Programming"
-    ],
-    "license": "MIT"
+  "name": "javascript-lp-solver",
+  "description": "Easy to use, JSON oriented Linear Programming and Mixed Int. Programming Solver",
+  "version": "0.3.0",
+  "private": false,
+  "authors": [
+    "Justin W. Wolcott"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JWally/jsLPSolver"
+  },
+  "main": "./src/solver",
+  "devDependencies": {
+    "benchmark": "*",
+    "grunt": "*",
+    "grunt-browserify": "^4.0.1",
+    "grunt-contrib-jshint": "~0.9",
+    "grunt-contrib-uglify": "*",
+    "grunt-jsbeautifier": "*",
+    "grunt-mocha-test": "*"
+  },
+  "keywords": [
+    "Linear",
+    "Programming",
+    "Integer",
+    "Programming",
+    "Solver",
+    "Linear Programming",
+    "Linear Optimization",
+    "Simplex",
+    "Mixed Integer Optimization",
+    "Mixed Integer Programming"
+  ],
+  "license": "MIT"
 }
