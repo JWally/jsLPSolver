@@ -5,8 +5,6 @@
 var assert = require("assert"),
     problems = require("./problems.json");
 
-problems = problems.concat(require("./all_problems.json"));
-
 // Kick off the second "Monster" problem
 problems.splice(-1,1);
 
