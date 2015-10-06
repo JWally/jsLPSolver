@@ -27,7 +27,8 @@ function Model() {
 
     this.objectiveCosts = [];
 
-    this.nConstraints = 0;
+    this.nInequalities = 0;
+    this.nEqualities = 0;
     this.nVariables = 0;
 
     this.minimize = true;
@@ -44,32 +45,31 @@ Model.prototype.maximize = function () {
     return this;
 };
 
-Model.prototype.addConstraint = function (constraint) {
-    // TODO: make sure that the constraint does not belong do another model
-    // and make 
-    this.constraints.push(constraint);
-    this.nConstraints += 1;
-    return this;
-};
+// Model.prototype.addConstraint = function (constraint) {
+//     // TODO: make sure that the constraint does not belong do another model
+//     // and make 
+//     this.constraints.push(constraint);
+//     return this;
+// };
 
 Model.prototype.smallerThan = function (rhs) {
     var constraint = new Constraint(rhs, true, false);
     this.constraints.push(constraint);
-    this.nConstraints += 1;
+    this.nInequalities += 1;
     return constraint;
 };
 
 Model.prototype.greaterThan = function (rhs) {
     var constraint = new Constraint(rhs, false, true);
     this.constraints.push(constraint);
-    this.nConstraints += 1;
+    this.nInequalities += 1;
     return constraint;
 };
 
 Model.prototype.equal = function (rhs) {
     var constraint = new Constraint(rhs, true, true);
     this.constraints.push(constraint);
-    this.nConstraints += 1;
+    this.nEqualities += 1;
     return constraint;
 };
 
@@ -120,18 +120,21 @@ Model.prototype.loadJson = function (jsonModel) {
         if (equal !== undefined) {
             constraintsEqualIndexes[constraintId] = this.constraints.length;
             this.constraints.push(new Constraint(equal, true, true));
+            this.nEqualities += 1;
         }
 
         var min = constraint.min;
         if (min !== undefined) {
             constraintsMinIndexes[constraintId] = this.constraints.length;
             this.constraints.push(new Constraint(min, false, true));
+            this.nInequalities += 1;
         }
 
         var max = constraint.max;
         if (max !== undefined) {
             constraintsMaxIndexes[constraintId] = this.constraints.length;
             this.constraints.push(new Constraint(max, true, false));
+            this.nInequalities += 1;
         }
     }
 
@@ -188,15 +191,12 @@ Model.prototype.loadJson = function (jsonModel) {
     var integerVarIds = jsonModel.ints;
     if (integerVarIds !== undefined) {
         for (v = 0; v < this.nVariables; v += 1) {
-            variableId = this.variableIds[v];
-            if (integerVarIds[variableId] !== undefined) {
+            if (integerVarIds[this.variableIds[v]] !== undefined) {
                 this.integerVarIndexes.push(v);
             }
         }
     }
 
-    this.nConstraints = this.constraints.length;
     this.nVariable = this.variables.length;
-
     return this;
 };
