@@ -416,6 +416,7 @@ Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex) {
             nNonZeroColumns += 1;
         }
     }
+    pivotRow[pivotColumnIndex] = 1 / quotient;
 
 
     // for every row EXCEPT the pivot row,
@@ -445,8 +446,6 @@ Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex) {
             }
         }
     }
-
-    pivotRow[pivotColumnIndex] = 1 / quotient;
 };
 
 Tableau.prototype.copy = function () {
@@ -544,11 +543,11 @@ Tableau.prototype.restore = function () {
 Tableau.prototype.addCutConstraints = function (cutConstraints) {
     var nCutConstraints = cutConstraints.length;
 
-    var heightWithoutCuts = this.model.nConstraints + 1;
-    var heightWithCuts = heightWithoutCuts + nCutConstraints;
+    var height = 2 * this.model.nEqualities + this.model.nInequalities + 1;
+    var heightWithCuts = height + nCutConstraints;
 
     // Adding rows to hold cut constraints
-    for (var h = heightWithoutCuts; h < heightWithCuts; h += 1) {
+    for (var h = height; h < heightWithCuts; h += 1) {
         if (this.matrix[h] === undefined) {
             this.matrix[h] = this.matrix[h - 1].slice();
         }
@@ -564,7 +563,7 @@ Tableau.prototype.addCutConstraints = function (cutConstraints) {
         var cut = cutConstraints[i];
 
         // Constraint row index
-        var r = heightWithoutCuts + i;
+        var r = height + i;
 
         var sign = (cut.type === "min") ? -1 : 1;
 
@@ -622,15 +621,16 @@ Tableau.prototype._resetMatrix = function () {
     var nObjectiveVars = variableIds.length;
     var nConstraints = constraints.length;
 
+    var rowIndex = 1;
     for (var c = 0; c < nConstraints; c += 1) {
-        var rowIndex = c + 1;
         var constraint = constraints[c];
-        var row = this.matrix[rowIndex];
 
-        var t, term;
+        var row, t, term;
         var terms = constraint.terms;
         var nTerms = terms.length;
         if (constraint.isUpperBound) {
+            this.basicIndexes[rowIndex] = nObjectiveVars + rowIndex - 1;
+            row = this.matrix[rowIndex++];
             for (t = 0; t < nTerms; t += 1) {
                 term = terms[t];
                 row[term.variable.index + 1] = term.coefficient.value;
@@ -640,6 +640,8 @@ Tableau.prototype._resetMatrix = function () {
         }
 
         if (constraint.isLowerBound) {
+            this.basicIndexes[rowIndex] = nObjectiveVars + rowIndex - 1;
+            row = this.matrix[rowIndex++];
             for (t = 0; t < nTerms; t += 1) {
                 term = terms[t];
                 row[term.variable.index + 1] = -term.coefficient.value;
@@ -647,9 +649,6 @@ Tableau.prototype._resetMatrix = function () {
 
             row[0] = -constraint.rhs.value;
         }
-
-        var varIndex = nObjectiveVars + c;
-        this.basicIndexes[rowIndex] = varIndex;
     }
 
     var v;
@@ -684,7 +683,7 @@ Tableau.prototype.generateFromModel = function (model) {
     this.model = model;
 
     var width = model.nVariables + 1;
-    var height = model.nConstraints + 1;
+    var height = 2 * model.nEqualities + model.nInequalities + 1;
 
     this.initialize(width, height, model.variableIds);
     this._resetMatrix();
