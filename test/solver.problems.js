@@ -55,7 +55,5 @@ describe("The Solve method takes a problem and solves it",
                         sortObject(a,5)
                     );
                 });
-            }
-        );
-    }
-);
+        });
+    });

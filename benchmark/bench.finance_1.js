@@ -5,9 +5,12 @@
 /*global process*/
 
 
-var problems = require("../test/all_problems.json"),
+var problems = [],//.push(require("./test_suite/SPY_SPY_SPY_20150918.json")),
     fs = require("fs"),
     solver = require("../src/solver");
+    
+problems.push(require("./test_suite/SPY_SPY_SPY_20150918.json"))
+console.log(problems.length);
 
 
 console.log("------------------------");
@@ -48,12 +51,11 @@ for (var i = 0; i < problems.length; i++) {
 for( i = 0; i < problems.length; i++){
     j = problems[i];
     var date_0 = process.hrtime();
-    var d = solver.Solve(j);
+    var d = solver.Solve(j, 1e-8, true);
     var a = process.hrtime(date_0);
 
-    log[j.name].result = d.result;
+    log[j.name] = d;
     log[j.name].time =  a[0] + a[1] / 1e9;
-    log[j.name].iter = d.iter ? d.iter : undefined;
 
 }
 

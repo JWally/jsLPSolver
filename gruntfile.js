@@ -73,6 +73,6 @@ module.exports = function(grunt){
     grunt.loadNpmTasks("grunt-browserify");
     grunt.registerTask("default", ["jshint"]);
     grunt.registerTask("test", ["jshint","mochaTest"]);
-    grunt.registerTask("speed", function(){require("./benchmark/solver.play");});
+    grunt.registerTask("speed", function(){require("./benchmark/bench.test_suite");});
     grunt.registerTask("prod", ["jshint","browserify"])
 }
