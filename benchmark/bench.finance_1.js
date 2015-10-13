@@ -24,7 +24,6 @@ for (var i = 0; i < problems.length; i++) {
 
     var k = 0,
         j = problems[i];
-        // delete j.ints;
 
 
         log[j.name] = {};
