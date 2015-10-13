@@ -5,43 +5,54 @@
 /*global console*/
 /*global process*/
 
+var Tableau = require("./Tableau.js");
+var MILP = require("./MILP.js");
 var expressions = require("./expressions.js");
 var Constraint = expressions.Constraint;
+var Equality = expressions.Equality;
 var Variable = expressions.Variable;
-var Numeral = expressions.Numeral;
-var Term = expressions.Term;
 
+var Term = expressions.Term;
 
 /*************************************************************
  * Class: Model
- * Description: Holds a linear optimisation problem model
+ * Description: Holds the model of a linear optimisation problem
  **************************************************************/
-function Model() {
+function Model(precision, name) {
+    this.tableau = new Tableau(precision);
+
+    this.name = name;
+
     this.variables = [];
 
     this.variableIds = [];
 
-    this.integerVarIndexes = [];
+    this.integerVariables = [];
+
+    this.unrestrictedVariables = {};
 
     this.constraints = [];
 
-    this.objectiveCosts = [];
+    this.nConstraints = 0;
 
-    this.nInequalities = 0;
-    this.nEqualities = 0;
     this.nVariables = 0;
 
-    this.minimize = true;
+    this.isMinimization = true;
+
+    // TODO: this.availableIndexes = [];
+    this.lastElementIndex = 0;
+
+    this.tableauInitialized = false;
 }
 module.exports = Model;
 
 Model.prototype.minimize = function () {
-    this.minimize = true;
+    this.isMinimization = true;
     return this;
 };
 
 Model.prototype.maximize = function () {
-    this.minimize = false;
+    this.isMinimization = false;
     return this;
 };
 
@@ -52,151 +63,241 @@ Model.prototype.maximize = function () {
 //     return this;
 // };
 
-Model.prototype.smallerThan = function (rhs) {
-    var constraint = new Constraint(rhs, true, false);
+Model.prototype._addConstraint = function (constraint) {
     this.constraints.push(constraint);
-    this.nInequalities += 1;
+    this.nConstraints += 1;
+    this.lastElementIndex += 1;
+    if (this.tableauInitialized === true) {
+        this.tableau.addConstraint(constraint);
+    }
+};
+
+Model.prototype.smallerThan = function (rhs) {
+    var constraint = new Constraint(rhs, true, this.lastElementIndex, this);
+    this._addConstraint(constraint);
     return constraint;
 };
 
 Model.prototype.greaterThan = function (rhs) {
-    var constraint = new Constraint(rhs, false, true);
-    this.constraints.push(constraint);
-    this.nInequalities += 1;
+    var constraint = new Constraint(rhs, false, this.lastElementIndex, this);
+    this._addConstraint(constraint);
     return constraint;
 };
 
 Model.prototype.equal = function (rhs) {
-    var constraint = new Constraint(rhs, true, true);
-    this.constraints.push(constraint);
-    this.nEqualities += 1;
-    return constraint;
+    var constraintUpper = new Constraint(rhs, true, this.lastElementIndex, this);
+    this._addConstraint(constraintUpper);
+
+    var constraintLower = new Constraint(rhs, false, this.lastElementIndex, this);
+    this._addConstraint(constraintLower);
+
+    return new Equality(constraintUpper, constraintLower);
 };
 
-Model.prototype.createVariable = function (name, objectiveCoefficient,
-    isInteger) {
+Model.prototype.addVariable = function (cost, id, isInteger, isUnrestricted) {
+    // TODO: difficulty undetermined
+    // add support for variables that can be negative
+    // how: may be by allowing negative pivots? <- should be easy enough
     var varIndex = this.variables.length;
-    var variable = new Variable(name, varIndex);
+    var variable = new Variable(id, cost, this.lastElementIndex);
     this.variables.push(variable);
+    this.variableIds[this.lastElementIndex] = id;
 
     if (isInteger) {
-        this.integerVarIndexes.push(varIndex);
+        this.integerVariables.push(variable);
     }
 
-    this.objectiveCosts[varIndex] = Numeral(objectiveCoefficient);
+    if (isUnrestricted) {
+        this.unrestrictedVariables[variable.index] = true;
+    }
+
     this.nVariables += 1;
+    this.lastElementIndex += 1;
+
+    if (this.tableauInitialized === true) {
+        this.tableau.addVariable(variable, cost);
+    }
 
     return variable;
 };
 
-Model.prototype.setObjectiveCoefficient = function (variable,
-    objectiveCoefficient) {
-    this.objectiveCosts[variable.index] = Numeral(objectiveCoefficient);
+//-------------------------------------------------------------------
+// For dynamic model modification
+//-------------------------------------------------------------------
+Model.prototype.removeConstraint = function (constraint) {
+    var idx = this.constraints.indexOf(constraint);
+    if (idx === -1) {
+        console.warn("[Model.removeConstraint] Constraint not present in model");
+        return;
+    }
+
+    if (this.tableauInitialized === true) {
+        if (constraint instanceof Equality === true) {
+            this.tableau.removeConstraint(constraint.upperBound);
+            this.tableau.removeConstraint(constraint.lowerBound);
+        } else {
+            this.tableau.removeConstraint(constraint);
+        }
+    }
+
+    this.constraints.splice(idx, 1);
+    this.nConstraints -= 1;
+    return this;
+};
+
+Model.prototype.removeVariable = function (variable) {
+    // TODO ? remove variable term from every constraint?
+    // How: every variable should reference the constraints it appears in
+    var idx = this.variables.indexOf(variable);
+    if (idx === -1) {
+        console.warn("[Model.removeVariable] Variable not present in model");
+        return;
+    }
+
+    if (this.tableauInitialized === true) {
+        this.tableau.removeVariable(variable);
+    }
+
+    variable.index = -1;
+    this.variables.splice(idx, 1);
+    return this;
+};
+
+Model.prototype.updateRightHandSide = function (constraint, difference) {
+    if (this.tableauInitialized === true) {
+        this.tableau.updateRightHandSide(constraint, difference);
+    }
+    return this;
+};
+
+Model.prototype.updateConstraintCoefficient = function (constraint, variable, difference) {
+    if (this.tableauInitialized === true) {
+        this.tableau.updateConstraintCoefficient(constraint, variable, difference);
+    }
+    return this;
+};
+
+
+Model.prototype.setCost = function (cost, variable) {
+    var difference = cost - variable.cost;
+    if (this.isMinimization === false) {
+        difference = -difference;
+    }
+
+    variable.cost = cost;
+    this.tableau.updateCost(variable, difference);
     return this;
 };
 
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
 Model.prototype.loadJson = function (jsonModel) {
-    var variableId;
-
-    this.minimize = (jsonModel.opType === "min");
+    this.isMinimization = (jsonModel.opType === "min");
 
     var variables = jsonModel.variables;
     var constraints = jsonModel.constraints;
 
-    var constraintsEqualIndexes = {};
-    var constraintsMinIndexes = {};
-    var constraintsMaxIndexes = {};
+    var constraintsMin = {};
+    var constraintsMax = {};
 
     // Instantiating constraints
     var constraintIds = Object.keys(constraints);
-    var nConstraints = constraintIds.length;
-    for (var c = 0; c < nConstraints; c += 1) {
+    var nConstraintIds = constraintIds.length;
+
+    for (var c = 0; c < nConstraintIds; c += 1) {
         var constraintId = constraintIds[c];
         var constraint = constraints[constraintId];
-
         var equal = constraint.equal;
-        if (equal !== undefined) {
-            constraintsEqualIndexes[constraintId] = this.constraints.length;
-            this.constraints.push(new Constraint(equal, true, true));
-            this.nEqualities += 1;
-        }
 
-        var min = constraint.min;
+        var min = (equal === undefined) ? constraint.min : equal;
         if (min !== undefined) {
-            constraintsMinIndexes[constraintId] = this.constraints.length;
-            this.constraints.push(new Constraint(min, false, true));
-            this.nInequalities += 1;
+            constraintsMin[constraintId] = this.greaterThan(min);
         }
 
-        var max = constraint.max;
+        var max = (equal === undefined) ? constraint.max : equal;
         if (max !== undefined) {
-            constraintsMaxIndexes[constraintId] = this.constraints.length;
-            this.constraints.push(new Constraint(max, true, false));
-            this.nInequalities += 1;
+            constraintsMax[constraintId] =  this.smallerThan(max);
         }
     }
 
+    var variableIds = Object.keys(variables);
+    var nVariables = variableIds.length;
 
-    this.variableIds = Object.keys(variables);
-    this.nVariables = this.variableIds.length;
-    this.variables = [];
+    var integerVarIds = jsonModel.ints || {};
+    var unrestrictedVarIds = jsonModel.unrestricted || {};
 
     // Instantiating variables and constraint terms
     var objectiveName = jsonModel.optimize;
-    for (var v = 0; v < this.nVariables; v += 1) {
-        var column = v + 1;
-
+    for (var v = 0; v < nVariables; v += 1) {
         // Creation of the variables
-        variableId = this.variableIds[v];
-        var variable = new Variable(variableId, v);
-        this.variables[v] = variable;
-
-        this.objectiveCosts[v] = new Numeral(0);
-
+        var variableId = variableIds[v];
         var variableConstraints = variables[variableId];
+        var cost = variableConstraints[objectiveName] || 0;
+        var isInteger = !!integerVarIds[variableId];
+        var isUnrestricted = !!unrestrictedVarIds[variableId];
+        var variable = this.addVariable(cost, variableId, isInteger, isUnrestricted);
+
         var constraintNames = Object.keys(variableConstraints);
         for (c = 0; c < constraintNames.length; c += 1) {
             var constraintName = constraintNames[c];
-
-            var coefficient = Numeral(variableConstraints[constraintName]);
             if (constraintName === objectiveName) {
-                this.objectiveCosts[v] = coefficient;
-            } else {
-                var term = new Term(coefficient, variable);
+                continue;
+            }
 
-                var constraintEqualIndex = constraintsEqualIndexes[
-                    constraintName];
-                if (constraintEqualIndex !== undefined) {
-                    this.constraints[constraintEqualIndex].addTerm(term);
-                }
+            var coefficient = variableConstraints[constraintName];
 
-                var constraintMinIndex = constraintsMinIndexes[
-                    constraintName];
-                if (constraintMinIndex !== undefined) {
-                    this.constraints[constraintMinIndex].addTerm(term);
-                }
+            var constraintMin = constraintsMin[constraintName];
+            if (constraintMin !== undefined) {
+                constraintMin.addTerm(coefficient, variable);
+            }
 
-                var constraintMaxIndex = constraintsMaxIndexes[
-                    constraintName];
-                if (constraintMaxIndex !== undefined) {
-                    this.constraints[constraintMaxIndex].addTerm(term);
-                }
+            var constraintMax = constraintsMax[constraintName];
+            if (constraintMax !== undefined) {
+                constraintMax.addTerm(coefficient, variable);
             }
         }
     }
 
-    // Adding integer variable references
-    var integerVarIds = jsonModel.ints;
-    if (integerVarIds !== undefined) {
-        for (v = 0; v < this.nVariables; v += 1) {
-            if (integerVarIds[this.variableIds[v]] !== undefined) {
-                this.integerVarIndexes.push(v);
-            }
-        }
-    }
-
-    this.nVariable = this.variables.length;
     return this;
+};
+
+//-------------------------------------------------------------------
+//-------------------------------------------------------------------
+Model.prototype.getNumberOfIntegerVariables = function () {
+    return this.integerVariables.length;
+};
+
+Model.prototype.solve = function () {
+    // Setting tableau if not done
+    if (this.tableauInitialized === false) {
+        this.tableau.setModel(this);
+        this.tableauInitialized = true;
+    }
+
+    if (this.getNumberOfIntegerVariables() > 0) {
+        return MILP(this);
+    } else {
+        var solution = this.tableau.solve().compileSolution();
+        return solution;
+    }
+};
+
+Model.prototype.compileSolution = function () {
+    return this.tableau.compileSolution();
+};
+
+Model.prototype.isFeasible = function () {
+    return this.tableau.feasible;
+};
+
+Model.prototype.save = function () {
+    return this.tableau.save();
+};
+
+Model.prototype.restore = function () {
+    return this.tableau.restore();
+};
+
+Model.prototype.log = function (message) {
+    return this.tableau.log(message);
 };

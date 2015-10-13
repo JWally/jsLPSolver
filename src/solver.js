@@ -18,11 +18,24 @@
 var Tableau = require("./Tableau");
 var Model = require("./Model");
 var MILP = require("./MILP");
+var expressions = require("./expressions.js");
+var Constraint = expressions.Constraint;
+var Variable = expressions.Variable;
+var Numeral = expressions.Numeral;
+var Term = expressions.Term;
 
 // Place everything under the Solver Name Space
 var Solver = function () {
 
     "use strict";
+
+    this.Model = Model;
+    this.MILP = MILP;
+    this.Constraint = Constraint;
+    this.Variable = Variable;
+    this.Numeral = Numeral;
+    this.Term = Term;
+    this.Tableau = Tableau;
 
     /*************************************************************
      * Method: Solve
@@ -40,19 +53,11 @@ var Solver = function () {
             throw new Error("Solver requires a model to operate on");
         }
 
-        var tableau = new Tableau(precision);
         if (model instanceof Model === false) {
-            model = new Model().loadJson(model);
+            model = new Model(precision).loadJson(model);
         }
-        tableau.generateFromModel(model);
 
-        var solution;
-        if (tableau.getNumberOfIntegerVariables() > 0) {
-            solution = MILP(tableau);
-        } else {
-            tableau.solve();
-            solution = tableau.compileSolution();
-        }
+        var solution = model.solve();
 
         // If the user asks for a full breakdown
         // of the tableau (e.g. full === true)

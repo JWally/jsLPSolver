@@ -32,20 +32,20 @@ function sortByEvaluation(a, b) {
 // Detail: Main function, my attempt at a mixed integer linear programming
 //         solver
 //-------------------------------------------------------------------
-function MILP(tableau) {
+function MILP(model) {
     var branches = [];
-
     var iterations = 0;
+    var tableau = model.tableau;
 
     // This is the default result
     // If nothing is both *integral* and *feasible*
+    var bestEvaluation = Infinity;
     var bestSolution = {
         evaluation: Infinity,
         solutionSet: {},
         feasible: false
     };
 
-    var bestEvaluation = Infinity;
 
     // And here...we...go!
 
@@ -56,8 +56,7 @@ function MILP(tableau) {
     tableau.save();
 
     // 1.) Load a model into the queue
-    var nbIntegerVariables = tableau.getNumberOfIntegerVariables();
-    var branch = new Branch(-Infinity, [], nbIntegerVariables);
+    var branch = new Branch(-Infinity, []);
     branches.push(branch);
 
     // If all branches have been exhausted terminate the loop
@@ -69,6 +68,9 @@ function MILP(tableau) {
             continue;
         }
 
+        // Solving from initial relaxed solution
+        // with additional cut constraints
+
         // Restoring initial solution
         tableau.restore();
 
@@ -76,8 +78,7 @@ function MILP(tableau) {
         var cuts = branch.cuts;
         tableau.addCutConstraints(cuts);
 
-        // Solving using initial relaxed solution
-        // and addition cut constraints
+        // Solving
         tableau.solve();
 
         // Keep Track of how many cycles
@@ -88,29 +89,20 @@ function MILP(tableau) {
             continue;
         }
 
+        var evaluation = tableau.evaluation;
         // Is the model both integral and feasible?
         if (tableau.isIntegral() === true) {
             // Is the new result the bestSolution that we've ever had?
-            if (tableau.evaluation < bestEvaluation) {
+            if (evaluation < bestEvaluation) {
                 // Store the solution as the bestSolution
                 bestSolution = tableau.compileSolution();
-                bestEvaluation = tableau.evaluation;
-
-                // Removing useless branches
-                for (var b = 0; b < branches.length; b += 1) {
-                    if (branches[b].relaxedEvaluation < bestEvaluation) {
-                        if (b !== 0) {
-                            branches.splice(0, b);
-                        }
-                        break;
-                    }
-                }
+                bestEvaluation = evaluation;
             }
 
             // The solution is feasible and interagal;
             // But it is worse than the current solution;
             // Ignore it.
-        } else if (tableau.evaluation < bestEvaluation) {
+        } else if (evaluation < bestEvaluation) {
             // If the solution is
             //  a. Feasible
             //  b. Better than the current solution
@@ -148,8 +140,8 @@ function MILP(tableau) {
             // the model is not integral at this point, and fails.
 
             // Find out where we want to split the solution
-            // var variable = tableau.getMostFractionalVar();
-            var variable = tableau.getFractionalVarWithLowestCost();
+            var variable = tableau.getMostFractionalVar();
+            // var variable = tableau.getFractionalVarWithLowestCost();
             var varIndex = variable.index;
 
             var cutsHigh = [];
@@ -170,17 +162,17 @@ function MILP(tableau) {
                 }
             }
 
-            var cutHigh = new Cut("min", varIndex, Math.ceil(
-                variable.value));
+            var min = Math.ceil(variable.value);
+            var max = Math.floor(variable.value);
+
+            var cutHigh = new Cut("min", varIndex, min);
             cutsHigh.push(cutHigh);
 
-            var cutLow = new Cut("max", varIndex, Math.floor(
-                variable.value));
+            var cutLow = new Cut("max", varIndex, max);
             cutsLow.push(cutLow);
 
-            var relaxedEvaluation = tableau.evaluation;
-            branches.push(new Branch(relaxedEvaluation, cutsHigh));
-            branches.push(new Branch(relaxedEvaluation, cutsLow));
+            branches.push(new Branch(evaluation, cutsHigh));
+            branches.push(new Branch(evaluation, cutsLow));
 
             // Sorting branches
             // Branches with the most promising lower bounds
@@ -190,6 +182,9 @@ function MILP(tableau) {
             // branches.sort(sortAdvanced);
         }
     }
+
+    // Restoring initial solution
+    tableau.restore();
 
     bestSolution.iter = iterations;
     return bestSolution;

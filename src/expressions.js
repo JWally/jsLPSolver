@@ -7,58 +7,51 @@
 
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
-function Numeral(value) {
-    if (this instanceof Numeral) {
-        this.value = value;
-    } else {
-        if (value instanceof Numeral) {
-            return value;
-        } else {
-            return new Numeral(value);
-        }
-    }
-}
-
-Numeral.prototype.set = function (value) {
-    if (value !== this.value) {
-        this.value = value;
-        this._dirty = true;
-        // TODO: set constraint and model as dirty
-    }
-};
-
-//-------------------------------------------------------------------
-//-------------------------------------------------------------------
-function Variable(name, index) {
-    this.name = name;
+function Variable(id, cost, index) {
+    this.id = id;
+    this.cost = cost;
     this.index = index;
     this.value = 0;
 }
 
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
-function Term(coefficient, variable) {
-    this.coefficient = Numeral(coefficient);
+function Term(variable, coefficient) {
     this.variable = variable;
+    this.coefficient = coefficient;
 }
 
-Term.prototype.setCoefficient = function (coefficient) {
-    this.coefficient = Numeral(coefficient);
-    this._dirty = true;
-};
-
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
-function Constraint(rhs, isUpperBound, isLowerBound) {
-    this.rhs = Numeral(rhs);
-    this.terms = [];
-
+function Constraint(rhs, isUpperBound, index, model) {
+    this.index = index;
+    this.model = model;
+    this.rhs = rhs;
     this.isUpperBound = isUpperBound;
-    this.isLowerBound = isLowerBound;
+
+    this.terms = [];
+    this.termsByVarIndex = {};
 }
 
-Constraint.prototype.addTerm = function (term) {
-    this.terms.push(term);
+Constraint.prototype.addTerm = function (coefficient, variable) {
+    var varIndex = variable.index;
+    var term = this.termsByVarIndex[varIndex];
+    if (term === undefined) {
+        // No term for given variable
+        term = new Term(variable, coefficient);
+        this.termsByVarIndex[varIndex] = term;
+        this.terms.push(term);
+        if (this.isUpperBound === true) {
+            coefficient = -coefficient;
+        }
+        this.model.updateConstraintCoefficient(this, variable, coefficient);
+    } else {
+        // Term for given variable already exists
+        // updating its coefficient
+        var newCoefficient = term.coefficient + coefficient;
+        this.setVariableCoefficient(newCoefficient, variable);
+    }
+
     return this;
 };
 
@@ -67,20 +60,76 @@ Constraint.prototype.removeTerm = function (term) {
     return this;
 };
 
+Constraint.prototype.setRightHandSide = function (newRhs) {
+    if (newRhs !== this.rhs) {
+        var difference = newRhs - this.rhs;
+        if (this.isUpperBound === true) {
+            difference = -difference;
+        }
 
-module.exports = {
-    Variable: Variable,
-    Numeral: Numeral,
-    Term: Term,
-    Constraint: Constraint
+        this.rhs = newRhs;
+        this.model.updateRightHandSide(this, difference);
+    }
+
+    return this;
 };
 
-// var model = new JSPL.Model().maximize();
+Constraint.prototype.setVariableCoefficient = function (newCoefficient, variable) {
+    var varIndex = variable.index;
+    if (varIndex === -1) {
+        console.warn("[Constraint.setVariableCoefficient] Trying to change coefficient of inexistant variable.");
+        return;
+    }
 
-// var var1 = model.createVariable('x1', -4);
-// var var2 = model.createVariable('x2', -2);
-// var var3 = model.createVariable('x3',  1);
+    var term = this.termsByVarIndex[varIndex];
+    if (term === undefined) {
+        // No term for given variable
+        this.addTerm(newCoefficient, variable);
+    } else {
+        // Term for given variable already exists
+        // updating its coefficient if changed
+        if (newCoefficient !== term.coefficient) {
+            var difference = newCoefficient - term.coefficient;
+            if (this.isUpperBound === true) {
+                difference = -difference;
+            }
 
-// var cst1 = model.smallerThan(-3).addTerm(Term(-1, var1)).addTerm(Term(-1, var2)).addTerm(Term( 2, var3));
-// var cst2 = model.smallerThan(-4).addTerm(Term(-4, var1)).addTerm(Term(-2, var2)).addTerm(Term( 1, var3));
-// var cst2 = model.smallerThan( 2).addTerm(Term( 1, var1)).addTerm(Term( 1, var2)).addTerm(Term(-4, var3));
+            term.coefficient = newCoefficient;
+            this.model.updateConstraintCoefficient(this, variable, difference);
+        }
+    }
+
+    return this;
+};
+
+//-------------------------------------------------------------------
+//-------------------------------------------------------------------
+function Equality(constraintUpper, constraintLower) {
+    this.upperBound = constraintUpper;
+    this.lowerBound = constraintLower;
+}
+
+Equality.prototype.addTerm = function (term) {
+    this.upperBound.addTerm(term);
+    this.lowerBound.addTerm(term);
+    return this;
+};
+
+Equality.prototype.removeTerm = function (term) {
+    this.upperBound.removeTerm(term);
+    this.lowerBound.removeTerm(term);
+    return this;
+};
+
+Equality.prototype.setRightHandSide = function (rhs) {
+    this.upperBound.setRightHandSide(rhs);
+    this.lowerBound.setRightHandSide(rhs);
+};
+
+
+module.exports = {
+    Constraint: Constraint,
+    Variable: Variable,
+    Equality: Equality,
+    Term: Term
+};
