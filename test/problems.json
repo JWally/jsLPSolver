@@ -275,7 +275,7 @@
         },
         "expects": {
             "feasible": true,
-            "Yusip": 267,
+            "Yusip": 270,
             "Exotic": 260,
             "result": 1985
         }
