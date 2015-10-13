@@ -1,3 +1,10 @@
+/*global describe*/
+/*global require*/
+/*global module*/
+/*global it*/
+/*global console*/
+/*global process*/
+
 /*************************************************************
  * Class: Tableau
  * Description: Simplex tableau, holding a the tableau matrix
@@ -124,7 +131,7 @@ Tableau.prototype.isIntegral = function () {
 
     var nIntegerVars = integerVariables.length;
     for (var v = 0; v < nIntegerVars; v++) {
-        var varRow = this.rows[integerVariables[v]];
+        var varRow = this.rows[integerVariables[v].index];
         if (varRow === -1) {
             continue;
         }
@@ -153,7 +160,7 @@ Tableau.prototype.getMostFractionalVar = function () {
     var integerVariables = this.model.integerVariables;
     var nIntegerVars = integerVariables.length;
     for (var v = 0; v < nIntegerVars; v++) {
-        var varIndex = integerVariables[v];
+        var varIndex = integerVariables[v].index;
         var varRow = this.rows[varIndex];
         if (varRow === -1) {
             continue;
@@ -181,7 +188,8 @@ Tableau.prototype.getFractionalVarWithLowestCost = function () {
     var integerVariables = this.model.integerVariables;
     var nIntegerVars = integerVariables.length;
     for (var v = 0; v < nIntegerVars; v++) {
-        var varIndex = integerVariables[v];
+        var variable = integerVariables[v];
+        var varIndex = variable.index;
         var varRow = this.rows[varIndex];
         if (varRow === -1) {
             // Variable value is non basic
@@ -226,6 +234,7 @@ Tableau.prototype.phase1 = function () {
     var lastColumn = this.width - 1;
     var lastRow = this.height - 1;
 
+    var unrestricted;
     var iterations = 0;
     while (true) {
         // Selecting leaving variable (feasibility condition):
@@ -233,7 +242,7 @@ Tableau.prototype.phase1 = function () {
         var leavingRowIndex = 0;
         var rhsValue = -this.precision;
         for (var r = 1; r <= lastRow; r++) {
-            var unrestricted = this.unrestrictedVars[this.basicIndexes[r]] === true;
+            unrestricted = this.unrestrictedVars[this.basicIndexes[r]] === true;
             if (unrestricted) {
                 continue;
             }
@@ -263,7 +272,7 @@ Tableau.prototype.phase1 = function () {
                 continue;
             }
 
-            var unrestricted = this.unrestrictedVars[this.nonBasicIndexes[c]] === true;
+            unrestricted = this.unrestrictedVars[this.nonBasicIndexes[c]] === true;
             if (unrestricted || colValue < -this.precision) {
                 var quotient = -costRow[c] / colValue;
                 if (maxQuotient < quotient) {
@@ -731,7 +740,7 @@ Tableau.prototype.addConstraint = function (constraint) {
     for (var t = 0; t < nTerms; t += 1) {
         var term = terms[t];
         var coefficient = term.coefficient;
-        varIndex = term.variable.index;
+        var varIndex = term.variable.index;
 
         var varRowIndex = this.rows[varIndex];
         if (varRowIndex === -1) {

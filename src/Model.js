@@ -1,3 +1,10 @@
+/*global describe*/
+/*global require*/
+/*global module*/
+/*global it*/
+/*global console*/
+/*global process*/
+
 var Tableau = require("./Tableau.js");
 var MILP = require("./MILP.js");
 var expressions = require("./expressions.js");
@@ -97,7 +104,7 @@ Model.prototype.addVariable = function (cost, id, isInteger, isUnrestricted) {
     this.variableIds[this.lastElementIndex] = id;
 
     if (isInteger) {
-        this.integerVariables.push(variable.index);
+        this.integerVariables.push(variable);
     }
 
     if (isUnrestricted) {
@@ -120,7 +127,7 @@ Model.prototype.addVariable = function (cost, id, isInteger, isUnrestricted) {
 Model.prototype.removeConstraint = function (constraint) {
     var idx = this.constraints.indexOf(constraint);
     if (idx === -1) {
-        console.warn('[Model.removeConstraint] Constraint not present in model');
+        console.warn("[Model.removeConstraint] Constraint not present in model");
         return;
     }
 
@@ -143,7 +150,7 @@ Model.prototype.removeVariable = function (variable) {
     // How: every variable should reference the constraints it appears in
     var idx = this.variables.indexOf(variable);
     if (idx === -1) {
-        console.warn('[Model.removeVariable] Variable not present in model');
+        console.warn("[Model.removeVariable] Variable not present in model");
         return;
     }
 

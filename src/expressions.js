@@ -1,3 +1,9 @@
+/*global describe*/
+/*global require*/
+/*global module*/
+/*global it*/
+/*global console*/
+/*global process*/
 
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
@@ -32,7 +38,7 @@ Constraint.prototype.addTerm = function (coefficient, variable) {
     var term = this.termsByVarIndex[varIndex];
     if (term === undefined) {
         // No term for given variable
-        var term = new Term(variable, coefficient);
+        term = new Term(variable, coefficient);
         this.termsByVarIndex[varIndex] = term;
         this.terms.push(term);
         if (this.isUpperBound === true) {
@@ -71,7 +77,7 @@ Constraint.prototype.setRightHandSide = function (newRhs) {
 Constraint.prototype.setVariableCoefficient = function (newCoefficient, variable) {
     var varIndex = variable.index;
     if (varIndex === -1) {
-        console.warn('[Constraint.setVariableCoefficient] Trying to change coefficient of inexistant variable.');
+        console.warn("[Constraint.setVariableCoefficient] Trying to change coefficient of inexistant variable.");
         return;
     }
 

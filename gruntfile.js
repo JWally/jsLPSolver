@@ -16,7 +16,7 @@ module.exports = function(grunt){
         "mochaTest": {
             "test": {
                 "options": {
-                    "reporter": "json"
+                    "reporter": "spec"
                 },
                 "src": ["test/**/*.js"]
             }
@@ -56,14 +56,23 @@ module.exports = function(grunt){
                     "wrap_line_length": 80                    
                 }
             }
-        }       
+        },
+        "browserify": {
+            "dist": {
+                "files": {
+                    "prod/solver.js": ["./src/solver.js"]
+                }
+            }
+        }
     });
     
     grunt.loadNpmTasks("grunt-contrib-uglify");
     grunt.loadNpmTasks("grunt-jsbeautifier");
     grunt.loadNpmTasks("grunt-contrib-jshint");
     grunt.loadNpmTasks("grunt-mocha-test");
-    grunt.registerTask("default", ["jsbeautifier:default", "jshint"]);
-    grunt.registerTask("test", ["jsbeautifier:default", "jshint","mochaTest"]);
-    grunt.registerTask("speed", function(){require("./benchmark/solver.play");});
+    grunt.loadNpmTasks("grunt-browserify");
+    grunt.registerTask("default", ["jshint"]);
+    grunt.registerTask("test", ["jshint","mochaTest"]);
+    grunt.registerTask("speed", function(){require("./benchmark/bench.test_suite");});
+    grunt.registerTask("prod", ["jshint","browserify"])
 }

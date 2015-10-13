@@ -1,3 +1,11 @@
+/*global describe*/
+/*global require*/
+/*global module*/
+/*global it*/
+/*global console*/
+/*global process*/
+
+
 //-------------------------------------------------------------------
 // SimplexJS
 // https://github.com/
@@ -15,12 +23,6 @@ var Constraint = expressions.Constraint;
 var Variable = expressions.Variable;
 var Numeral = expressions.Numeral;
 var Term = expressions.Term;
-
-/*global describe*/
-/*global require*/
-/*global it*/
-/*global console*/
-/*global process*/
 
 // Place everything under the Solver Name Space
 var Solver = function () {
@@ -258,6 +260,7 @@ var Solver = function () {
 // if we're in node, offer a friendly exports
 // otherwise, Solver's going global
 /* jshint ignore:start */
+/*
 (function () {
     if (typeof module !== "undefined" && module.exports) {
         module.exports = new Solver();
@@ -267,4 +270,18 @@ var Solver = function () {
         });
     }
 })();
+*/
+(function(){
+    // If define exists; use it
+    if (typeof define === "function") {       
+        define([], function () {
+            return new Solver();
+        });
+    } else if(typeof window === "object"){
+        window.solver = new Solver();
+    } else {
+        module.exports =  new Solver();
+    }   
+})()
+
 /* jshint ignore:end */
