@@ -140,8 +140,8 @@ function MILP(model) {
             // the model is not integral at this point, and fails.
 
             // Find out where we want to split the solution
-            // var variable = tableau.getMostFractionalVar();
-            var variable = tableau.getFractionalVarWithLowestCost();
+            var variable = tableau.getMostFractionalVar();
+            // var variable = tableau.getFractionalVarWithLowestCost();
             var varIndex = variable.index;
 
             var cutsHigh = [];
