@@ -20,7 +20,7 @@ module.exports = function(grunt){
                     "quite": "true",
                     "captureFile": "test_results.txt"
                 },
-                "src": ["test/**/*.js"]
+                "src": ["test/solver.problems.js"]
             }
         },
         "jsbeautifier" : {
