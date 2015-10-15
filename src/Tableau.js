@@ -152,7 +152,7 @@ function VariableData(index, value) {
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
 Tableau.prototype.getMostFractionalVar = function () {
-    var biggestFraction = 1;
+    var biggestFraction = 0;
     var selectedVarIndex = null;
     var selectedVarValue = null;
     var mid = 0.5;
@@ -167,8 +167,8 @@ Tableau.prototype.getMostFractionalVar = function () {
         }
 
         var varValue = this.matrix[varRow][this.rhsColumn];
-        var fraction = Math.abs(varValue % 1 - mid);
-        if (biggestFraction > fraction) {
+        var fraction = Math.abs(varValue - Math.round(varValue));
+        if (biggestFraction < fraction) {
             biggestFraction = fraction;
             selectedVarIndex = varIndex;
             selectedVarValue = varValue;

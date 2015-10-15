@@ -33,6 +33,44 @@
             "result": -5
         }
     }, {
+        "name": "Integer Unrestricted",
+        "optimize": "objective",
+        "opType": "min",
+        "constraints": {
+            "c0": {
+                "min": -6
+            },
+            "c1": {
+                "min": -6
+            }
+        },
+        "variables": {
+            "x1": {
+                "c0": 4,
+                "c1": 1.5,
+                "objective": 2.5
+            },
+            "x2": {
+                "c0": 2.5,
+                "c1": 4,
+                "objective": 2
+            }
+        },
+        "unrestricted": {
+            "x1": 1,
+            "x2": 1
+        },
+        "ints": {
+            "x1": 1,
+            "x2": 1
+        },
+        "expects": {
+            "feasible": true,
+            "x1": -2,
+            "x2": 1,
+            "result": -3
+        }
+    }, {
         "name": "Chevalier 1",
         "optimize": "objective",
         "opType": "min",
