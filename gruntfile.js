@@ -16,7 +16,9 @@ module.exports = function(grunt){
         "mochaTest": {
             "test": {
                 "options": {
-                    "reporter": "spec"
+                    "reporter": "json",
+                    "quite": "true",
+                    "captureFile": "test_results.txt"
                 },
                 "src": ["test/**/*.js"]
             }
