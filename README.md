@@ -135,4 +135,20 @@ var awesome = solver.ReformatLP(model);
 ```
 
 you will be given an array of equations as strings that fits the requirements
-of lp_solve.
+of lp_solve. You can use it like this:
+
+```javascript
+var model = problems[problems.length - 1];
+
+// Set up the solution
+var tableau = solver.ReformatLP(model);
+    
+// Clear the LP File
+fs.truncateSync("model.lp");
+
+// Iterate over the array of strings
+for(i = 0; i < tableau.length; i++){
+    // Pushing into the LP File
+    fs.appendFileSync("model.lp", tableau[i] + "\n", encoding="utf8");
+}
+```
