@@ -601,10 +601,8 @@
             }
         },
         "expects": {
-            "feasible": true,
-            "brit": 12,
-            "yank": 24,
-            "result": 960000
+            "feasible": false,
+            "result": 0
         }
     }, {
         "name": "Integer Wood Shop Problem",
