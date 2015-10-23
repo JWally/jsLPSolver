@@ -6,10 +6,7 @@
 /*global process*/
 
 var JSLP = require("../src/solver");
-
 var Model = JSLP.Model;
-var Term = JSLP.Term;
-
 var models = [];
 
 //-------------------------------------------
@@ -39,13 +36,6 @@ var cst1 = model2.greaterThan(3).addTerm(1, x1).addTerm(1, x2);
 var cst2 = model2.greaterThan(4).addTerm(2, x1).addTerm(1, x2);
 
 models.push(model2);
-
-//-------------------------------------------
-// WARM UP
-//-------------------------------------------
-for (var m = 0; m < models.length; m++) {
-    models[m].solve();
-}
 
 //-------------------------------------------
 // TESTING

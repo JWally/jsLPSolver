@@ -102,16 +102,36 @@ Constraint.prototype.setVariableCoefficient = function (newCoefficient, variable
     return this;
 };
 
+var errorVarIdx = 1;
+Constraint.prototype.relax = function (weight) {
+    if (this.model.isMinimization === false) {
+        weight = -weight;
+    }
+
+    var error = this.model.addVariable(weight, "e" + (errorVarIdx++).toString());
+    this._relax(error);
+};
+
+Constraint.prototype._relax = function (error) {
+    if (this.isUpperBound) {
+        this.setVariableCoefficient(-1, error);
+    } else {
+        this.setVariableCoefficient(1, error);
+    }
+};
+
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
 function Equality(constraintUpper, constraintLower) {
     this.upperBound = constraintUpper;
     this.lowerBound = constraintLower;
+    this.model = constraintUpper.model;
+    this.rhs = constraintUpper.rhs;
 }
 
-Equality.prototype.addTerm = function (term) {
-    this.upperBound.addTerm(term);
-    this.lowerBound.addTerm(term);
+Equality.prototype.addTerm = function (coefficient, variable) {
+    this.upperBound.addTerm(coefficient, variable);
+    this.lowerBound.addTerm(coefficient, variable);
     return this;
 };
 
@@ -124,6 +144,17 @@ Equality.prototype.removeTerm = function (term) {
 Equality.prototype.setRightHandSide = function (rhs) {
     this.upperBound.setRightHandSide(rhs);
     this.lowerBound.setRightHandSide(rhs);
+    this.rhs = rhs;
+};
+
+Equality.prototype.relax = function (weight) {
+    if (this.model.isMinimization === false) {
+        weight = -weight;
+    }
+
+    var error = this.model.addVariable(weight, "e" + (errorVarIdx++).toString());
+    this.upperBound._relax(error);
+    this.lowerBound._relax(error);
 };
 
 

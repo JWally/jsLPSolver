@@ -178,8 +178,6 @@ function MILP(model) {
             // Branches with the most promising lower bounds
             // will be picked first
             branches.sort(sortByEvaluation);
-            // branches.sort(sortByNbIntegers);
-            // branches.sort(sortAdvanced);
         }
     }
 
