@@ -7,9 +7,6 @@
 
 var JSLP = require("../src/solver");
 var Model = JSLP.Model;
-var Tableau = JSLP.Tableau;
-var Term = JSLP.Term;
-
 
 //-------------------------------------------
 // TESTING DYNAMIC RESOLUTION

@@ -192,7 +192,7 @@ Model.prototype.setCost = function (cost, variable) {
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
 Model.prototype.loadJson = function (jsonModel) {
-    this.isMinimization = (jsonModel.opType === "min");
+    this.isMinimization = (jsonModel.opType !== "max");
 
     var variables = jsonModel.variables;
     var constraints = jsonModel.constraints;
@@ -216,7 +216,15 @@ Model.prototype.loadJson = function (jsonModel) {
 
         var max = (equal === undefined) ? constraint.max : equal;
         if (max !== undefined) {
-            constraintsMax[constraintId] =  this.smallerThan(max);
+            constraintsMax[constraintId] = this.smallerThan(max);
+        }
+
+        if (equal !== undefined) {
+            var equality = new Equality(constraintsMin[constraintId], constraintsMax[constraintId]);
+            if (constraint.weight !== undefined) {
+                equality.relax(constraint.weight);
+            }
+            continue;
         }
     }
 
