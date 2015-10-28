@@ -1,3 +1,10 @@
+/*global describe*/
+/*global require*/
+/*global module*/
+/*global it*/
+/*global console*/
+/*global process*/
+
 var solver = require("./solver");
     /***************************************************************
      * Method: polyopt
@@ -89,7 +96,7 @@ module.exports = function(model){
                     // Does the variable exist in tmp *and* does attribute exist in this model?
                     if(model.variables[x][keys[y]] && tmp[x]){
                         // Add it to tmp
-                        tmp[keys[y]] += tmp[x] * model.variables[x][keys[y]]
+                        tmp[keys[y]] += tmp[x] * model.variables[x][keys[y]];
                     }
                 }
             }
@@ -150,13 +157,13 @@ module.exports = function(model){
 
     // Give the model a fake thing to optimize on
     model.optimize = "cheater-" + Math.random();
-    model.opType = "max"
+    model.opType = "max";
 
     // And add the fake attribute to the variables
     // in the model
-    for(var x in model.variables){
-        model.variables[x].cheater = 1;
+    for(var z in model.variables){
+        model.variables[z].cheater = 1;
     }
 
     return solver.Solve(model);
-}
+};
