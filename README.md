@@ -65,36 +65,37 @@ which should yield the following:
 
 Say you live in the real world and partial results aren't realistic, or are too messy.
 
->Steven manages a wood shop that makes money by charging people money to use its tools.
->The shop owner tells Steven that he has an extra $40,000 this year to spend on new equipment.
->After thinking of ways to get the new tools in the shop, Steven realizes that he only has 205 sqft
->to work with.
+> You run a small custom furniture shop and make custom tables and dressers.
 >
->The 3 pieces of equipment Steven is most interestd in are the press, the lathe, and the drill.
->A new drill will cost $8,000, take up 15 sqft, and yield about $100 in profit / week.
->A new lathe will only cost $4,000, make about $150 / wk in profit, but it takes up 30 sqft.
->Finally, Steven can get a new drill for $4,500 which takes up 14 sqft; and can expect about $80 / wk from it.
+> Each week you're limited to 300 square feet of wood, 110 hours of labor,
+> and 400 square feet of storage.
 >
->What should Steven buy to maximize profit?
+> A table uses 30sf of wood, 5 hours of labor, requires 30sf of storage and has a
+> gross profit of $1,200. A dresser uses 20sf of wood, 10 hours of work to put
+> together, requires 50 square feet to store and has a gross profit of $1,600.
+>
+> How much of each do you product to maximize profit, given that partial furniture
+> isn't allowed in this dumb word problem?
 
 ```javascript
- models.push({
-     optimize: "profit",
-     opType: "max",
-     constraints: {
-         space: {max: 205},
-         price: {max: 40000}
-     },
-     variables: {
-                 press: {space: 15, price: 8000, profit: 100},
-                 lathe: {space: 30, price: 4000, profit: 150},
-                 drill: {space: 14, price: 4500, profit: 80}
-             },
-     ints: {
-         press: 1 ,lathe: 1 ,drill: 1
-     }
- });
-
+var solver = require("./src/solver"),
+    model = {
+        "optimize": "profit",
+        "opType": "max",
+        "constraints": {
+            "wood": {"max": 300},
+            "labor": {"max": 110},
+            "storage": {"max": 400}
+        },
+        "variables": {
+            "table": {"wood": 30,"labor": 5,"profit": 1200,"table": 1, "storage": 30},
+            "dresser": {"wood": 20,"labor": 10,"profit": 1600,"dresser": 1, "storage": 50}
+        },
+        "ints": {"table": 1,"dresser": 1}
+    }
+    
+console.log(solver.Solve(model));
+// {feasible: true, result: 1440-0, table: 8, dresser: 3}
 ```
 
 ##How Fast is it?
@@ -102,24 +103,31 @@ Say you live in the real world and partial results aren't realistic, or are too 
 Below are the results from my home made suite of variable sized LP(s)
 
 ```javascript
-{ 'Coffee Problem':{ constraints: 2, variables: 2, result: 1985, time: 0.00097189 },
-  'Computer Problem':{ constraints: 2, variables: 2, result: 71818.18181818182, time: 0.000083931},
-  'Generic Business Problem':{ constraints: 2, variables: 2, result: 9500, time: 0.000093317 },
-  'Generic Business Problem 2':{ constraints: 2, variables: 2, result: 10000, time: 0.000035299 },
-  'Chocolate Problem':{ constraints: 2, variables: 2, result: 18750, time: 0.000030907 },
-  'Wood Shop Problem': { constraints: 2, variables: 2, result: 96, time: 0.000024994},
-  'Wood Shop Problem II': { constraints: 2, variables: 2, result: 96, time: 0.000021994 },
-  'Integer Wood Problem': { constraints: 3, variables: 2,ints: 2, result: 88, time: 0.001034486, iter: 2 },
-  'Berlin Air Lift Problem': { constraints: 3, variables: 2, result: 1024000, time: 0.00005718},
-  'Integer Wood Shop Problem': { constraints: 2, variables: 3, ints: 3, result: 1010, time: 0.006214069, iter: 16 },
-  'Integer Sports Complex Problem':{ constraints: 6,variables: 4,ints: 4,result: 700,time: 0.001319043,iter: 4 },
-  'Integer Chocolate Problem':{ constraints: 2,variables: 2,ints: 2,result: 19500,time: 0.000301197,iter: 2 },
-  'Integer Clothing Shop Problem':{ constraints: 2,variables: 2,ints: 2,result: 1460,time: 0.000152802,iter: 1 },
-  'Integer Clothing Shop Problem II':{ constraints: 2,variables: 4,ints: 4,result: 1460,time: 0.000323052,iter: 2 },
-  'Shift Work Problem':{ constraints: 6,variables: 6,result: 26,time: 0.000058054 },
-  'Monster Problem':{ constraints: 624, variables: 552, result: 25433,time: 0.109093596 },
-  'monster_II':{ constraints: 894, variables: 924, ints: 112, result: 20631,  time: 37.54, iter: 230 }
-}
+{ Relaxed: { variables: 2, time: 0.004899597 },
+  Unrestricted: { constraints: 1, variables: 2, time: 0.001273972 },
+  'Chevalier 1': { constraints: 5, variables: 2, time: 0.000112002 },
+  Artificial: { constraints: 2, variables: 2, time: 0.000101994 },
+  'Wiki 1': { variables: 3, time: 0.000358714 },
+  'Degenerate Min': { constraints: 5, variables: 2, time: 0.000097377 },
+  'Degenerate Max': { constraints: 5, variables: 2, time: 0.000085829 },
+  'Coffee Problem': { constraints: 2, variables: 2, time: 0.000296747 },
+  'Computer Problem': { constraints: 2, variables: 2, time: 0.000066585 },
+  'Generic Business Problem': { constraints: 2, variables: 2, time: 0.000083135 },
+  'Generic Business Problem 2': { constraints: 2, variables: 2, time: 0.000040413 },
+  'Chocolate Problem': { constraints: 2, variables: 2, time: 0.000058503 },
+  'Wood Shop Problem': { constraints: 2, variables: 2, time: 0.000045416 },
+  'Integer Wood Problem': { constraints: 3, variables: 2, ints: 2, time: 0.002406691 },
+  'Berlin Air Lift Problem': { constraints: 3, variables: 2, time: 0.000077362 },
+  'Integer Berlin Air Lift Problem': { constraints: 3, variables: 2, ints: 2, time: 0.000823271 },
+  'Infeasible Berlin Air Lift Problem': { constraints: 5, variables: 2, time: 0.000411828 },
+  'Integer Wood Shop Problem': { constraints: 2, variables: 3, ints: 3, time: 0.001610363 },
+  'Integer Sports Complex Problem': { constraints: 6, variables: 4, ints: 4, time: 0.001151579 },
+  'Integer Chocolate Problem': { constraints: 2, variables: 2, ints: 2, time: 0.000109692 },
+  'Integer Clothing Shop Problem': { constraints: 2, variables: 2, ints: 2, time: 0.000382191 },
+  'Integer Clothing Shop Problem II': { constraints: 2, variables: 4, ints: 4, time: 0.000113927 },
+  'Shift Work Problem': { constraints: 6, variables: 6, time: 0.000127012 },
+  'Monster Problem': { constraints: 576, variables: 552, time: 0.054285454 },
+  monster_II: { constraints: 842, variables: 924, ints: 112, time: 0.649073406 } }
 ```
 
 ##Incorporating a "Big-Boy" Solver
@@ -132,23 +140,9 @@ primitive state right now, but if you
 
 ```javascript
 var awesome = solver.ReformatLP(model);
-```
-
-you will be given an array of equations as strings that fits the requirements
-of lp_solve. You can use it like this:
-
-```javascript
-var model = problems[problems.length - 1];
-
-// Set up the solution
-var tableau = solver.ReformatLP(model);
+    fs = require("fs");
     
-// Clear the LP File
-fs.truncateSync("model.lp");
-
-// Iterate over the array of strings
-for(i = 0; i < tableau.length; i++){
-    // Pushing into the LP File
-    fs.appendFileSync("model.lp", tableau[i] + "\n", encoding="utf8");
-}
+fs.writeFile("model.lp", fs);
 ```
+
+you can convert a JSON model into a string that can be used by [LP_Solve](http://lpsolve.sourceforge.net/5.5/).
