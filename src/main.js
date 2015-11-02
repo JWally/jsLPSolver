@@ -19,6 +19,7 @@ var Tableau = require("./Tableau");
 var Model = require("./Model");
 var MILP = require("./MILP");
 var expressions = require("./expressions.js");
+var validation = require("./Validation");
 var Constraint = expressions.Constraint;
 var Variable = expressions.Variable;
 var Numeral = expressions.Numeral;
@@ -48,6 +49,14 @@ var Solver = function () {
      *                   (defaults to 1e-9)
      **************************************************************/
     this.Solve = function (model, precision, full) {
+        // Run our validations on the model
+        // if the model doesn't have a validate
+        // attribute set to false
+        for(var test in validation){
+            model = validation[test](model);
+        }
+
+
         // Make sure we at least have a model
         if (!model) {
             throw new Error("Solver requires a model to operate on");
@@ -96,8 +105,8 @@ var Solver = function () {
      *          lp_solver
      **************************************************************/
     this.ReformatLP = require("./LP_Solve");
-    
-   
+
+
 };
 
 // Determine the environment we're in.
@@ -107,7 +116,7 @@ var Solver = function () {
 
 (function(){
     // If define exists; use it
-    if (typeof define === "function") {       
+    if (typeof define === "function") {
         define([], function () {
             return new Solver();
         });
@@ -115,7 +124,7 @@ var Solver = function () {
         window.solver = new Solver();
     } else {
         module.exports =  new Solver();
-    }   
+    }
 })()
 
 /* jshint ignore:end */

@@ -581,7 +581,7 @@ Model.prototype.log = function (message) {
     return this.tableau.log(message);
 };
 
-},{"./MILP.js":2,"./Tableau.js":4,"./expressions.js":5}],4:[function(require,module,exports){
+},{"./MILP.js":2,"./Tableau.js":4,"./expressions.js":6}],4:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -1612,6 +1612,50 @@ Tableau.prototype.log = function (message, force) {
 /*global it*/
 /*global console*/
 /*global process*/
+/*global exports*/
+
+
+// All functions in this module that
+// get exported to main ***MUST***
+// return a functional LPSolve JSON style
+// model or throw an error
+
+exports.CleanObjectiveAttributes = function(model){
+  // Test to see if the objective attribute
+  // is also used by one of the constraints
+  //
+  // If so...create a new attribute on each
+  // variable
+    if(model.constraints[model.objective]){
+        // Create the new attribute
+        var fakeAttr = Math.random();
+
+        // Go over each variable and check
+        for(var x in model.variables){
+            // Is it there?
+            if(model.variables[x][model.objective]){
+                model.variables[fakeAttr] = model.variables[x][model.objective];
+            }
+        }
+
+    // Now that we've cleaned up the variables
+    // we need to clean up the constraints
+        model.constraints[fakeAttr] = model.constraints[model.objective];
+
+        return model;
+
+    } else {
+        return model;
+    }
+};
+
+},{}],6:[function(require,module,exports){
+/*global describe*/
+/*global require*/
+/*global module*/
+/*global it*/
+/*global console*/
+/*global process*/
 
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
@@ -1773,7 +1817,7 @@ module.exports = {
     Term: Term
 };
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -1795,6 +1839,7 @@ var Tableau = require("./Tableau");
 var Model = require("./Model");
 var MILP = require("./MILP");
 var expressions = require("./expressions.js");
+var validation = require("./Validation");
 var Constraint = expressions.Constraint;
 var Variable = expressions.Variable;
 var Numeral = expressions.Numeral;
@@ -1824,6 +1869,14 @@ var Solver = function () {
      *                   (defaults to 1e-9)
      **************************************************************/
     this.Solve = function (model, precision, full) {
+        // Run our validations on the model
+        // if the model doesn't have a validate
+        // attribute set to false
+        for(var test in validation){
+            model = validation[test](model);
+        }
+
+
         // Make sure we at least have a model
         if (!model) {
             throw new Error("Solver requires a model to operate on");
@@ -1872,8 +1925,8 @@ var Solver = function () {
      *          lp_solver
      **************************************************************/
     this.ReformatLP = require("./LP_Solve");
-    
-   
+
+
 };
 
 // Determine the environment we're in.
@@ -1883,7 +1936,7 @@ var Solver = function () {
 
 (function(){
     // If define exists; use it
-    if (typeof define === "function") {       
+    if (typeof define === "function") {
         define([], function () {
             return new Solver();
         });
@@ -1891,9 +1944,9 @@ var Solver = function () {
         window.solver = new Solver();
     } else {
         module.exports =  new Solver();
-    }   
+    }
 })()
 
 /* jshint ignore:end */
 
-},{"./LP_Solve":1,"./MILP":2,"./Model":3,"./Tableau":4,"./expressions.js":5}]},{},[6]);
+},{"./LP_Solve":1,"./MILP":2,"./Model":3,"./Tableau":4,"./Validation":5,"./expressions.js":6}]},{},[7]);
