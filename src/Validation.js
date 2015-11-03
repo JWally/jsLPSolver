@@ -18,25 +18,27 @@ exports.CleanObjectiveAttributes = function(model){
   //
   // If so...create a new attribute on each
   // variable
-    if(model.constraints[model.objective]){
+    
+    if(model.constraints[model.optimize]){
         // Create the new attribute
         var fakeAttr = Math.random();
 
         // Go over each variable and check
         for(var x in model.variables){
             // Is it there?
-            if(model.variables[x][model.objective]){
-                model.variables[fakeAttr] = model.variables[x][model.objective];
+            if(model.variables[x][model.optimize]){
+                model.variables[x][fakeAttr] = model.variables[x][model.optimize];
             }
         }
 
     // Now that we've cleaned up the variables
     // we need to clean up the constraints
-        model.constraints[fakeAttr] = model.constraints[model.objective];
-
+        model.constraints[fakeAttr] = model.constraints[model.optimize];
+        delete model.constraints[model.optimize];
         return model;
 
     } else {
+    
         return model;
     }
 };
