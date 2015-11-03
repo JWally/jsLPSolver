@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en" class=" is-copy-enabled">
+    <head>
+        <meta charset='utf-8'>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta http-equiv="Content-Language" content="en">
+        <meta name="viewport" content="width=1020">
+        
+        <style>
+            .test{
+                border: solid 1px black;
+            }
+        </style>
+        <script src="../src/solver.js"></script>
+        <script src="https://code.jquery.com/jquery-2.1.4.min.js" charset="utf-8"></script>
+        <script type="text/javascript">
+            $(document).ready(function(){
+                $.getJSON("./problems.json", function(problems){
+                    for(var x in problems){
+                        s = "";
+                        s += "<h3>" + problems[x].name + "</h3>";
+                        s += "<div class='test'>" + JSON.stringify(solver.Solve(problems[x])) + "</div>";
+                        $("#testArea").append("<div>" + s + "</div>")
+                    }
+                });
+            });
+        </script>
+    </head>
+    <body>
+        <h1>Browser Testing</h1>
+        <p>Really Simple (lazy) test to make sure that everything
+            ports over to a browser
+        </p>
+        <div id="testArea"></div>
+    </body>
+</html>
