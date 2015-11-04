@@ -18,27 +18,50 @@ exports.CleanObjectiveAttributes = function(model){
   //
   // If so...create a new attribute on each
   // variable
-    
-    if(model.constraints[model.optimize]){
-        // Create the new attribute
-        var fakeAttr = Math.random();
+    var fakeAttr,
+        x, z;
+  
+    if(typeof model.optimize === "string"){
+        if(model.constraints[model.optimize]){
+            // Create the new attribute
+            fakeAttr = Math.random();
 
-        // Go over each variable and check
-        for(var x in model.variables){
-            // Is it there?
-            if(model.variables[x][model.optimize]){
-                model.variables[x][fakeAttr] = model.variables[x][model.optimize];
+            // Go over each variable and check
+            for(x in model.variables){
+                // Is it there?
+                if(model.variables[x][model.optimize]){
+                    model.variables[x][fakeAttr] = model.variables[x][model.optimize];
+                }
             }
-        }
 
-    // Now that we've cleaned up the variables
-    // we need to clean up the constraints
-        model.constraints[fakeAttr] = model.constraints[model.optimize];
-        delete model.constraints[model.optimize];
-        return model;
-
+        // Now that we've cleaned up the variables
+        // we need to clean up the constraints
+            model.constraints[fakeAttr] = model.constraints[model.optimize];
+            delete model.constraints[model.optimize];
+            return model;
+        } else {    
+            return model;
+        }  
     } else {
-    
+        // We're assuming its an object?
+        for(z in model.optimize){
+            if(model.constraints[z]){
+                // Create the new attribute
+                fakeAttr = Math.random();
+
+                // Go over each variable and check
+                for(x in model.variables){
+                    // Is it there?
+                    if(model.variables[x][z]){
+                        model.variables[x][fakeAttr] = model.variables[x][z];
+                    }
+                }
+            // Now that we've cleaned up the variables
+            // we need to clean up the constraints
+                model.constraints[fakeAttr] = model.constraints[z];
+                delete model.constraints[z];
+            }    
+        }
         return model;
     }
 };
