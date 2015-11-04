@@ -176,7 +176,8 @@ module.exports = function(model){
             if(pareto[x][i]){
                 if(pareto[x][i] > obj[i].max){
                     obj[i].max = pareto[x][i];
-                } else if(pareto[x][i] < obj[i].min){
+                } 
+                if(pareto[x][i] < obj[i].min){
                     obj[i].min = pareto[x][i];
                 }
             } else {
