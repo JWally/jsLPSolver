@@ -57,13 +57,16 @@ module.exports = function(model){
         max_counter = 0,
         min_counter = 0,
         vectors = {},
-        vector_key = "";
+        vector_key = "",
+        obj = {},
+        pareto = [],
+        i,j,x,y,z;
 
     // Delete the optimize object from the model
     delete model.optimize;
 
     // Iterate and Clear
-    for(var i = 0; i < keys.length; i++){
+    for(i = 0; i < keys.length; i++){
         // Clean up the new_constraints
         new_constraints[keys[i]] = 0;
     }
@@ -86,13 +89,13 @@ module.exports = function(model){
         // them later...
 
         // Loop over the keys
-        for(var y in keys){
+        for(y in keys){
             // We're only worried about attributes, not variables
             if(!model.variables[keys[y]]){
                 // Create space for the attribute in the tmp object
                 tmp[keys[y]] = tmp[keys[y]] ? tmp[keys[y]] : 0;
                 // Go over each of the variables
-                for(var x in model.variables){
+                for(x in model.variables){
                     // Does the variable exist in tmp *and* does attribute exist in this model?
                     if(model.variables[x][keys[y]] && tmp[x]){
                         // Add it to tmp
@@ -108,7 +111,7 @@ module.exports = function(model){
         // the same vector more than once,
         // we only count it once when finding
         // the midpoint
-        for(var j = 0; j < keys.length; j++){
+        for(j = 0; j < keys.length; j++){
             if(tmp[keys[j]]){
                 vector_key += "-" + ((tmp[keys[j]] * 1000) | 0) / 1000;
             } else {
@@ -138,6 +141,14 @@ module.exports = function(model){
                     new_constraints[keys[j]] += tmp[keys[j]];
                 }
             }
+            
+            // Push the solution into the paretos
+            // array after cleaning it of some
+            // excess data markers
+            
+            delete tmp.feasible;
+            delete tmp.result;            
+            pareto.push(tmp);
         }
     }
 
@@ -161,9 +172,41 @@ module.exports = function(model){
 
     // And add the fake attribute to the variables
     // in the model
-    for(var z in model.variables){
-        model.variables[z].cheater = 1;
+    for(i in model.variables){
+        model.variables[i].cheater = 1;
     }
-
-    return solver.Solve(model);
+    
+    // Build out the object with all attributes
+    for(i in pareto){
+        for(x in pareto[i]){
+            obj[x] = obj[x] || {min: 1e99, max: -1e99};
+        }
+    }
+    
+    // Give each pareto a full attribute list
+    // while getting the max and min values
+    // for each attribute
+    for(i in obj){
+        for(x in pareto){
+            if(pareto[x][i]){
+                if(pareto[x][i] > obj[i].max){
+                    obj[i].max = pareto[x][i];
+                } else if(pareto[x][i] < obj[i].min){
+                    obj[i].min = pareto[x][i];
+                }
+            } else {
+                pareto[x][i] = 0;
+                obj[i].min = 0;
+            }
+        }
+    }
+    // Solve the model for the midpoints
+    // (hopefully obsolete soon)
+    tmp =  solver.Solve(model);
+    
+    return {
+        midpoint: tmp,
+        pareto: pareto,
+        ranges: obj
+    };
 };
