@@ -54,8 +54,7 @@ module.exports = function(model){
         new_constraints = JSON.parse(JSON.stringify(model.optimize)),
         keys = Object.keys(model.optimize),
         tmp,
-        max_counter = 0,
-        min_counter = 0,
+        counter = 0,
         vectors = {},
         vector_key = "",
         obj = {},
@@ -123,17 +122,8 @@ module.exports = function(model){
         if(!vectors[vector_key]){
             // Add the vector-key in
             vectors[vector_key] = 1;
-
-            // TODO: Check to see if we need this?
-            // or if we can just have 1 counter
-            if(model.opType === "max"){
-                max_counter += 1;
-                min_counter += 1;
-            } else {
-                min_counter += 1;
-                max_counter += 1;
-            }
-
+            counter++;
+            
             // Iterate over the keys
             // and update our new constraints
             for(j = 0; j < keys.length; j++){
@@ -158,12 +148,7 @@ module.exports = function(model){
     // *midpoint formula*
     // (x1 + x2 + x3) / 3
     for(i = 0; i < keys.length; i++){
-        // TODO: Follow up wiht the "TODO" above
-        if(objectives[keys[i]] === "max"){
-            model.constraints[keys[i]] = {"equal": new_constraints[keys[i]] / max_counter};
-        } else {
-            model.constraints[keys[i]] = {"equal": new_constraints[keys[i]] / min_counter};
-        }
+        model.constraints[keys[i]] = {"equal": new_constraints[keys[i]] / counter};
     }
 
     // Give the model a fake thing to optimize on
