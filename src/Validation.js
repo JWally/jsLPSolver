@@ -46,20 +46,30 @@ exports.CleanObjectiveAttributes = function(model){
         // We're assuming its an object?
         for(z in model.optimize){
             if(model.constraints[z]){
-                // Create the new attribute
-                fakeAttr = Math.random();
+            // Make sure that the constraint
+            // being optimized isn't constrained
+            // by an equity collar
+                if(model.constraints[z] === "equal"){
+                    // Its constrained by an equal sign;
+                    // delete that objective and move on
+                    delete model.optimize[z];
+                
+                } else {
+                    // Create the new attribute
+                    fakeAttr = Math.random();
 
-                // Go over each variable and check
-                for(x in model.variables){
-                    // Is it there?
-                    if(model.variables[x][z]){
-                        model.variables[x][fakeAttr] = model.variables[x][z];
+                    // Go over each variable and check
+                    for(x in model.variables){
+                        // Is it there?
+                        if(model.variables[x][z]){
+                            model.variables[x][fakeAttr] = model.variables[x][z];
+                        }
                     }
+                // Now that we've cleaned up the variables
+                // we need to clean up the constraints
+                    model.constraints[fakeAttr] = model.constraints[z];
+                    delete model.constraints[z];            
                 }
-            // Now that we've cleaned up the variables
-            // we need to clean up the constraints
-                model.constraints[fakeAttr] = model.constraints[z];
-                delete model.constraints[z];
             }    
         }
         return model;
