@@ -48,13 +48,16 @@ var Solver = function () {
      *                   that 20.000000000000001 is not an integer.
      *                   (defaults to 1e-9)
      **************************************************************/
-    this.Solve = function (model, precision, full) {
+    this.Solve = function (model, precision, full, validate) {
         // Run our validations on the model
         // if the model doesn't have a validate
         // attribute set to false
-        for(var test in validation){
-            model = validation[test](model);
+        if(validate){
+            for(var test in validation){
+                model = validation[test](model);
+            }        
         }
+
 
 
         // Make sure we at least have a model
