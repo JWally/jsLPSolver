@@ -115,6 +115,10 @@ Model.prototype.addVariable = function (cost, id, isInteger, isUnrestricted, pri
     }
 
     var varIndex = this._getNewElementIndex();
+    if (!id) { // could be null, undefined or empty string
+        id = 'x' + varIndex;
+    }
+
     var variable = new Variable(id, cost, varIndex, priority || 0);
     this.variables.push(variable);
     this.variableIds[varIndex] = id;
