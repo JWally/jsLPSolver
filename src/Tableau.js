@@ -506,19 +506,20 @@ Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex, debug) {
     // set the value in the pivot column = 0 by
     // multiplying the value of all elements in the objective
     // row by ... yuck... just look below; better explanation later
+    var coefficient, i, v0;
     var precision = this.precision;
     for (var r = 0; r <= lastRow; r++) {
         var row = matrix[r];
         if (r !== pivotRowIndex) {
-            var coefficient = row[pivotColumnIndex];
+            coefficient = row[pivotColumnIndex];
             // No point Burning Cycles if
             // Zero to the thing
             if (coefficient !== 0) {
-                for (var i = 0; i < nNonZeroColumns; i++) {
+                for (i = 0; i < nNonZeroColumns; i++) {
                     c = nonZeroColumns[i];
                     // No point in doing math if you're just adding
                     // Zero to the thing
-                    var v0 = pivotRow[c];
+                    v0 = pivotRow[c];
                     if (v0 !== 0) {
                         row[c] = row[c] - coefficient * v0;
                     }
@@ -533,11 +534,11 @@ Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex, debug) {
     if (nOptionalObjectives > 0) {
         for (var o = 0; o < nOptionalObjectives; o += 1) {
             var reducedCosts = this.optionalObjectives[o].reducedCosts;
-            var coefficient = reducedCosts[pivotColumnIndex];
+            coefficient = reducedCosts[pivotColumnIndex];
             if (coefficient !== 0) {
-                for (var i = 0; i < nNonZeroColumns; i++) {
+                for (i = 0; i < nNonZeroColumns; i++) {
                     c = nonZeroColumns[i];
-                    var v0 = pivotRow[c];
+                    v0 = pivotRow[c];
                     if (v0 !== 0) {
                         reducedCosts[c] = reducedCosts[c] - coefficient * v0;
                     }
@@ -782,7 +783,7 @@ Tableau.prototype.updateRightHandSide = function (constraint, difference) {
         if (nOptionalObjectives > 0) {
             for (var o = 0; o < nOptionalObjectives; o += 1) {
                 var reducedCosts = this.optionalObjectives[o].reducedCosts;
-                reducedCosts[this.rhsColumn] -= difference * row[slackColumn];
+                reducedCosts[this.rhsColumn] -= difference * reducedCosts[slackColumn];
             }
         }
     } else {
@@ -816,16 +817,17 @@ Tableau.prototype.updateCost = function (variable, difference) {
         // Variable is in base
         var variableRow = this.matrix[this.rows[varIndex]];
 
+        var c;
         if (variable.priority === 0) {
             var costRow = this.matrix[0];
 
             // Upading all the reduced costs
-            for (var c = 0; c <= lastColumn; c += 1) {
+            for (c = 0; c <= lastColumn; c += 1) {
                 costRow[c] += difference * variableRow[c];
             }
         } else {
             var reducedCosts = this.objectivesByPriority[variable.priority].reducedCosts;
-            for (var c = 0; c <= lastColumn; c += 1) {
+            for (c = 0; c <= lastColumn; c += 1) {
                 reducedCosts[c] += difference * variableRow[c];
             }
         }
@@ -918,7 +920,7 @@ function OptionalObjective(priority, firstNonNullCost, firstNonNullColumn) {
     this.reducedCosts[firstNonNullColumn] = firstNonNullCost;
 }
 
-Tableau.prototype.addVariable = function (variable, priority) {
+Tableau.prototype.addVariable = function (variable) {
     // Adds a variable to the tableau
     // var sign = constraint.isUpperBound ? 1 : -1;
 

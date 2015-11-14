@@ -183,12 +183,11 @@ function MILP(model) {
     tableau.restore();
 
     // Adding cut constraints for the optimal solution
-    var cuts = bestBranch.cuts;
-    tableau.addCutConstraints(cuts);
+    tableau.addCutConstraints(bestBranch.cuts);
 
     // Solving a last time
     var bestSolution = tableau.solve().getSolution();
-    tableau.updateVariableValues()
+    tableau.updateVariableValues();
 
     bestSolution.iter = iterations;
     return bestSolution;

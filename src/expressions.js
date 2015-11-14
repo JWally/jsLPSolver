@@ -112,7 +112,7 @@ Constraint.prototype.relax = function (weight, priority) {
         weight = -weight;
     }
 
-    this.relaxation = this.model.addVariable(weight, "e" + (errorVarIdx++).toString(), false, false, priority);
+    this.relaxation = this.model.addVariable(weight, null, false, false, priority);
     this._relax(this.relaxation, priority);
 };
 
@@ -157,7 +157,7 @@ Equality.prototype.relax = function (weight, priority) {
         weight = -weight;
     }
 
-    this.relaxation = this.model.addVariable(weight, "e" + (errorVarIdx++).toString(), false, false, priority);
+    this.relaxation = this.model.addVariable(weight, null, false, false, priority);
     this.upperBound._relax(this.relaxation);
     this.lowerBound._relax(this.relaxation);
 };

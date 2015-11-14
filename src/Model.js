@@ -104,19 +104,29 @@ Model.prototype.equal = function (rhs) {
 };
 
 Model.prototype.addVariable = function (cost, id, isInteger, isUnrestricted, priority) {
-    if (typeof priority === 'string') {
+    if (typeof priority === "string") {
         switch (priority) {
-        case 'required': priority = 0; break;
-        case 'strong': priority = 1; break;
-        case 'medium': priority = 2; break;
-        case 'weak': priority = 3; break;
-        default: priority = 0; break;
+        case "required":
+            priority = 0;
+            break;
+        case "strong":
+            priority = 1;
+            break;
+        case "medium":
+            priority = 2;
+            break;
+        case "weak":
+            priority = 3;
+            break;
+        default:
+            priority = 0;
+            break;
         }
     }
 
     var varIndex = this._getNewElementIndex();
     if (!id) { // could be null, undefined or empty string
-        id = 'x' + varIndex;
+        id = "v" + varIndex;
     }
 
     if (!cost) { // could be null, undefined or already 0
