@@ -119,7 +119,15 @@ Model.prototype.addVariable = function (cost, id, isInteger, isUnrestricted, pri
         id = 'x' + varIndex;
     }
 
-    var variable = new Variable(id, cost, varIndex, priority || 0);
+    if (!cost) { // could be null, undefined or already 0
+        cost = 0;
+    }
+
+    if (!priority) { // could be null, undefined or already 0
+        priority = 0;
+    }
+
+    var variable = new Variable(id, cost, varIndex, priority);
     this.variables.push(variable);
     this.variableIds[varIndex] = id;
 
