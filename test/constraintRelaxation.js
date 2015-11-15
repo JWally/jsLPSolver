@@ -102,7 +102,7 @@ describe("Testing Model Relaxation", function () {
 		//-------------------------------------------
 		// SOLVING RELAXED MODEL
 		//-------------------------------------------
-		solution2 = model2.solve();
+		var solution2 = model2.solve();
 		assert.deepEqual(solution2.feasible, true);
 		assert.deepEqual(solution2.evaluation, 0);
 		assert.deepEqual(x1.value, 1.17647059);

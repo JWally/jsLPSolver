@@ -172,7 +172,7 @@ describe("Testing Dynamic Model Modification", function () {
         yard.setRightHandSide(150);
 
         // Reintroducing the pants variable
-        var pants = model4d.addVariable(40, "pants");
+        pants = model4d.addVariable(40, "pants");
         yard.addTerm(5, pants);
         hours.addTerm(4, pants);
 
