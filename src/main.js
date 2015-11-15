@@ -59,7 +59,7 @@ var Solver = function () {
         if(validate){
             for(var test in validation){
                 model = validation[test](model);
-            }        
+            }
         }
 
         // Make sure we at least have a model
@@ -72,6 +72,7 @@ var Solver = function () {
         }
 
         var solution = model.solve();
+        solution.solutionSet = solution.generateSolutionSet();
 
         // If the user asks for a full breakdown
         // of the tableau (e.g. full === true)
@@ -110,8 +111,8 @@ var Solver = function () {
      *          lp_solver
      **************************************************************/
     this.ReformatLP = require("./LP_Solve");
-    
-    
+
+
      /*************************************************************
      * Method: MultiObjective
      * Scope: Public:
@@ -128,7 +129,7 @@ var Solver = function () {
      *                   the frontier of the polytope (ranges)
      * Purpose: Solve a model with multiple objective functions.
      *          Since a potential infinite number of solutions exist
-     *          this naively returns the mid-point between 
+     *          this naively returns the mid-point between
      *
      * Note: The model has to be changed a little to work with this.
      *       Before an *opType* was required. No more. The objective
@@ -145,7 +146,7 @@ var Solver = function () {
      *           soda: {fluid: 1, soda: 1}
      *       }
      *   }
-     *       
+     *
      **************************************************************/
     this.MultiObjective = function(model, detail){
         return require("./Polyopt")(this, model, detail);
