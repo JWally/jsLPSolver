@@ -6,6 +6,9 @@
   "authors": [
     "Justin W. Wolcott"
   ],
+  "contributors": [
+    "Brice Chevalier <bchevalier@wizcorp.jp>"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/JWally/jsLPSolver"
