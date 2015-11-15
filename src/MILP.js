@@ -40,14 +40,12 @@ function MILP(model) {
     // This is the default result
     // If nothing is both *integral* and *feasible*
     var bestEvaluation = Infinity;
-    var bestSolution = {
-        evaluation: Infinity,
-        solutionSet: {},
-        feasible: false
-    };
-
+    var bestBranch = null;
 
     // And here...we...go!
+
+    // Restoring initial solution
+    tableau.restore();
 
     // Running solver a first time to obtain an initial solution
     tableau.solve();
@@ -95,7 +93,7 @@ function MILP(model) {
             // Is the new result the bestSolution that we've ever had?
             if (evaluation < bestEvaluation) {
                 // Store the solution as the bestSolution
-                bestSolution = tableau.compileSolution();
+                bestBranch = branch;
                 bestEvaluation = evaluation;
             }
 
@@ -183,6 +181,13 @@ function MILP(model) {
 
     // Restoring initial solution
     tableau.restore();
+
+    // Adding cut constraints for the optimal solution
+    tableau.addCutConstraints(bestBranch.cuts);
+
+    // Solving a last time
+    var bestSolution = tableau.solve().getSolution();
+    tableau.updateVariableValues();
 
     bestSolution.iter = iterations;
     return bestSolution;

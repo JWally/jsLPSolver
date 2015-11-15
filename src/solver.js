@@ -2134,6 +2134,7 @@ var Solver = function () {
         }
 
         var solution = model.solve();
+        solution.solutionSet = solution.generateSolutionSet();
 
         // If the user asks for a full breakdown
         // of the tableau (e.g. full === true)

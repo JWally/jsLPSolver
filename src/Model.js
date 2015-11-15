@@ -39,7 +39,7 @@ function Model(precision, name) {
 
     this.isMinimization = true;
 
-    // TODO: this.availableIndexes = [];
+    this.availableIndexes = [];
     this.lastElementIndex = 0;
 
     this.tableauInitialized = false;
@@ -63,59 +63,96 @@ Model.prototype.maximize = function () {
 //     return this;
 // };
 
+Model.prototype._getNewElementIndex = function () {
+    if (this.availableIndexes.length > 0) {
+        return this.availableIndexes.pop();
+    }
+
+    var index = this.lastElementIndex;
+    this.lastElementIndex += 1;
+    return index;
+};
+
 Model.prototype._addConstraint = function (constraint) {
     this.constraints.push(constraint);
     this.nConstraints += 1;
-    this.lastElementIndex += 1;
     if (this.tableauInitialized === true) {
         this.tableau.addConstraint(constraint);
     }
 };
 
 Model.prototype.smallerThan = function (rhs) {
-    var constraint = new Constraint(rhs, true, this.lastElementIndex, this);
+    var constraint = new Constraint(rhs, true, this._getNewElementIndex(), this);
     this._addConstraint(constraint);
     return constraint;
 };
 
 Model.prototype.greaterThan = function (rhs) {
-    var constraint = new Constraint(rhs, false, this.lastElementIndex, this);
+    var constraint = new Constraint(rhs, false, this._getNewElementIndex(), this);
     this._addConstraint(constraint);
     return constraint;
 };
 
 Model.prototype.equal = function (rhs) {
-    var constraintUpper = new Constraint(rhs, true, this.lastElementIndex, this);
+    var constraintUpper = new Constraint(rhs, true, this._getNewElementIndex(), this);
     this._addConstraint(constraintUpper);
 
-    var constraintLower = new Constraint(rhs, false, this.lastElementIndex, this);
+    var constraintLower = new Constraint(rhs, false, this._getNewElementIndex(), this);
     this._addConstraint(constraintLower);
 
     return new Equality(constraintUpper, constraintLower);
 };
 
-Model.prototype.addVariable = function (cost, id, isInteger, isUnrestricted) {
-    // TODO: difficulty undetermined
-    // add support for variables that can be negative
-    // how: may be by allowing negative pivots? <- should be easy enough
-    var varIndex = this.variables.length;
-    var variable = new Variable(id, cost, this.lastElementIndex);
+Model.prototype.addVariable = function (cost, id, isInteger, isUnrestricted, priority) {
+    if (typeof priority === "string") {
+        switch (priority) {
+        case "required":
+            priority = 0;
+            break;
+        case "strong":
+            priority = 1;
+            break;
+        case "medium":
+            priority = 2;
+            break;
+        case "weak":
+            priority = 3;
+            break;
+        default:
+            priority = 0;
+            break;
+        }
+    }
+
+    var varIndex = this._getNewElementIndex();
+    if (!id) { // could be null, undefined or empty string
+        id = "v" + varIndex;
+    }
+
+    if (!cost) { // could be null, undefined or already 0
+        cost = 0;
+    }
+
+    if (!priority) { // could be null, undefined or already 0
+        priority = 0;
+    }
+
+    var variable = new Variable(id, cost, varIndex, priority);
     this.variables.push(variable);
-    this.variableIds[this.lastElementIndex] = id;
+    this.variableIds[varIndex] = id;
 
     if (isInteger) {
         this.integerVariables.push(variable);
     }
 
     if (isUnrestricted) {
-        this.unrestrictedVariables[variable.index] = true;
+        this.unrestrictedVariables[varIndex] = true;
     }
 
     this.nVariables += 1;
-    this.lastElementIndex += 1;
 
     if (this.tableauInitialized === true) {
-        this.tableau.addVariable(variable, cost);
+        this.tableau.addVariable(variable);
     }
 
     return variable;
@@ -142,6 +179,10 @@ Model.prototype.removeConstraint = function (constraint) {
 
     this.constraints.splice(idx, 1);
     this.nConstraints -= 1;
+    this.availableIndexes.push(constraint.index);
+    if (constraint.relaxation) {
+        this.removeVariable(constraint.relaxation);
+    }
     return this;
 };
 
@@ -157,6 +198,8 @@ Model.prototype.removeVariable = function (variable) {
     if (this.tableauInitialized === true) {
         this.tableau.removeVariable(variable);
     }
+
+    this.availableIndexes.push(variable.index);
 
     variable.index = -1;
     this.variables.splice(idx, 1);
@@ -285,7 +328,8 @@ Model.prototype.solve = function () {
     if (this.getNumberOfIntegerVariables() > 0) {
         return MILP(this);
     } else {
-        var solution = this.tableau.solve().compileSolution();
+        var solution = this.tableau.solve().getSolution();
+        this.tableau.updateVariableValues();
         return solution;
     }
 };

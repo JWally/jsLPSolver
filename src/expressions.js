@@ -7,11 +7,12 @@
 
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
-function Variable(id, cost, index) {
+function Variable(id, cost, index, priority) {
     this.id = id;
     this.cost = cost;
     this.index = index;
     this.value = 0;
+    this.priority = priority;
 }
 
 //-------------------------------------------------------------------
@@ -31,6 +32,9 @@ function Constraint(rhs, isUpperBound, index, model) {
 
     this.terms = [];
     this.termsByVarIndex = {};
+
+    // Error variable in case the constraint is relaxed
+    this.relaxation = null;
 }
 
 Constraint.prototype.addTerm = function (coefficient, variable) {
@@ -103,13 +107,13 @@ Constraint.prototype.setVariableCoefficient = function (newCoefficient, variable
 };
 
 var errorVarIdx = 1;
-Constraint.prototype.relax = function (weight) {
+Constraint.prototype.relax = function (weight, priority) {
     if (this.model.isMinimization === false) {
         weight = -weight;
     }
 
-    var error = this.model.addVariable(weight, "e" + (errorVarIdx++).toString());
-    this._relax(error);
+    this.relaxation = this.model.addVariable(weight, null, false, false, priority);
+    this._relax(this.relaxation, priority);
 };
 
 Constraint.prototype._relax = function (error) {
@@ -127,6 +131,7 @@ function Equality(constraintUpper, constraintLower) {
     this.lowerBound = constraintLower;
     this.model = constraintUpper.model;
     this.rhs = constraintUpper.rhs;
+    this.relaxation = null;
 }
 
 Equality.prototype.addTerm = function (coefficient, variable) {
@@ -147,14 +152,14 @@ Equality.prototype.setRightHandSide = function (rhs) {
     this.rhs = rhs;
 };
 
-Equality.prototype.relax = function (weight) {
+Equality.prototype.relax = function (weight, priority) {
     if (this.model.isMinimization === false) {
         weight = -weight;
     }
 
-    var error = this.model.addVariable(weight, "e" + (errorVarIdx++).toString());
-    this.upperBound._relax(error);
-    this.lowerBound._relax(error);
+    this.relaxation = this.model.addVariable(weight, null, false, false, priority);
+    this.upperBound._relax(this.relaxation);
+    this.lowerBound._relax(this.relaxation);
 };
 
 
