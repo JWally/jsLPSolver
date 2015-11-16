@@ -148,8 +148,8 @@ var Solver = function () {
      *   }
      *
      **************************************************************/
-    this.MultiObjective = function(model, detail){
-        return require("./Polyopt")(this, model, detail);
+    this.MultiObjective = function(model){
+        return require("./Polyopt")(this, model);
     };
 };
 

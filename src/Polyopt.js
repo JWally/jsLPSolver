@@ -35,7 +35,7 @@
 
      **************************************************************/
 
-module.exports = function(solver, model, detail){
+module.exports = function(solver, model){
 
     // I have no idea if this is actually works, or what,
     // but here is my algorithm to solve linear programs
@@ -160,46 +160,38 @@ module.exports = function(solver, model, detail){
         model.variables[i].cheater = 1;
     }
     
-    
-    console.log(model);
-    // Build out the detail if its requested
-    // otherwise, this is just burning cycles...
-    if(detail){
-        // Build out the object with all attributes
-        for(i in pareto){
-            for(x in pareto[i]){
-                obj[x] = obj[x] || {min: 1e99, max: -1e99};
-            }
+    // Build out the object with all attributes
+    for(i in pareto){
+        for(x in pareto[i]){
+            obj[x] = obj[x] || {min: 1e99, max: -1e99};
         }
-        
-        // Give each pareto a full attribute list
-        // while getting the max and min values
-        // for each attribute
-        for(i in obj){
-            for(x in pareto){
-                if(pareto[x][i]){
-                    if(pareto[x][i] > obj[i].max){
-                        obj[i].max = pareto[x][i];
-                    } 
-                    if(pareto[x][i] < obj[i].min){
-                        obj[i].min = pareto[x][i];
-                    }
-                } else {
-                    pareto[x][i] = 0;
-                    obj[i].min = 0;
-                }
-            }
-        }
-        // Solve the model for the midpoints
-        tmp =  solver.Solve(model, undefined, undefined, true);
-        
-        return {
-            midpoint: tmp,
-            pareto: pareto,
-            ranges: obj
-        };    
-    } else {
-        // Just return the result of the mid-point formula
-        return solver.Solve(model, undefined, undefined, true);
     }
+    
+    // Give each pareto a full attribute list
+    // while getting the max and min values
+    // for each attribute
+    for(i in obj){
+        for(x in pareto){
+            if(pareto[x][i]){
+                if(pareto[x][i] > obj[i].max){
+                    obj[i].max = pareto[x][i];
+                } 
+                if(pareto[x][i] < obj[i].min){
+                    obj[i].min = pareto[x][i];
+                }
+            } else {
+                pareto[x][i] = 0;
+                obj[i].min = 0;
+            }
+        }
+    }
+    // Solve the model for the midpoints
+    tmp =  solver.Solve(model, undefined, undefined, true);
+    
+    return {
+        midpoint: tmp,
+        vertices: pareto,
+        ranges: obj
+    };    
+
 };
