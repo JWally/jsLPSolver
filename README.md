@@ -97,6 +97,104 @@ var solver = require("./src/solver"),
 console.log(solver.Solve(model));
 // {feasible: true, result: 1440-0, table: 8, dresser: 3}
 ```
+##Multi-Objective Optimization
+
+__What is it?__
+
+Its a way to "solve" linear programs with multiple objective functions. Basically, it solves each objective function independent of one another and returns an object with:
+
+* The mid-point between those solutions (midpoint)
+* The solutions themselves (vertices)
+* The range of values for each variable in the solution (ranges)
+
+__Caveats__
+
+I have no idea if this is right or not. Proceed with caution.
+
+__Use Case__
+
+Say you're a dietitician and have a client that has the following constraints in their diet:
+
+* 375g of carbohydrates / day
+* 225g of protein / day
+* 66.66g of fat / day
+
+They're also a bit of a junk-food glutton and would like you to create a meal for them containing the following ingredients which meets their nutrition specifications outlined above:
+
+* egg whites
+* whole eggs
+* cheddar cheese
+* bacon
+* potato
+* fries
+
+They also mention they want to eat as much bacon, cheese, and fries as possible. After losing your appetite, you build the following linear program: 
+
+```javascript
+{ 
+    "optimize": {
+        "bacon": "max",
+        "cheddar cheese": "max",
+        "french fries": "max"
+    },
+    "constraints": { 
+        "carb": { "equal": 375 },
+        "protein": { "equal": 225 },
+        "fat": { "equal": 66.666 }
+    },
+    "variables": { 
+         "egg white":{ "carb": 0.0073, "protein": 0.109, "fat": 0.0017, "egg white": 1 },
+         "egg whole":{ "carb": 0.0072, "protein": 0.1256, "fat": 0.0951, "egg whole": 1 },
+         "cheddar cheese":{ "carb": 0.0128, "protein": 0.249, "fat": 0.3314, "cheddar cheese": 1 },
+         "bacon":{ "carb": 0.00667, "protein": 0.116, "fat": 0.4504, "bacon": 1 },
+         "potato": { "carb": 0.1747, "protein": 0.0202, "fat": 0.0009, "potato": 1 },
+         "french fries": { "carb": 0.3902, "protein": 0.038, "fat": 0.1612, "french fries": 1 }
+    } 
+}
+```
+
+which is solved by the ```solver.MultiObjective``` method. The result for this problem is:
+
+```javascript
+{ midpoint: 
+   { feasible: true,
+     result: -0,
+     'egg white': 1494.64994046,
+     potato: 1788.20687788,
+     bacon: 46.02690209,
+     'cheddar cheese': 63.03985067,
+     'french fries': 129.61405521 },
+  vertices: 
+   [ { bacon: 138.08070627,
+       'egg white': 1532.31628515,
+       potato: 2077.23579169,
+       'cheddar cheese': 0,
+       'french fries': 0 },
+     { 'cheddar cheese': 189.119552,
+       'egg white': 1246.61767465,
+       potato: 2080.58935724,
+       bacon: 0,
+       'french fries': 0 },
+     { 'french fries': 388.84216563,
+       'egg white': 1705.0158616,
+       potato: 1206.79548473,
+       bacon: 0,
+       'cheddar cheese': 0 } ],
+  ranges: 
+   { bacon: { min: 0, max: 138.08070627 },
+     'egg white': { min: 1246.61767465, max: 1705.0158616 },
+     potato: { min: 1206.79548473, max: 2080.58935724 },
+     'cheddar cheese': { min: 0, max: 189.119552 },
+     'french fries': { min: 0, max: 388.84216563 } } }
+```
+
+__Reading the Results__
+
+midpoint: This is the solution that maximizes the amount of bacon, cheese, and fries your client can eat *simultaneously*. No single objective can be improved without hurting at least one other objective.
+
+vertices: The solutions to the individual objective functions
+
+ranges: This tells you the absolute minimum and absolute maximum values for each variable that was encountered while solving the objective functions. For instance, I can have between 0 and 138 grams of bacon. If I have 0 grams, I can have more cheese and more fries. If I have 138 grams, I can have no cheese and no fries. 
 
 ##How Fast is it?
 
