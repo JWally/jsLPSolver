@@ -110,7 +110,7 @@ var Solver = function () {
      *          real solving library...in this case
      *          lp_solver
      **************************************************************/
-    this.ReformatLP = require("./LP_Solve");
+    this.ReformatLP = require("./Reformat");
 
 
      /*************************************************************

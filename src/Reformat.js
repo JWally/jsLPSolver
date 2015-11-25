@@ -4,19 +4,11 @@
 /*global it*/
 /*global console*/
 /*global process*/
+/*jshint -W083 */
 
 
 
-module.exports = function (model) {
-    // If the user is giving us an array
-    // or a string, convert it to a JSON Model
-    // otherwise, spit it out as a string
-    if(model.length){
-        return to_JSON(model);
-    } else {
-        return from_JSON(model);
-    }
-};
+
  
  
  /*************************************************************
@@ -29,6 +21,7 @@ module.exports = function (model) {
  **************************************************************/
 function to_JSON(input){
     var rxo = {
+        /* jshint ignore:start */
         "is_blank": /^\W{0,}$/,
         "is_objective": /(max|min)(imize){0,}\:/i,
         "is_int": /^\W{0,}int/i,
@@ -40,6 +33,7 @@ function to_JSON(input){
         "parse_int": /[^\s|^\,]+/gi,
         "get_num": /(\-|\+){0,1}(\W|^)\d+\.{0,}\d{0,}/g,
         "get_word": /[A-Za-z].*/
+        /* jshint ignore:end */
     },
     model = {
         "opType": "",
@@ -117,7 +111,7 @@ function to_JSON(input){
                 
                 // Make sure the variable is in the model
                 model.variables[hldr2] = model.variables[hldr2] || {};
-                model.variables[hldr2]["_obj"] = hldr;
+                model.variables[hldr2]._obj = hldr;
 
             });
         ////////////////////////////////////
@@ -271,3 +265,15 @@ function from_JSON(model){
     // And kick the string back
     return output;
 }
+
+
+module.exports = function (model) {
+    // If the user is giving us an array
+    // or a string, convert it to a JSON Model
+    // otherwise, spit it out as a string
+    if(model.length){
+        return to_JSON(model);
+    } else {
+        return from_JSON(model);
+    }
+};
