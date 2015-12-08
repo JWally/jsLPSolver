@@ -21,13 +21,14 @@ from [this](http://math.stackexchange.com/questions/59429/berlin-airlift-linear-
 
 
 
-##So How Would I Do This?
+So How Would I Do This?
+-----------------------
 Part of the reason I built this library is that I wanted to do as little thinking / setup as possible
 to solve the actual problem. Instead of tinkering with arrays to solve this problem, you would create a
-model in a JavaScript object, and solver it through the object's `solve` function; like this:
+model in a JavaScript object, and solve it through the object's `solve` function; like this:
 
 ```javascript
-var solver = new Solver,
+var solver = require("./src/solver"),
   results,
   model = {
     "optimize": "capacity",
@@ -61,9 +62,10 @@ which should yield the following:
 ```
 {feasible: true, brit: 24, yank: 20, result: 1080000}
 ```
-##What If I Want Only Integers
+What If I Want Only Integers
+--------------------
 
-Say you live in the real world and partial results aren't realistic, or are too messy.
+Say you live in the real world and partial results aren't realistic, too messy, or generally unsafe.
 
 > You run a small custom furniture shop and make custom tables and dressers.
 >
@@ -97,7 +99,121 @@ var solver = require("./src/solver"),
 console.log(solver.Solve(model));
 // {feasible: true, result: 1440-0, table: 8, dresser: 3}
 ```
-##Multi-Objective Optimization
+
+
+How Fast is it?
+----------------------
+Below are the results from my home made suite of variable sized LP(s)
+
+```javascript
+{ Relaxed: { variables: 2, time: 0.004899597 },
+  Unrestricted: { constraints: 1, variables: 2, time: 0.001273972 },
+  'Chevalier 1': { constraints: 5, variables: 2, time: 0.000112002 },
+  Artificial: { constraints: 2, variables: 2, time: 0.000101994 },
+  'Wiki 1': { variables: 3, time: 0.000358714 },
+  'Degenerate Min': { constraints: 5, variables: 2, time: 0.000097377 },
+  'Degenerate Max': { constraints: 5, variables: 2, time: 0.000085829 },
+  'Coffee Problem': { constraints: 2, variables: 2, time: 0.000296747 },
+  'Computer Problem': { constraints: 2, variables: 2, time: 0.000066585 },
+  'Generic Business Problem': { constraints: 2, variables: 2, time: 0.000083135 },
+  'Generic Business Problem 2': { constraints: 2, variables: 2, time: 0.000040413 },
+  'Chocolate Problem': { constraints: 2, variables: 2, time: 0.000058503 },
+  'Wood Shop Problem': { constraints: 2, variables: 2, time: 0.000045416 },
+  'Integer Wood Problem': { constraints: 3, variables: 2, ints: 2, time: 0.002406691 },
+  'Berlin Air Lift Problem': { constraints: 3, variables: 2, time: 0.000077362 },
+  'Integer Berlin Air Lift Problem': { constraints: 3, variables: 2, ints: 2, time: 0.000823271 },
+  'Infeasible Berlin Air Lift Problem': { constraints: 5, variables: 2, time: 0.000411828 },
+  'Integer Wood Shop Problem': { constraints: 2, variables: 3, ints: 3, time: 0.001610363 },
+  'Integer Sports Complex Problem': { constraints: 6, variables: 4, ints: 4, time: 0.001151579 },
+  'Integer Chocolate Problem': { constraints: 2, variables: 2, ints: 2, time: 0.000109692 },
+  'Integer Clothing Shop Problem': { constraints: 2, variables: 2, ints: 2, time: 0.000382191 },
+  'Integer Clothing Shop Problem II': { constraints: 2, variables: 4, ints: 4, time: 0.000113927 },
+  'Shift Work Problem': { constraints: 6, variables: 6, time: 0.000127012 },
+  'Monster Problem': { constraints: 576, variables: 552, time: 0.054285454 },
+  monster_II: { constraints: 842, variables: 924, ints: 112, time: 0.649073406 } }
+```
+
+Alternative Model Formats
+-----------
+
+Part of the reason that I build this library is because I *hate* setting up tableaus. Sometimes though, its just easier just to work with a tableau; other times, javaScript might not be the right environment to solve linear programs in. Fear not, we (kind of) have you covered!
+
+__USING A TABLEAU__
+
+The tableau "style-guide" I used to parse LPs came from [LP_Solve](http://lpsolve.sourceforge.net/5.5/lp-format.htm). 
+
+* Get LP From File *
+
+```javascript
+  var fs = require("fs"),
+      solver = require("./src/solver"),
+      model = {};
+    
+  // Read Data from File
+  fs.readFile("./your/model/file", "utf8", function(e,d){
+      // Convert the File Data to a JSON Model
+      model = solver.ReformatLP(d);
+  });
+
+  // Solve the LP
+  console.log(solver.Solve(model));
+```
+
+* Get LP From Arrays *
+
+```javascript
+    var solver = require("./src/solver"),
+        model = [
+                  "max: 1200 table 1600 dresser",
+                  "30 table 20 dresser <= 300",
+                  "5 table 10 dresser <= 110",
+                  "30 table 50 dresser <= 400",
+                  "int table",
+                  "int dresser",
+                ];
+  
+  // Reformat to JSON model              
+  model = solver.ReformatLP(model);
+  
+  // Solve the model
+  solver.Solve(model);
+    
+```
+
+__EXPORTING A TABLEAU__
+
+You can also exports JSON models to an [LP_Solve](http://lpsolve.sourceforge.net/5.5/lp-format.htm) format (which is convenient if you plan on using LP_Solve). 
+
+```javascript
+   var solver = require("./src/solver"),
+       fs = require("fs"),
+       model = {
+        "optimize": "profit",
+        "opType": "max",
+        "constraints": {
+            "wood": {"max": 300},
+            "labor": {"max": 110},
+            "storage": {"max": 400}
+        },
+        "variables": {
+            "table": {"wood": 30,"labor": 5,"profit": 1200,"table": 1, "storage": 30},
+            "dresser": {"wood": 20,"labor": 10,"profit": 1600,"dresser": 1, "storage": 50}
+        },
+        "ints": {"table": 1,"dresser": 1}
+    };
+    
+    // convert the model to a string
+    model = solver.ReformatLP(model);
+    
+    // Push the string to file
+    fs.writeFile("./something.LP", model);
+
+```
+
+
+
+Multi-Objective Optimization
+----------------------------
 
 __What is it?__
 
@@ -196,51 +312,4 @@ vertices: The solutions to the individual objective functions
 
 ranges: This tells you the absolute minimum and absolute maximum values for each variable that was encountered while solving the objective functions. For instance, I can have between 0 and 138 grams of bacon. If I have 0 grams, I can have more cheese and more fries. If I have 138 grams, I can have no cheese and no fries. 
 
-##How Fast is it?
 
-Below are the results from my home made suite of variable sized LP(s)
-
-```javascript
-{ Relaxed: { variables: 2, time: 0.004899597 },
-  Unrestricted: { constraints: 1, variables: 2, time: 0.001273972 },
-  'Chevalier 1': { constraints: 5, variables: 2, time: 0.000112002 },
-  Artificial: { constraints: 2, variables: 2, time: 0.000101994 },
-  'Wiki 1': { variables: 3, time: 0.000358714 },
-  'Degenerate Min': { constraints: 5, variables: 2, time: 0.000097377 },
-  'Degenerate Max': { constraints: 5, variables: 2, time: 0.000085829 },
-  'Coffee Problem': { constraints: 2, variables: 2, time: 0.000296747 },
-  'Computer Problem': { constraints: 2, variables: 2, time: 0.000066585 },
-  'Generic Business Problem': { constraints: 2, variables: 2, time: 0.000083135 },
-  'Generic Business Problem 2': { constraints: 2, variables: 2, time: 0.000040413 },
-  'Chocolate Problem': { constraints: 2, variables: 2, time: 0.000058503 },
-  'Wood Shop Problem': { constraints: 2, variables: 2, time: 0.000045416 },
-  'Integer Wood Problem': { constraints: 3, variables: 2, ints: 2, time: 0.002406691 },
-  'Berlin Air Lift Problem': { constraints: 3, variables: 2, time: 0.000077362 },
-  'Integer Berlin Air Lift Problem': { constraints: 3, variables: 2, ints: 2, time: 0.000823271 },
-  'Infeasible Berlin Air Lift Problem': { constraints: 5, variables: 2, time: 0.000411828 },
-  'Integer Wood Shop Problem': { constraints: 2, variables: 3, ints: 3, time: 0.001610363 },
-  'Integer Sports Complex Problem': { constraints: 6, variables: 4, ints: 4, time: 0.001151579 },
-  'Integer Chocolate Problem': { constraints: 2, variables: 2, ints: 2, time: 0.000109692 },
-  'Integer Clothing Shop Problem': { constraints: 2, variables: 2, ints: 2, time: 0.000382191 },
-  'Integer Clothing Shop Problem II': { constraints: 2, variables: 4, ints: 4, time: 0.000113927 },
-  'Shift Work Problem': { constraints: 6, variables: 6, time: 0.000127012 },
-  'Monster Problem': { constraints: 576, variables: 552, time: 0.054285454 },
-  monster_II: { constraints: 842, variables: 924, ints: 112, time: 0.649073406 } }
-```
-
-##Incorporating a "Big-Boy" Solver
-
-Part of the reason that I build this library is because I *hate* setting up
-tableaus. Unfortunately, I'm not a CS wizard, and this solver probably should not
-be used for real calculation intensive problems. However, I'm in the process of
-building out functionality to convert a JSON object into a tableau. Its in a pretty
-primitive state right now, but if you
-
-```javascript
-var awesome = solver.ReformatLP(model);
-    fs = require("fs");
-    
-fs.writeFile("model.lp", fs);
-```
-
-you can convert a JSON model into a string that can be used by [LP_Solve](http://lpsolve.sourceforge.net/5.5/).
