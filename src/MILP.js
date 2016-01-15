@@ -4,6 +4,7 @@
 /*global it*/
 /*global console*/
 /*global process*/
+var Solution = require("./Solution.js");
 
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
@@ -19,6 +20,16 @@ function Branch(relaxedEvaluation, cuts) {
     this.relaxedEvaluation = relaxedEvaluation;
     this.cuts = cuts;
 }
+
+//-------------------------------------------------------------------
+//-------------------------------------------------------------------
+function MilpSolution(relaxedSolution, iterations) {
+    Solution.call(this, relaxedSolution._tableau, relaxedSolution.evaluation, relaxedSolution.feasible);
+    this.iter = iterations;
+}
+
+MilpSolution.prototype = Object.create(Solution.prototype);
+MilpSolution.prototype.constructor = MilpSolution;
 
 //-------------------------------------------------------------------
 // Branch sorting strategies
@@ -44,15 +55,6 @@ function MILP(model) {
 
     // And here...we...go!
 
-    // Restoring initial solution
-    tableau.restore();
-
-    // Running solver a first time to obtain an initial solution
-    tableau.solve();
-
-    // Saving initial solution
-    tableau.save();
-
     // 1.) Load a model into the queue
     var branch = new Branch(-Infinity, []);
     branches.push(branch);
@@ -61,7 +63,6 @@ function MILP(model) {
     while (branches.length > 0) {
         // Get a model from the queue
         branch = branches.pop();
-
         if (branch.relaxedEvaluation >= bestEvaluation) {
             continue;
         }
@@ -78,6 +79,12 @@ function MILP(model) {
 
         // Solving
         tableau.solve();
+
+        if (iterations === 0) {
+            // Saving the first iteration
+            // TODO: implement a better strategy for saving the tableau?
+            tableau.save();
+        }
 
         // Keep Track of how many cycles
         // we've gone through
@@ -183,13 +190,13 @@ function MILP(model) {
     tableau.restore();
 
     // Adding cut constraints for the optimal solution
-    tableau.addCutConstraints(bestBranch.cuts);
+    if (bestBranch !== null) {
+        tableau.addCutConstraints(bestBranch.cuts);
+        tableau.solve();
+        tableau.updateVariableValues();
+    }
 
     // Solving a last time
-    var bestSolution = tableau.solve().getSolution();
-    tableau.updateVariableValues();
-
-    bestSolution.iter = iterations;
-    return bestSolution;
+    return new MilpSolution(tableau.getSolution(), iterations);
 }
 module.exports = MILP;

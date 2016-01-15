@@ -4,6 +4,7 @@
 /*global it*/
 /*global console*/
 /*global process*/
+var Solution = require("./Solution.js");
 
 /*************************************************************
  * Class: Tableau
@@ -86,6 +87,7 @@ Tableau.prototype.initialize = function (width, height, variables, variableIds, 
 // Detail: Main function, linear programming solver
 //-------------------------------------------------------------------
 Tableau.prototype.solve = function () {
+// this.log('INIT')
     // Execute Phase 1 to obtain a Basic Feasible Solution (BFS)
     this.phase1();
 
@@ -97,36 +99,6 @@ Tableau.prototype.solve = function () {
     }
 
     return this;
-};
-
-function Solution(tableau, evaluation, feasible) {
-    this.feasible = feasible;
-    this.evaluation = evaluation;
-    this._tableau = tableau;
-}
-
-Solution.prototype.generateSolutionSet = function () {
-    var solutionSet = {};
-
-    var tableau = this._tableau;
-    var basicIndexes = tableau.basicIndexes;
-    var variableIds = tableau.variableIds;
-    var matrix = tableau.matrix;
-    var rhsColumn = tableau.rhsColumn;
-    var lastRow = tableau.height - 1;
-    var roundingCoeff = Math.round(1 / tableau.precision);
-
-    for (var r = 1; r <= lastRow; r += 1) {
-        var varIndex = basicIndexes[r];
-        var variableId = variableIds[varIndex];
-        if (variableId !== undefined) {
-            var varValue = matrix[r][rhsColumn];
-            solutionSet[variableId] =
-                Math.round(varValue * roundingCoeff) / roundingCoeff;
-        }
-    }
-
-    return solutionSet;
 };
 
 //-------------------------------------------------------------------
