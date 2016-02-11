@@ -32,7 +32,7 @@
             "feasible": true,
             "x1": 0.75,
             "x2": 2.25,
-            "v5": 0.25,
+            "r2": 0.25,
             "result": 0.5
         }
     }, {
@@ -282,6 +282,27 @@
             "x1": 4,
             "x2": 12,
             "result": 72
+        }
+    }, {
+        "name": "Fertilizer",
+        "constraints" : {
+            "W": { "equal": 40, "weight": 1, "priority": 1 },
+            "N": { "equal": 50, "weight": 1, "priority": 0 },
+            "P": { "equal": 20, "weight": 2, "priority": 0 },
+            "K": { "equal": 30, "weight": 1, "priority": 0 }
+        },
+        "variables" : {
+            "Fertilizer A": { "N" : 36.00, "P" : 0.00,  "K" : 0.00,  "W" : 40 },  
+            "Fertilizer B": { "N" : 15.00, "P" : 15.00, "K" : 15.00, "W" : 40 },
+            "Fertilizer C": { "N" : 5.00,  "P" : 25.00, "K" : 10.00, "W" : 40 }
+        },
+        "expects": {
+            "feasible": true,
+            "r1": 46.66666667,
+            "r4": 10,
+            "Fertilizer A": 0.83333333,
+            "Fertilizer B": 1.33333333,
+            "result": 10
         }
     }, {
         "name": "Coffee Problem",

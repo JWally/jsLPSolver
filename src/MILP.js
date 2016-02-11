@@ -95,19 +95,17 @@ function MILP(model) {
         }
 
         var evaluation = tableau.evaluation;
+        if (evaluation >= bestEvaluation) {
+            // This branch does not contain the optimal solution
+            continue;
+        }
+
         // Is the model both integral and feasible?
         if (tableau.isIntegral() === true) {
-            // Is the new result the bestSolution that we've ever had?
-            if (evaluation < bestEvaluation) {
-                // Store the solution as the bestSolution
-                bestBranch = branch;
-                bestEvaluation = evaluation;
-            }
-
-            // The solution is feasible and interagal;
-            // But it is worse than the current solution;
-            // Ignore it.
-        } else if (evaluation < bestEvaluation) {
+            // Store the solution as the bestSolution
+            bestBranch = branch;
+            bestEvaluation = evaluation;
+        } else {
             // If the solution is
             //  a. Feasible
             //  b. Better than the current solution

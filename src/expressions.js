@@ -22,6 +22,17 @@ function Term(variable, coefficient) {
     this.coefficient = coefficient;
 }
 
+function createRelaxationVariable(model, weight, priority) {
+    weight = weight || 0;
+    priority = priority || 0;
+
+    if (model.isMinimization === false) {
+        weight = -weight;
+    }
+
+    return model.addVariable(weight, "r" + (model.relaxationIndex++), false, false, priority);
+}
+
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
 function Constraint(rhs, isUpperBound, index, model) {
@@ -106,13 +117,8 @@ Constraint.prototype.setVariableCoefficient = function (newCoefficient, variable
     return this;
 };
 
-var errorVarIdx = 1;
 Constraint.prototype.relax = function (weight, priority) {
-    if (this.model.isMinimization === false) {
-        weight = -weight;
-    }
-
-    this.relaxation = this.model.addVariable(weight, null, false, false, priority);
+    this.relaxation = createRelaxationVariable(this.model, weight, priority);
     this._relax(this.relaxation, priority);
 };
 
@@ -153,11 +159,7 @@ Equality.prototype.setRightHandSide = function (rhs) {
 };
 
 Equality.prototype.relax = function (weight, priority) {
-    if (this.model.isMinimization === false) {
-        weight = -weight;
-    }
-
-    this.relaxation = this.model.addVariable(weight, null, false, false, priority);
+    this.relaxation = createRelaxationVariable(this.model, weight, priority);
     this.upperBound._relax(this.relaxation);
     this.lowerBound._relax(this.relaxation);
 };
