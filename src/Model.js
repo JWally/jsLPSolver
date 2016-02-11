@@ -43,6 +43,7 @@ function Model(precision, name) {
     this.lastElementIndex = 0;
 
     this.tableauInitialized = false;
+    this.relaxationIndex = 1;
 }
 module.exports = Model;
 
@@ -125,15 +126,15 @@ Model.prototype.addVariable = function (cost, id, isInteger, isUnrestricted, pri
     }
 
     var varIndex = this._getNewElementIndex();
-    if (!id) { // could be null, undefined or empty string
+    if (id === null || id === undefined) {
         id = "v" + varIndex;
     }
 
-    if (!cost) { // could be null, undefined or already 0
+    if (cost === null || cost === undefined) {
         cost = 0;
     }
 
-    if (!priority) { // could be null, undefined or already 0
+    if (priority === null || priority === undefined) {
         priority = 0;
     }
 
@@ -252,22 +253,34 @@ Model.prototype.loadJson = function (jsonModel) {
         var constraint = constraints[constraintId];
         var equal = constraint.equal;
 
-        var min = (equal === undefined) ? constraint.min : equal;
-        if (min !== undefined) {
-            constraintsMin[constraintId] = this.greaterThan(min);
-        }
+        var weight = constraint.weight;
+        var priority = constraint.priority;
+        var relaxed = weight !== undefined || priority !== undefined;
 
-        var max = (equal === undefined) ? constraint.max : equal;
-        if (max !== undefined) {
-            constraintsMax[constraintId] = this.smallerThan(max);
-        }
-
-        if (equal !== undefined) {
-            var equality = new Equality(constraintsMin[constraintId], constraintsMax[constraintId]);
-            if (constraint.weight !== undefined) {
-                equality.relax(constraint.weight);
+        var lowerBound, upperBound;
+        if (equal === undefined) {
+            var min = constraint.min;
+            if (min !== undefined) {
+                lowerBound = this.greaterThan(min);
+                constraintsMin[constraintId] = lowerBound;
+                if (relaxed) { lowerBound.relax(weight, priority); }
             }
-            continue;
+
+            var max = constraint.max;
+            if (max !== undefined) {
+                upperBound = this.smallerThan(max);
+                constraintsMax[constraintId] = upperBound;
+                if (relaxed) { upperBound.relax(weight, priority); }
+            }
+        } else {
+            lowerBound = this.greaterThan(equal);
+            constraintsMin[constraintId] = lowerBound;
+
+            upperBound = this.smallerThan(equal);
+            constraintsMax[constraintId] = upperBound;
+
+            var equality = new Equality(lowerBound, upperBound);
+            if (relaxed) { equality.relax(weight, priority); }
         }
     }
 

@@ -883,14 +883,28 @@ Tableau.prototype.removeConstraint = function (constraint) {
     this.height -= 1;
 };
 
-function OptionalObjective(priority, firstNonNullCost, firstNonNullColumn) {
+function OptionalObjective(priority, nColumns) {
     this.priority = priority;
-    this.reducedCosts = [];
-    for (var c = 0; c < firstNonNullColumn; c += 1) {
+    this.reducedCosts = new Array(nColumns);
+    for (var c = 0; c < nColumns; c += 1) {
         this.reducedCosts[c] = 0;
     }
-    this.reducedCosts[firstNonNullColumn] = firstNonNullCost;
 }
+
+Tableau.prototype.setOptionalObjective = function (priority, column, cost) {
+    var objectiveForPriority = this.objectivesByPriority[priority];
+    if (objectiveForPriority === undefined) {
+        var nColumns = Math.max(this.width, column) + 1;
+        objectiveForPriority = new OptionalObjective(priority, nColumns);
+        this.objectivesByPriority[priority] = objectiveForPriority;
+        this.optionalObjectives.push(objectiveForPriority);
+        this.optionalObjectives.sort(function (a, b) {
+            return a.priority - b.priority;
+        });
+    }
+
+    objectiveForPriority.reducedCosts[column] = cost;
+};
 
 Tableau.prototype.addVariable = function (variable) {
     // Adds a variable to the tableau
@@ -912,18 +926,7 @@ Tableau.prototype.addVariable = function (variable) {
     if (priority === 0) {
         this.matrix[0][lastColumn] = cost;
     } else {
-        var objectiveForPriority = this.objectivesByPriority[priority];
-        if (objectiveForPriority === undefined) {
-            var optionalObjective = new OptionalObjective(priority, cost, lastColumn);
-            this.objectivesByPriority[priority] = optionalObjective;
-            this.optionalObjectives.push(optionalObjective);
-            this.optionalObjectives.sort(function (a, b) {
-                return a.priority - b.priority;
-            });
-        } else {
-            objectiveForPriority.reducedCosts[lastColumn] = cost;
-        }
-
+        this.setOptionalObjective(priority, lastColumn, cost);
         this.matrix[0][lastColumn] = 0;
     }
 
@@ -986,13 +989,15 @@ Tableau.prototype._resetMatrix = function () {
 
     var v, varIndex;
     var costRow = this.matrix[0];
-    if (this.model.isMinimization === true) {
-        for (v = 0; v < nVars; v += 1) {
-            costRow[v + 1] = -variables[v].cost;
-        }
-    } else {
-        for (v = 0; v < nVars; v += 1) {
-            costRow[v + 1] = variables[v].cost;
+    var coeff = (this.model.isMinimization === true) ? -1 : 1;
+    for (v = 0; v < nVars; v += 1) {
+        var variable = variables[v];
+        var priority = variable.priority;
+        var cost = coeff * variable.cost;
+        if (priority === 0) {
+            costRow[v + 1] = cost;
+        } else {
+            this.setOptionalObjective(priority, v + 1, cost);
         }
     }
 
