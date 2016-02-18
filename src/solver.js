@@ -257,7 +257,7 @@ Model.prototype.maximize = function () {
 
 // Model.prototype.addConstraint = function (constraint) {
 //     // TODO: make sure that the constraint does not belong do another model
-//     // and make 
+//     // and make
 //     this.constraints.push(constraint);
 //     return this;
 // };
@@ -678,7 +678,7 @@ module.exports = function(solver, model){
             // Add the vector-key in
             vectors[vector_key] = 1;
             counter++;
-            
+
             // Iterate over the keys
             // and update our new constraints
             for(j = 0; j < keys.length; j++){
@@ -686,13 +686,13 @@ module.exports = function(solver, model){
                     new_constraints[keys[j]] += tmp[keys[j]];
                 }
             }
-            
+
             // Push the solution into the paretos
             // array after cleaning it of some
             // excess data markers
-            
+
             delete tmp.feasible;
-            delete tmp.result;            
+            delete tmp.result;
             pareto.push(tmp);
         }
     }
@@ -715,14 +715,14 @@ module.exports = function(solver, model){
     for(i in model.variables){
         model.variables[i].cheater = 1;
     }
-    
+
     // Build out the object with all attributes
     for(i in pareto){
         for(x in pareto[i]){
             obj[x] = obj[x] || {min: 1e99, max: -1e99};
         }
     }
-    
+
     // Give each pareto a full attribute list
     // while getting the max and min values
     // for each attribute
@@ -731,7 +731,7 @@ module.exports = function(solver, model){
             if(pareto[x][i]){
                 if(pareto[x][i] > obj[i].max){
                     obj[i].max = pareto[x][i];
-                } 
+                }
                 if(pareto[x][i] < obj[i].min){
                     obj[i].min = pareto[x][i];
                 }
@@ -743,12 +743,12 @@ module.exports = function(solver, model){
     }
     // Solve the model for the midpoints
     tmp =  solver.Solve(model, undefined, undefined, true);
-    
+
     return {
         midpoint: tmp,
         vertices: pareto,
         ranges: obj
-    };    
+    };
 
 };
 
@@ -764,8 +764,8 @@ module.exports = function(solver, model){
 
 
 
- 
- 
+
+
  /*************************************************************
  * Method: to_JSON
  * Scope: Public:
@@ -803,7 +803,7 @@ function to_JSON(input){
     },
     tmp = "", tst = 0, ary = null, hldr = "", hldr2 = "",
     constraint = "", rhs = 0;
-    
+
     // Handle input if its coming
     // to us as a hard string
     // instead of as an array of
@@ -811,42 +811,42 @@ function to_JSON(input){
     if(typeof input === "string"){
         input = input.split("\n");
     }
-    
+
     // Start iterating over the rows
     // to see what all we have
     for(var i = 0; i < input.length; i++){
-    
+
         constraint = "__" + i;
-        
+
         // Get the string we're working with
         tmp = input[i];
-        
+
         // Set the test = 0
         tst = 0;
-        
+
         // Reset the array
         ary = null;
-                
+
         // Test to see if we're the objective
         if(rxo.is_objective.test(tmp)){
-        
+
             // Set up in model the opType
             model.opType = tmp.match(/(max|min)/gi)[0];
-        
+
             // Pull apart lhs
             ary = tmp.match(rxo.parse_lhs).map(function(d){
                 return d.replace(/\s+/,"");
             }).slice(1);
-            
-            
-            
+
+
+
             // *** STEP 1 *** ///
             // Get the variables out
             ary.forEach(function(d){
-            
+
                 // Get the number if its there
                 hldr = d.match(rxo.get_num);
-            
+
                 // If it isn't a number, it might
                 // be a standalone variable
                 if(hldr === null){
@@ -858,12 +858,12 @@ function to_JSON(input){
                 } else {
                     hldr = hldr[0];
                 }
-                
+
                 hldr = parseFloat(hldr);
-                
+
                 // Get the variable type
                 hldr2 = d.match(rxo.get_word)[0].replace(/\;$/,"");
-                
+
                 // Make sure the variable is in the model
                 model.variables[hldr2] = model.variables[hldr2] || {};
                 model.variables[hldr2]._obj = hldr;
@@ -873,10 +873,10 @@ function to_JSON(input){
         }else if(rxo.is_int.test(tmp)){
             // Get the array of ints
             ary = tmp.match(rxo.parse_int).slice(1);
-            
+
             // Since we have an int, our model should too
             model.ints = model.ints || {};
-            
+
             ary.forEach(function(d){
                 d = d.replace(";","");
                 model.ints[d] = 1;
@@ -888,13 +888,13 @@ function to_JSON(input){
                 return d.replace(/\s+/,"");
             });
 
-            
+
             // *** STEP 1 *** ///
             // Get the variables out
             ary.forEach(function(d){
                 // Get the number if its there
                 hldr = d.match(rxo.get_num);
-                
+
                 if(hldr === null){
                     if(d.substr(0,1) === "-"){
                         hldr = -1;
@@ -904,36 +904,36 @@ function to_JSON(input){
                 } else {
                     hldr = hldr[0];
                 }
-                
-                hldr = parseFloat(hldr);                
 
-                
+                hldr = parseFloat(hldr);
+
+
                 // Get the variable type
                 hldr2 = d.match(rxo.get_word)[0];
-                
+
                 // Make sure the variable is in the model
                 model.variables[hldr2] = model.variables[hldr2] || {};
                 model.variables[hldr2][constraint] = hldr;
 
             });
-            
+
             // *** STEP 2 *** ///
-            // Get the RHS out            
+            // Get the RHS out
             rhs = parseFloat(tmp.match(rxo.parse_rhs)[0]);
 
             // *** STEP 3 *** ///
-            // Get the Constrainer out   
+            // Get the Constrainer out
             tmp = constraints[tmp.match(rxo.parse_dir)[0]];
             model.constraints[constraint] = model.constraints[constraint] || {};
-            model.constraints[constraint][tmp] = rhs; 
+            model.constraints[constraint][tmp] = rhs;
         ////////////////////////////////////
         } else if(rxo.is_unrestricted.test(tmp)){
             // Get the array of unrestricted
             ary = tmp.match(rxo.parse_int).slice(1);
-            
+
             // Since we have an int, our model should too
             model.unrestricted = model.unrestricted || {};
-            
+
             ary.forEach(function(d){
                 d = d.replace(";","");
                 model.unrestricted[d] = 1;
@@ -1016,7 +1016,7 @@ function from_JSON(model){
             output += "unrestricted " + x.replace(rxClean,"_") + ";\n";
         }
     }
-    
+
     // And kick the string back
     return output;
 }
@@ -2258,7 +2258,7 @@ exports.CleanObjectiveAttributes = function(model){
   // variable
     var fakeAttr,
         x, z;
-  
+
     if(typeof model.optimize === "string"){
         if(model.constraints[model.optimize]){
             // Create the new attribute
@@ -2277,9 +2277,9 @@ exports.CleanObjectiveAttributes = function(model){
             model.constraints[fakeAttr] = model.constraints[model.optimize];
             delete model.constraints[model.optimize];
             return model;
-        } else {    
+        } else {
             return model;
-        }  
+        }
     } else {
         // We're assuming its an object?
         for(z in model.optimize){
@@ -2291,7 +2291,7 @@ exports.CleanObjectiveAttributes = function(model){
                     // Its constrained by an equal sign;
                     // delete that objective and move on
                     delete model.optimize[z];
-                
+
                 } else {
                     // Create the new attribute
                     fakeAttr = Math.random();
@@ -2306,9 +2306,9 @@ exports.CleanObjectiveAttributes = function(model){
                 // Now that we've cleaned up the variables
                 // we need to clean up the constraints
                     model.constraints[fakeAttr] = model.constraints[z];
-                    delete model.constraints[z];            
+                    delete model.constraints[z];
                 }
-            }    
+            }
         }
         return model;
     }

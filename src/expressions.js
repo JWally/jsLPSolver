@@ -15,6 +15,16 @@ function Variable(id, cost, index, priority) {
     this.priority = priority;
 }
 
+function IntegerVariable(id, cost, index, priority) {
+    Variable.call(this, id, cost, index, priority);
+}
+IntegerVariable.prototype.isInteger = true;
+
+function SlackVariable(id, index) {
+    Variable.call(this, id, 0, index, 0);
+}
+SlackVariable.prototype.isSlack = true;
+
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
 function Term(variable, coefficient) {
@@ -36,6 +46,7 @@ function createRelaxationVariable(model, weight, priority) {
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
 function Constraint(rhs, isUpperBound, index, model) {
+    this.slack = new SlackVariable("s" + index, index);
     this.index = index;
     this.model = model;
     this.rhs = rhs;
@@ -140,6 +151,8 @@ function Equality(constraintUpper, constraintLower) {
     this.relaxation = null;
 }
 
+Equality.prototype.isEquality = true;
+
 Equality.prototype.addTerm = function (coefficient, variable) {
     this.upperBound.addTerm(coefficient, variable);
     this.lowerBound.addTerm(coefficient, variable);
@@ -168,6 +181,8 @@ Equality.prototype.relax = function (weight, priority) {
 module.exports = {
     Constraint: Constraint,
     Variable: Variable,
+    IntegerVariable: IntegerVariable,
+    SlackVariable: SlackVariable,
     Equality: Equality,
     Term: Term
 };
