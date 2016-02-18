@@ -88,8 +88,6 @@ function MILP(model) {
     var branch = new Branch(-Infinity, []);
     branches.push(branch);
 
-    // tableau.log("Start");
-
     // If all branches have been exhausted terminate the loop
     while (branches.length > 0) {
         // Get a model from the queue

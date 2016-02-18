@@ -313,9 +313,6 @@ Tableau.prototype.phase1 = function () {
             return iterations;
         }
 
-        // console.log("=========phase1=========");
-        // console.log(leavingRowIndex, enteringColumn);
-        // console.log("==================");
         this.pivot(leavingRowIndex, enteringColumn);
         iterations += 1;
     }
@@ -449,9 +446,6 @@ Tableau.prototype.phase2 = function () {
             return;
         }
 
-        // console.log("=========phase2=========");
-        // console.log(leavingRow, enteringColumn);
-        // console.log("==================");
         this.pivot(leavingRow, enteringColumn, true);
         iterations += 1;
     }
@@ -468,12 +462,7 @@ var nonZeroColumns = [];
 //-------------------------------------------------------------------
 Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex) {
     var matrix = this.matrix;
-
-// console.log("=========pivot=========");
-// console.log("matrix ", matrix);
-// console.log("pivotRowIndex", pivotRowIndex);
-// console.log("pivotColumnIndex", pivotColumnIndex);
-// console.log("=======================");
+    
     var quotient = matrix[pivotRowIndex][pivotColumnIndex];
 
     var lastRow = this.height - 1;
@@ -481,8 +470,6 @@ Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex) {
 
     var leavingBasicIndex = this.varIndexByRow[pivotRowIndex];
     var enteringBasicIndex = this.varIndexByCol[pivotColumnIndex];
-    // console.log("pivot1 ", pivotRowIndex, leavingBasicIndex, this.varIndexByRow);
-    // console.log("pivot2 ", pivotColumnIndex, enteringBasicIndex, this.varIndexByCol);
 
     this.varIndexByRow[pivotRowIndex] = enteringBasicIndex;
     this.varIndexByCol[pivotColumnIndex] = leavingBasicIndex;
@@ -712,7 +699,7 @@ Tableau.prototype.addCutConstraints = function (cutConstraints) {
 };
 
 Tableau.prototype._addLowerBoundMIRCut = function(rowIndex) {
-    
+
 	if(rowIndex === this.costRowIndex) {
 		//console.log("! IN MIR CUTS : The index of the row corresponds to the cost row. !");
 		return false;
