@@ -5,6 +5,9 @@
 /*global console*/
 /*global process*/
 var Solution = require("./Solution.js");
+var expressions = require("./expressions.js");
+var Constraint = expressions.Constraint;
+
 
 /*************************************************************
  * Class: Tableau
@@ -27,18 +30,26 @@ function Tableau(precision) {
     this.costRowIndex = 0;
     this.rhsColumn = 0;
 
-    this.variableIds = null;
+    this.variablesPerIndex = [];
     this.unrestrictedVars = null;
 
     // Solution attributes
     this.feasible = true; // until proven guilty
     this.evaluation = 0;
 
-    this.basicIndexes = null;
-    this.nonBasicIndexes = null;
+    this.varIndexByRow = null;
+    this.varIndexByCol = null;
 
-    this.rows = null;
-    this.cols = null;
+    this.rowByVarIndex = null;
+    this.colByVarIndex = null;
+
+    // this.model.variables[this.varIndexByRow[1]];
+
+        // this.varIndexByRow = null;
+        // this.varIndexByCol = null;
+        //
+        // this.rowByVarIndex = null;
+        // this.colByVarIndex = null;
 
     this.precision = precision || 1e-8;
 
@@ -46,14 +57,19 @@ function Tableau(precision) {
     this.objectivesByPriority = {};
 
     this.savedState = null;
+
+    this.availableIndexes = [];
+    this.lastElementIndex = 0;
+
+    this.variables = null;
+    this.nVars = 0;
 }
 module.exports = Tableau;
 
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
-Tableau.prototype.initialize = function (width, height, variables, variableIds, unrestrictedVars) {
+Tableau.prototype.initialize = function (width, height, variables, unrestrictedVars) {
     this.variables = variables;
-    this.variableIds = variableIds;
     this.unrestrictedVars = unrestrictedVars;
 
     this.width = width;
@@ -71,15 +87,17 @@ Tableau.prototype.initialize = function (width, height, variables, variableIds, 
         this.matrix[j] = tmpRow.slice();
     }
 
-    this.basicIndexes = new Array(this.height);
-    this.nonBasicIndexes = new Array(this.width);
+    this.varIndexByRow = new Array(this.height);
+    this.varIndexByCol = new Array(this.width);
 
-    this.basicIndexes[0] = -1;
-    this.nonBasicIndexes[0] = -1;
+    this.varIndexByRow[0] = -1;
+    this.varIndexByCol[0] = -1;
 
     this.nVars = width + height - 2;
-    this.rows = new Array(this.nVars);
-    this.cols = new Array(this.nVars);
+    this.rowByVarIndex = new Array(this.nVars);
+    this.colByVarIndex = new Array(this.nVars);
+
+    this.lastElementIndex = this.nVars;
 };
 
 //-------------------------------------------------------------------
@@ -110,7 +128,7 @@ Tableau.prototype.updateVariableValues = function () {
         var variable = this.variables[v];
         var varIndex = variable.index;
 
-        var r = this.rows[varIndex];
+        var r = this.rowByVarIndex[varIndex];
         if (r === -1) {
             // Variable is non basic
             variable.value = 0;
@@ -138,7 +156,7 @@ Tableau.prototype.isIntegral = function () {
 
     var nIntegerVars = integerVariables.length;
     for (var v = 0; v < nIntegerVars; v++) {
-        var varRow = this.rows[integerVariables[v].index];
+        var varRow = this.rowByVarIndex[integerVariables[v].index];
         if (varRow === -1) {
             continue;
         }
@@ -168,7 +186,7 @@ Tableau.prototype.getMostFractionalVar = function () {
     var nIntegerVars = integerVariables.length;
     for (var v = 0; v < nIntegerVars; v++) {
         var varIndex = integerVariables[v].index;
-        var varRow = this.rows[varIndex];
+        var varRow = this.rowByVarIndex[varIndex];
         if (varRow === -1) {
             continue;
         }
@@ -197,7 +215,7 @@ Tableau.prototype.getFractionalVarWithLowestCost = function () {
     for (var v = 0; v < nIntegerVars; v++) {
         var variable = integerVariables[v];
         var varIndex = variable.index;
-        var varRow = this.rows[varIndex];
+        var varRow = this.rowByVarIndex[varIndex];
         if (varRow === -1) {
             // Variable value is non basic
             // its value is 0
@@ -249,7 +267,7 @@ Tableau.prototype.phase1 = function () {
         var leavingRowIndex = 0;
         var rhsValue = -this.precision;
         for (var r = 1; r <= lastRow; r++) {
-            unrestricted = this.unrestrictedVars[this.basicIndexes[r]] === true;
+            unrestricted = this.unrestrictedVars[this.varIndexByRow[r]] === true;
             if (unrestricted) {
                 continue;
             }
@@ -279,7 +297,7 @@ Tableau.prototype.phase1 = function () {
                 continue;
             }
 
-            unrestricted = this.unrestrictedVars[this.nonBasicIndexes[c]] === true;
+            unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
             if (unrestricted || reducedCost < -this.precision) {
                 var quotient = -costRow[c] / reducedCost;
                 if (maxQuotient < quotient) {
@@ -330,7 +348,7 @@ Tableau.prototype.phase2 = function () {
         var isReducedCostNegative = false;
         for (var c = 1; c <= lastColumn; c++) {
             reducedCost = costRow[c];
-            unrestricted = this.unrestrictedVars[this.nonBasicIndexes[c]] === true;
+            unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
 
             if (nOptionalObjectives > 0 && -this.precision < reducedCost && reducedCost < this.precision) {
                 optionalCostsColumns.push(c);
@@ -362,7 +380,7 @@ Tableau.prototype.phase2 = function () {
                 for (var i = 0; i <= optionalCostsColumns.length; i++) {
                     c = optionalCostsColumns[i];
                     reducedCost = reducedCosts[c];
-                    unrestricted = this.unrestrictedVars[this.nonBasicIndexes[c]] === true;
+                    unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
 
                     if (-this.precision < reducedCost && reducedCost < this.precision) {
                         optionalCostsColumns2.push(c);
@@ -442,24 +460,25 @@ var nonZeroColumns = [];
 //          on a given row, and column
 //
 //-------------------------------------------------------------------
-Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex, debug) {
+Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex) {
     var matrix = this.matrix;
+    
     var quotient = matrix[pivotRowIndex][pivotColumnIndex];
 
     var lastRow = this.height - 1;
     var lastColumn = this.width - 1;
 
-    var leavingBasicIndex = this.basicIndexes[pivotRowIndex];
-    var enteringBasicIndex = this.nonBasicIndexes[pivotColumnIndex];
+    var leavingBasicIndex = this.varIndexByRow[pivotRowIndex];
+    var enteringBasicIndex = this.varIndexByCol[pivotColumnIndex];
 
-    this.basicIndexes[pivotRowIndex] = enteringBasicIndex;
-    this.nonBasicIndexes[pivotColumnIndex] = leavingBasicIndex;
+    this.varIndexByRow[pivotRowIndex] = enteringBasicIndex;
+    this.varIndexByCol[pivotColumnIndex] = leavingBasicIndex;
 
-    this.rows[enteringBasicIndex] = pivotRowIndex;
-    this.rows[leavingBasicIndex] = -1;
+    this.rowByVarIndex[enteringBasicIndex] = pivotRowIndex;
+    this.rowByVarIndex[leavingBasicIndex] = -1;
 
-    this.cols[enteringBasicIndex] = -1;
-    this.cols[leavingBasicIndex] = pivotColumnIndex;
+    this.colByVarIndex[enteringBasicIndex] = -1;
+    this.colByVarIndex[leavingBasicIndex] = pivotColumnIndex;
 
     // Divide everything in the target row by the element @
     // the target column
@@ -533,17 +552,19 @@ Tableau.prototype.copy = function () {
 
     // Making a shallow copy of integer variable indexes
     // and variable ids
-    copy.integerIndexes = this.integerIndexes;
     copy.variables = this.variables;
-    copy.variableIds = this.variableIds;
+    copy.variablesPerIndex = this.variablesPerIndex;
     copy.unrestrictedVars = this.unrestrictedVars;
+    copy.lastElementIndex = this.lastElementIndex;
 
     // All the other arrays are deep copied
-    copy.basicIndexes = this.basicIndexes.slice();
-    copy.nonBasicIndexes = this.nonBasicIndexes.slice();
+    copy.varIndexByRow = this.varIndexByRow.slice();
+    copy.varIndexByCol = this.varIndexByCol.slice();
 
-    copy.rows = this.rows.slice();
-    copy.cols = this.cols.slice();
+    copy.rowByVarIndex = this.rowByVarIndex.slice();
+    copy.colByVarIndex = this.colByVarIndex.slice();
+
+    copy.availableIndexes = this.availableIndexes.slice();
 
 
     var matrix = this.matrix;
@@ -570,10 +591,12 @@ Tableau.prototype.restore = function () {
     var savedMatrix = save.matrix;
     this.nVars = save.nVars;
     this.model = save.model;
+
+    // Shallow restore
     this.variables = save.variables;
-    this.variableIds = save.variableIds;
-    this.integerIndexes = save.integerIndexes;
+    this.variablesPerIndex = save.variablesPerIndex;
     this.unrestrictedVars = save.unrestrictedVars;
+    this.lastElementIndex = save.lastElementIndex;
 
     this.width = save.width;
     this.height = save.height;
@@ -589,36 +612,38 @@ Tableau.prototype.restore = function () {
     }
 
     // Restoring all the other structures
-    var savedBasicIndexes = save.basicIndexes;
+    var savedBasicIndexes = save.varIndexByRow;
     for (c = 0; c < this.height; c += 1) {
-        this.basicIndexes[c] = savedBasicIndexes[c];
+        this.varIndexByRow[c] = savedBasicIndexes[c];
     }
 
-    while (this.basicIndexes.length > this.height) {
-        this.basicIndexes.pop();
+    while (this.varIndexByRow.length > this.height) {
+        this.varIndexByRow.pop();
     }
 
-    var savedNonBasicIndexes = save.nonBasicIndexes;
+    var savedNonBasicIndexes = save.varIndexByCol;
     for (r = 0; r < this.width; r += 1) {
-        this.nonBasicIndexes[r] = savedNonBasicIndexes[r];
+        this.varIndexByCol[r] = savedNonBasicIndexes[r];
     }
 
-    while (this.nonBasicIndexes.length > this.width) {
-        this.nonBasicIndexes.pop();
+    while (this.varIndexByCol.length > this.width) {
+        this.varIndexByCol.pop();
     }
 
-    var savedRows = save.rows;
-    var savedCols = save.cols;
+    var savedRows = save.rowByVarIndex;
+    var savedCols = save.colByVarIndex;
     for (var v = 0; v < this.nVars; v += 1) {
-        this.rows[v] = savedRows[v];
-        this.cols[v] = savedCols[v];
+        this.rowByVarIndex[v] = savedRows[v];
+        this.colByVarIndex[v] = savedCols[v];
     }
+
+    this.availableIndexes = save.availableIndexes.slice();
 };
 
 Tableau.prototype.addCutConstraints = function (cutConstraints) {
     var nCutConstraints = cutConstraints.length;
 
-    var height = this.model.nConstraints + 1;
+    var height = this.height;
     var heightWithCuts = height + nCutConstraints;
 
     // Adding rows to hold cut constraints
@@ -644,7 +669,7 @@ Tableau.prototype.addCutConstraints = function (cutConstraints) {
 
         // Variable on which the cut is applied
         var varIndex = cut.varIndex;
-        var varRowIndex = this.rows[varIndex];
+        var varRowIndex = this.rowByVarIndex[varIndex];
         var constraintRow = this.matrix[r];
         if (varRowIndex === -1) {
             // Variable is non basic
@@ -652,7 +677,7 @@ Tableau.prototype.addCutConstraints = function (cutConstraints) {
             for (c = 1; c <= lastColumn; c += 1) {
                 constraintRow[c] = 0;
             }
-            constraintRow[this.cols[varIndex]] = sign;
+            constraintRow[this.colByVarIndex[varIndex]] = sign;
         } else {
             // Variable is basic
             var varRow = this.matrix[varRowIndex];
@@ -664,12 +689,190 @@ Tableau.prototype.addCutConstraints = function (cutConstraints) {
         }
 
         // Creating slack variable
-        var slackVarIndex = lastColumn + r - 1;
-        this.basicIndexes[r] = slackVarIndex;
-
-        this.rows[slackVarIndex] = r;
-        this.cols[slackVarIndex] = -1;
+        var slackVarIndex = this.getNewElementIndex();
+        this.varIndexByRow[r] = slackVarIndex;
+        this.rowByVarIndex[slackVarIndex] = r;
+        this.colByVarIndex[slackVarIndex] = -1;
+        this.variablesPerIndex[slackVarIndex] = new expressions.SlackVariable("s"+slackVarIndex, slackVarIndex);
+        this.nVars += 1;
     }
+};
+
+Tableau.prototype._addLowerBoundMIRCut = function(rowIndex) {
+
+	if(rowIndex === this.costRowIndex) {
+		//console.log("! IN MIR CUTS : The index of the row corresponds to the cost row. !");
+		return false;
+	}
+
+	var model = this.model;
+	var matrix = this.matrix;
+
+	var intVar = this.variablesPerIndex[this.varIndexByRow[rowIndex]];
+	if (!intVar.isInteger) {
+		return false;
+    }
+
+	var d = matrix[rowIndex][this.rhsColumn];
+	var frac_d = d - Math.floor(d);
+
+	if (frac_d < this.precision || 1 - this.precision < frac_d) {
+		return false;
+    }
+
+	//Adding a row
+	var r = this.height;
+	matrix[r] = matrix[r - 1].slice();
+	this.height += 1;
+
+	// Creating slack variable
+	this.nVars += 1;
+	var slackVarIndex = this.getNewElementIndex();
+	this.varIndexByRow[r] = slackVarIndex;
+	this.rowByVarIndex[slackVarIndex] = r;
+	this.colByVarIndex[slackVarIndex] = -1;
+	this.variablesPerIndex[slackVarIndex] = new expressions.SlackVariable("s"+slackVarIndex, slackVarIndex);
+
+	matrix[r][this.rhsColumn] = Math.floor(d);
+
+	for (var colIndex = 1; colIndex < this.varIndexByCol.length; colIndex += 1) {
+		var variable = this.variablesPerIndex[this.varIndexByCol[colIndex]];
+
+		if (!variable.isInteger) {
+			matrix[r][colIndex] = Math.min(0, matrix[rowIndex][colIndex] / (1 - frac_d));
+		} else {
+			var coef = matrix[rowIndex][colIndex];
+			var termCoeff = Math.floor(coef)+Math.max(0, coef - Math.floor(coef) - frac_d) / (1 - frac_d);
+			matrix[r][colIndex] = termCoeff;
+		}
+	}
+
+	for(var c = 0; c < this.width; c += 1) {
+		matrix[r][c] -= matrix[rowIndex][c];
+	}
+
+	return true;
+};
+
+Tableau.prototype._addUpperBoundMIRCut = function(rowIndex) {
+
+	if (rowIndex === this.costRowIndex) {
+		//console.log("! IN MIR CUTS : The index of the row corresponds to the cost row. !");
+		return false;
+	}
+
+	var model = this.model;
+	var matrix = this.matrix;
+
+	var intVar = this.variablesPerIndex[this.varIndexByRow[rowIndex]];
+	if (!intVar.isInteger) {
+		return false;
+    }
+
+	var b = matrix[rowIndex][this.rhsColumn];
+	var f = b - Math.floor(b);
+
+	if (f < this.precision || 1 - this.precision < f) {
+		return false;
+    }
+
+	//Adding a row
+	var r = this.height;
+	matrix[r] = matrix[r - 1].slice();
+	this.height += 1;
+
+	// Creating slack variable
+	this.nVars += 1;
+	var slackVarIndex = this.getNewElementIndex();
+	this.varIndexByRow[r] = slackVarIndex;
+	this.rowByVarIndex[slackVarIndex] = r;
+	this.colByVarIndex[slackVarIndex] = -1;
+	this.variablesPerIndex[slackVarIndex] = new expressions.SlackVariable("s"+slackVarIndex, slackVarIndex);
+
+	matrix[r][this.rhsColumn] = -f;
+
+	for(var colIndex = 1; colIndex < this.varIndexByCol.length; colIndex += 1) {
+		var variable = this.variablesPerIndex[this.varIndexByCol[colIndex]];
+
+		var aj = matrix[rowIndex][colIndex];
+		var fj = aj - Math.floor(aj);
+
+		if(variable.isInteger) {
+			if(fj <= f) {
+				matrix[r][colIndex] = -fj;
+            } else {
+				matrix[r][colIndex] = -(1 - fj) * f / fj;
+            }
+		} else {
+			if (aj >= 0) {
+				matrix[r][colIndex] = -aj;
+            } else {
+				matrix[r][colIndex] = aj * f / (1 - f);
+            }
+		}
+	}
+
+	return true;
+};
+
+Tableau.prototype.applyMIRCuts = function () {
+
+    var nRows = this.height;
+    for (var cst = 0; cst < nRows; cst += 1) {
+        this._addUpperBoundMIRCut(cst);
+    }
+
+    // nRows = tableau.height;
+    for (cst = 0; cst < nRows; cst += 1) {
+        this._addLowerBoundMIRCut(cst);
+    }
+};
+
+Tableau.prototype.countIntegerValues = function(){
+
+    var count = 0;
+
+    for (var r = 1; r < this.height; r += 1) {
+        if (this.variablesPerIndex[this.varIndexByRow[r]].isInteger) {
+            var decimalPart = this.matrix[r][this.rhsColumn];
+            decimalPart = decimalPart - Math.floor(decimalPart);
+            if (decimalPart < this.precision && -decimalPart < this.precision) {
+                count += 1;
+            }
+        }
+    }
+
+    return count;
+};
+
+// Multiply all the fractional parts of variables supposed to be integer
+Tableau.prototype.computeFractionalVolume = function(ignoreIntegerValues) {
+
+    var volume = -1;
+
+    for (var r = 1; r < this.height; r += 1) {
+        if (this.variablesPerIndex[this.varIndexByRow[r]].isInteger) {
+            var rhs = this.matrix[r][this.rhsColumn];
+            rhs = Math.abs(rhs);
+            var decimalPart = Math.min(rhs - Math.floor(rhs), Math.floor(rhs + 1));
+            if (decimalPart < this.precision) {
+                if (!ignoreIntegerValues) {
+                    return 0;
+                }
+            } else {
+                if (volume === -1) {
+                    volume = rhs;
+                } else {
+                    volume *= rhs;
+                }
+            }
+        }
+    }
+
+    if (volume === -1){
+        return 0;
+    }
+    return volume;
 };
 
 Tableau.prototype.density = function () {
@@ -690,11 +893,12 @@ Tableau.prototype.density = function () {
 
 Tableau.prototype._putInBase = function (varIndex) {
     // Is varIndex in the base?
-    var r = this.rows[varIndex];
+    var r = this.rowByVarIndex[varIndex];
+
     if (r === -1) {
         // Outside the base
         // pivoting to take it out
-        var c = this.cols[varIndex];
+        var c = this.colByVarIndex[varIndex];
 
         // Selecting pivot row
         // (Any row with coefficient different from 0)
@@ -714,16 +918,16 @@ Tableau.prototype._putInBase = function (varIndex) {
 
 Tableau.prototype._takeOutOfBase = function (varIndex) {
     // Is varIndex in the base?
-    var c = this.cols[varIndex];
+    var c = this.colByVarIndex[varIndex];
     if (c === -1) {
         // Inside the base
         // pivoting to take it out
-        var r = this.rows[varIndex];
+        var r = this.rowByVarIndex[varIndex];
 
         // Selecting pivot column
         // (Any column with coefficient different from 0)
         var pivotRow = this.matrix[r];
-        for (var c1 = 1; c1 < this.height; c1 += 1) {
+        for (var c1 = 1; c1 < this.width; c1 += 1) {
             var coefficient = pivotRow[c1];
             if (coefficient < -this.precision || this.precision < coefficient) {
                 c = c1;
@@ -740,10 +944,10 @@ Tableau.prototype._takeOutOfBase = function (varIndex) {
 Tableau.prototype.updateRightHandSide = function (constraint, difference) {
     // Updates RHS of given constraint
     var lastRow = this.height - 1;
-    var constraintRow = this.rows[constraint.index];
+    var constraintRow = this.rowByVarIndex[constraint.index];
     if (constraintRow === -1) {
         // Slack is not in base
-        var slackColumn = this.cols[constraint.index];
+        var slackColumn = this.colByVarIndex[constraint.index];
 
         // Upading all the RHS values
         for (var r = 0; r <= lastRow; r += 1) {
@@ -766,28 +970,34 @@ Tableau.prototype.updateRightHandSide = function (constraint, difference) {
 };
 
 Tableau.prototype.updateConstraintCoefficient = function (constraint, variable, difference) {
-    // Updates variable coefficient within a constraint
-    // TODO: optimize, can be a little heavy (no more than one pivot necessary)
 
-    // Putting the constraint in the base
+    // Updates variable coefficient within a constraint
+    if (constraint.index === variable.index) {
+        // console.log('constraint index is', constraint.index);
+        throw new Error("In tableau.updateConstraintCoefficient : constraint index = variable index !");
+    }
+
     var r = this._putInBase(constraint.index);
 
-    // Putting the variable out of the base
-    var c = this._takeOutOfBase(variable.index);
-
-    // Updating coefficient with the difference
-    // between the old and the new one
-    this.matrix[r][c] -= difference;
+    var colVar = this.colByVarIndex[variable.index];
+    if (colVar === -1) {
+        var rowVar = this.rowByVarIndex[variable.index];
+        for (var c = 0; c < this.width; c += 1){
+            this.matrix[r][c] -= difference * this.matrix[rowVar][c];
+        }
+    } else {
+        this.matrix[r][colVar] -= difference;
+    }
 };
 
 Tableau.prototype.updateCost = function (variable, difference) {
     // Updates variable coefficient within the objective function
     var varIndex = variable.index;
     var lastColumn = this.width - 1;
-    var varColumn = this.cols[varIndex];
+    var varColumn = this.colByVarIndex[varIndex];
     if (varColumn === -1) {
         // Variable is in base
-        var variableRow = this.matrix[this.rows[varIndex]];
+        var variableRow = this.matrix[this.rowByVarIndex[varIndex]];
 
         var c;
         if (variable.priority === 0) {
@@ -837,10 +1047,10 @@ Tableau.prototype.addConstraint = function (constraint) {
         var coefficient = term.coefficient;
         var varIndex = term.variable.index;
 
-        var varRowIndex = this.rows[varIndex];
+        var varRowIndex = this.rowByVarIndex[varIndex];
         if (varRowIndex === -1) {
             // Variable is non basic
-            constraintRow[this.cols[varIndex]] += sign * coefficient;
+            constraintRow[this.colByVarIndex[varIndex]] += sign * coefficient;
         } else {
             // Variable is basic
             var varRow = this.matrix[varRowIndex];
@@ -850,13 +1060,11 @@ Tableau.prototype.addConstraint = function (constraint) {
             }
         }
     }
-
     // Creating slack variable
     var slackIndex = constraint.index;
-    this.basicIndexes[lastRow] = slackIndex;
-
-    this.rows[slackIndex] = lastRow;
-    this.cols[slackIndex] = -1;
+    this.varIndexByRow[lastRow] = slackIndex;
+    this.rowByVarIndex[slackIndex] = lastRow;
+    this.colByVarIndex[slackIndex] = -1;
 
     this.height += 1;
 };
@@ -876,9 +1084,12 @@ Tableau.prototype.removeConstraint = function (constraint) {
     this.matrix[r] = tmpRow;
 
     // Removing associated slack variable from basic variables
-    this.basicIndexes[r] = this.basicIndexes[lastRow];
-    this.basicIndexes[lastRow] = -1;
-    this.rows[slackIndex] = -1;
+    this.varIndexByRow[r] = this.varIndexByRow[lastRow];
+    this.varIndexByRow[lastRow] = -1;
+    this.rowByVarIndex[slackIndex] = -1;
+
+    // Putting associated slack variable index in index manager
+    this.availableIndexes[this.availableIndexes.length] = slackIndex;
 
     this.height -= 1;
 };
@@ -937,10 +1148,10 @@ Tableau.prototype.addVariable = function (variable) {
 
     // Adding variable to trackers
     var varIndex = variable.index;
-    this.nonBasicIndexes[lastColumn] = varIndex;
+    this.varIndexByCol[lastColumn] = varIndex;
 
-    this.rows[varIndex] = -1;
-    this.cols[varIndex] = lastColumn;
+    this.rowByVarIndex[varIndex] = -1;
+    this.colByVarIndex[varIndex] = lastColumn;
 
     this.width += 1;
 };
@@ -968,14 +1179,17 @@ Tableau.prototype.removeVariable = function (variable) {
             }
         }
 
-        var switchVarIndex = this.nonBasicIndexes[lastColumn];
-        this.nonBasicIndexes[c] = switchVarIndex;
-        this.cols[switchVarIndex] = c;
+        var switchVarIndex = this.varIndexByCol[lastColumn];
+        this.varIndexByCol[c] = switchVarIndex;
+        this.colByVarIndex[switchVarIndex] = c;
     }
 
     // Removing variable from non basic variables
-    this.nonBasicIndexes[lastColumn] = -1;
-    this.cols[varIndex] = -1;
+    this.varIndexByCol[lastColumn] = -1;
+    this.colByVarIndex[varIndex] = -1;
+
+    // Adding index into index manager
+    this.availableIndexes[this.availableIndexes.length] = varIndex;
 
     this.width -= 1;
 };
@@ -1003,9 +1217,9 @@ Tableau.prototype._resetMatrix = function () {
 
     for (v = 0; v < nVars; v += 1) {
         varIndex = variables[v].index;
-        this.rows[varIndex] = -1;
-        this.cols[varIndex] = v + 1;
-        this.nonBasicIndexes[v + 1] = varIndex;
+        this.rowByVarIndex[varIndex] = -1;
+        this.colByVarIndex[varIndex] = v + 1;
+        this.varIndexByCol[v + 1] = varIndex;
     }
 
     var rowIndex = 1;
@@ -1013,9 +1227,9 @@ Tableau.prototype._resetMatrix = function () {
         var constraint = constraints[c];
 
         var constraintIndex = constraint.index;
-        this.rows[constraintIndex] = rowIndex;
-        this.cols[constraintIndex] = -1;
-        this.basicIndexes[rowIndex] = constraintIndex;
+        this.rowByVarIndex[constraintIndex] = rowIndex;
+        this.colByVarIndex[constraintIndex] = -1;
+        this.varIndexByRow[rowIndex] = constraintIndex;
 
         var t, term, column;
         var terms = constraint.terms;
@@ -1024,7 +1238,7 @@ Tableau.prototype._resetMatrix = function () {
         if (constraint.isUpperBound) {
             for (t = 0; t < nTerms; t += 1) {
                 term = terms[t];
-                column = this.cols[term.variable.index];
+                column = this.colByVarIndex[term.variable.index];
                 row[column] = term.coefficient;
             }
 
@@ -1032,7 +1246,7 @@ Tableau.prototype._resetMatrix = function () {
         } else {
             for (t = 0; t < nTerms; t += 1) {
                 term = terms[t];
-                column = this.cols[term.variable.index];
+                column = this.colByVarIndex[term.variable.index];
                 row[column] = -term.coefficient;
             }
 
@@ -1040,6 +1254,18 @@ Tableau.prototype._resetMatrix = function () {
         }
     }
 };
+
+
+Tableau.prototype.getNewElementIndex = function () {
+    if (this.availableIndexes.length > 0) {
+        return this.availableIndexes.pop();
+    }
+
+    var index = this.lastElementIndex;
+    this.lastElementIndex += 1;
+    return index;
+};
+
 
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
@@ -1049,7 +1275,8 @@ Tableau.prototype.setModel = function (model) {
     var width = model.nVariables + 1;
     var height = model.nConstraints + 1;
 
-    this.initialize(width, height, model.variables, model.variableIds, model.unrestrictedVariables);
+
+    this.initialize(width, height, model.variables, model.unrestrictedVariables);
     this._resetMatrix();
     return this;
 };
@@ -1068,11 +1295,13 @@ Tableau.prototype.log = function (message, force) {
     console.log("****", message, "****");
     console.log("Nb Variables", this.width - 1);
     console.log("Nb Constraints", this.height - 1);
-    console.log("Variable Ids", this.variableIds);
-    console.log("Basic Indexes", this.basicIndexes);
-    console.log("Non Basic Indexes", this.nonBasicIndexes);
-    console.log("Rows", this.rows);
-    console.log("Cols", this.cols);
+    // console.log("Variable Ids", this.variablesPerIndex);
+    console.log("Basic Indexes", this.varIndexByRow);
+    console.log("Non Basic Indexes", this.varIndexByCol);
+    console.log("Rows", this.rowByVarIndex);
+    console.log("Cols", this.colByVarIndex);
+
+    var digitPrecision = 5;
 
     // Variable declaration
     var varNameRowString = "",
@@ -1081,6 +1310,7 @@ Tableau.prototype.log = function (message, force) {
         c,
         s,
         r,
+        variable,
         varIndex,
         varName,
         varNameLength,
@@ -1092,15 +1322,21 @@ Tableau.prototype.log = function (message, force) {
         rowString;
 
     for (c = 1; c < this.width; c += 1) {
-        varIndex = this.nonBasicIndexes[c];
-        varName = this.variableIds[varIndex];
-        if (varName === undefined) {
-            varName = "s" + varIndex;
+        varIndex = this.varIndexByCol[c];
+        variable = this.variablesPerIndex[varIndex];
+        if (variable === undefined) {
+            varName = "c" + varIndex;
+        } else {
+            varName = variable.id;
         }
 
         varNameLength = varName.length;
         nSpaces = Math.abs(varNameLength - 5);
         valueSpace = " ";
+        nameSpace = "\t";
+
+        ///////////
+        /*valueSpace = " ";
         nameSpace = " ";
 
         for (s = 0; s < nSpaces; s += 1) {
@@ -1109,7 +1345,15 @@ Tableau.prototype.log = function (message, force) {
             } else {
                 nameSpace += " ";
             }
+        }*/
+
+        ///////////
+        if (varNameLength > 5) {
+            valueSpace += " ";
+        } else {
+            nameSpace += "\t";
         }
+
         spacePerColumn[c] = valueSpace;
 
         varNameRowString += nameSpace + varName;
@@ -1120,8 +1364,10 @@ Tableau.prototype.log = function (message, force) {
 
     // Displaying reduced costs
     var firstRow = this.matrix[this.costRowIndex];
-    var firstRowString = "";
-    for (j = 1; j < this.width; j += 1) {
+    var firstRowString = "\t";
+
+    ///////////
+    /*for (j = 1; j < this.width; j += 1) {
         signSpace = firstRow[j] < 0 ? "" : " ";
         firstRowString += signSpace;
         firstRowString += spacePerColumn[j];
@@ -1130,27 +1376,51 @@ Tableau.prototype.log = function (message, force) {
     signSpace = firstRow[0] < 0 ? "" : " ";
     firstRowString += signSpace + spacePerColumn[0] +
         firstRow[0].toFixed(2);
-    console.log(firstRowString + " Z");
+    console.log(firstRowString + " Z");*/
 
-    // Then the basic variable rows
+    ///////////
+    for (j = 1; j < this.width; j += 1) {
+        signSpace = "\t";
+        firstRowString += signSpace;
+        firstRowString += spacePerColumn[j];
+        firstRowString += firstRow[j].toFixed(digitPrecision);
+    }
+    signSpace = "\t";
+    firstRowString += signSpace + spacePerColumn[0] +
+        firstRow[0].toFixed(digitPrecision);
+    console.log(firstRowString + "\tZ");
+
+
+    // Then the basic variable rowByVarIndex
     for (r = 1; r < this.height; r += 1) {
         row = this.matrix[r];
-        rowString = "";
-        for (c = 1; c < this.width; c += 1) {
+        rowString = "\t";
+
+        ///////////
+        /*for (c = 1; c < this.width; c += 1) {
             signSpace = row[c] < 0 ? "" : " ";
-            rowString += signSpace + spacePerColumn[c] + row[c].toFixed(
-                2);
+            rowString += signSpace + spacePerColumn[c] + row[c].toFixed(2);
         }
         signSpace = row[0] < 0 ? "" : " ";
-        rowString += signSpace + spacePerColumn[0] + row[0].toFixed(
-            2);
+        rowString += signSpace + spacePerColumn[0] + row[0].toFixed(2);*/
 
-        varIndex = this.basicIndexes[r];
-        varName = this.variableIds[varIndex];
-        if (varName === undefined) {
-            varName = "s" + varIndex;
+        ///////////
+        for (c = 1; c < this.width; c += 1) {
+            signSpace = "\t";
+            rowString += signSpace + spacePerColumn[c] + row[c].toFixed(digitPrecision);
         }
-        console.log(rowString + " " + varName);
+        signSpace = "\t";
+        rowString += signSpace + spacePerColumn[0] + row[0].toFixed(digitPrecision);
+
+
+        varIndex = this.varIndexByRow[r];
+        variable = this.variablesPerIndex[varIndex];
+        if (variable === undefined) {
+            varName = "c" + varIndex;
+        } else {
+            varName = variable.id;
+        }
+        console.log(rowString + "\t" + varName);
     }
     console.log("");
 
@@ -1165,14 +1435,16 @@ Tableau.prototype.log = function (message, force) {
                 signSpace = reducedCosts[j] < 0 ? "" : " ";
                 reducedCostsString += signSpace;
                 reducedCostsString += spacePerColumn[j];
-                reducedCostsString += reducedCosts[j].toFixed(2);
+                reducedCostsString += reducedCosts[j].toFixed(digitPrecision);
             }
             signSpace = reducedCosts[0] < 0 ? "" : " ";
             reducedCostsString += signSpace + spacePerColumn[0] +
-                reducedCosts[0].toFixed(2);
+                reducedCosts[0].toFixed(digitPrecision);
             console.log(reducedCostsString + " z" + o);
         }
     }
+    console.log("Feasible?", this.feasible);
+    console.log("evaluation", this.evaluation);
 
     return this;
 };

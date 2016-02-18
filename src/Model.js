@@ -11,7 +11,7 @@ var expressions = require("./expressions.js");
 var Constraint = expressions.Constraint;
 var Equality = expressions.Equality;
 var Variable = expressions.Variable;
-
+var IntegerVariable = expressions.IntegerVariable;
 var Term = expressions.Term;
 
 /*************************************************************
@@ -25,8 +25,6 @@ function Model(precision, name) {
 
     this.variables = [];
 
-    this.variableIds = [];
-
     this.integerVariables = [];
 
     this.unrestrictedVariables = {};
@@ -38,9 +36,6 @@ function Model(precision, name) {
     this.nVariables = 0;
 
     this.isMinimization = true;
-
-    this.availableIndexes = [];
-    this.lastElementIndex = 0;
 
     this.tableauInitialized = false;
     this.relaxationIndex = 1;
@@ -59,7 +54,7 @@ Model.prototype.maximize = function () {
 
 // Model.prototype.addConstraint = function (constraint) {
 //     // TODO: make sure that the constraint does not belong do another model
-//     // and make 
+//     // and make
 //     this.constraints.push(constraint);
 //     return this;
 // };
@@ -75,6 +70,8 @@ Model.prototype._getNewElementIndex = function () {
 };
 
 Model.prototype._addConstraint = function (constraint) {
+    var slackVariable = constraint.slack;
+    this.tableau.variablesPerIndex[slackVariable.index] = slackVariable;
     this.constraints.push(constraint);
     this.nConstraints += 1;
     if (this.tableauInitialized === true) {
@@ -83,22 +80,22 @@ Model.prototype._addConstraint = function (constraint) {
 };
 
 Model.prototype.smallerThan = function (rhs) {
-    var constraint = new Constraint(rhs, true, this._getNewElementIndex(), this);
+    var constraint = new Constraint(rhs, true, this.tableau.getNewElementIndex(), this);
     this._addConstraint(constraint);
     return constraint;
 };
 
 Model.prototype.greaterThan = function (rhs) {
-    var constraint = new Constraint(rhs, false, this._getNewElementIndex(), this);
+    var constraint = new Constraint(rhs, false, this.tableau.getNewElementIndex(), this);
     this._addConstraint(constraint);
     return constraint;
 };
 
 Model.prototype.equal = function (rhs) {
-    var constraintUpper = new Constraint(rhs, true, this._getNewElementIndex(), this);
+    var constraintUpper = new Constraint(rhs, true, this.tableau.getNewElementIndex(), this);
     this._addConstraint(constraintUpper);
 
-    var constraintLower = new Constraint(rhs, false, this._getNewElementIndex(), this);
+    var constraintLower = new Constraint(rhs, false, this.tableau.getNewElementIndex(), this);
     this._addConstraint(constraintLower);
 
     return new Equality(constraintUpper, constraintLower);
@@ -125,7 +122,7 @@ Model.prototype.addVariable = function (cost, id, isInteger, isUnrestricted, pri
         }
     }
 
-    var varIndex = this._getNewElementIndex();
+    var varIndex = this.tableau.getNewElementIndex();
     if (id === null || id === undefined) {
         id = "v" + varIndex;
     }
@@ -138,13 +135,16 @@ Model.prototype.addVariable = function (cost, id, isInteger, isUnrestricted, pri
         priority = 0;
     }
 
-    var variable = new Variable(id, cost, varIndex, priority);
-    this.variables.push(variable);
-    this.variableIds[varIndex] = id;
-
+    var variable;
     if (isInteger) {
+        variable = new IntegerVariable(id, cost, varIndex, priority);
         this.integerVariables.push(variable);
+    } else {
+        variable = new Variable(id, cost, varIndex, priority);
     }
+
+    this.variables.push(variable);
+    this.tableau.variablesPerIndex[varIndex] = variable;
 
     if (isUnrestricted) {
         this.unrestrictedVariables[varIndex] = true;
@@ -159,51 +159,61 @@ Model.prototype.addVariable = function (cost, id, isInteger, isUnrestricted, pri
     return variable;
 };
 
-//-------------------------------------------------------------------
-// For dynamic model modification
-//-------------------------------------------------------------------
-Model.prototype.removeConstraint = function (constraint) {
+Model.prototype._removeConstraint = function (constraint) {
     var idx = this.constraints.indexOf(constraint);
     if (idx === -1) {
         console.warn("[Model.removeConstraint] Constraint not present in model");
         return;
     }
 
-    if (this.tableauInitialized === true) {
-        if (constraint instanceof Equality === true) {
-            this.tableau.removeConstraint(constraint.upperBound);
-            this.tableau.removeConstraint(constraint.lowerBound);
-        } else {
-            this.tableau.removeConstraint(constraint);
-        }
-    }
+    this._removeVariable(constraint.slack);
 
     this.constraints.splice(idx, 1);
     this.nConstraints -= 1;
-    this.availableIndexes.push(constraint.index);
+
+    if (this.tableauInitialized === true) {
+        this.tableau.removeConstraint(constraint);
+    }
+
     if (constraint.relaxation) {
         this.removeVariable(constraint.relaxation);
     }
+};
+
+//-------------------------------------------------------------------
+// For dynamic model modification
+//-------------------------------------------------------------------
+Model.prototype.removeConstraint = function (constraint) {
+    if (constraint.isEquality) {
+        this._removeConstraint(constraint.upperBound);
+        this._removeConstraint(constraint.lowerBound);
+    } else {
+        this._removeConstraint(constraint);
+    }
+
     return this;
 };
 
-Model.prototype.removeVariable = function (variable) {
+Model.prototype._removeVariable = function (variable) {
     // TODO ? remove variable term from every constraint?
-    // How: every variable should reference the constraints it appears in
+    this.availableIndexes.push(variable.index);
+    variable.index = -1;
+};
+
+Model.prototype.removeVariable = function (variable) {
     var idx = this.variables.indexOf(variable);
     if (idx === -1) {
         console.warn("[Model.removeVariable] Variable not present in model");
         return;
     }
+    this.variables.splice(idx, 1);
+
+    this._removeVariable(variable);
 
     if (this.tableauInitialized === true) {
         this.tableau.removeVariable(variable);
     }
 
-    this.availableIndexes.push(variable.index);
-
-    variable.index = -1;
-    this.variables.splice(idx, 1);
     return this;
 };
 

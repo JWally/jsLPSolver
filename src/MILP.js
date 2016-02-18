@@ -38,6 +38,35 @@ function sortByEvaluation(a, b) {
     return b.relaxedEvaluation - a.relaxedEvaluation;
 }
 
+
+//-------------------------------------------------------------------
+// Applying cuts on a tableau and resolving
+//-------------------------------------------------------------------
+function applyCuts(tableau, cuts){
+    // Restoring initial solution
+    tableau.restore();
+
+    tableau.addCutConstraints(cuts);
+    tableau.solve();
+
+    // Adding MIR cuts
+    var fractionalVolumeImproved = true;
+    while(fractionalVolumeImproved){
+        var fractionalVolumeBefore = tableau.computeFractionalVolume(true);
+
+        tableau.applyMIRCuts();
+        tableau.solve();
+
+        var fractionalVolumeAfter = tableau.computeFractionalVolume(true);
+
+        // If the new fractional volume is bigger than 90% of the previous one
+        // we assume there is no improvement from the MIR cuts
+        if(fractionalVolumeAfter >= 0.9 * fractionalVolumeBefore){
+            fractionalVolumeImproved = false;
+        }
+    }
+}
+
 //-------------------------------------------------------------------
 // Function: MILP
 // Detail: Main function, my attempt at a mixed integer linear programming
@@ -70,26 +99,12 @@ function MILP(model) {
         // Solving from initial relaxed solution
         // with additional cut constraints
 
-        // Restoring initial solution
-        tableau.restore();
-
         // Adding cut constraints
         var cuts = branch.cuts;
-        tableau.addCutConstraints(cuts);
 
-        // Solving
-        tableau.solve();
+        applyCuts(tableau, cuts);
 
-        if (iterations === 0) {
-            // Saving the first iteration
-            // TODO: implement a better strategy for saving the tableau?
-            tableau.save();
-        }
-
-        // Keep Track of how many cycles
-        // we've gone through
         iterations++;
-
         if (tableau.feasible === false) {
             continue;
         }
@@ -102,10 +117,21 @@ function MILP(model) {
 
         // Is the model both integral and feasible?
         if (tableau.isIntegral() === true) {
+            if (iterations === 1) {
+                tableau.updateVariableValues();
+                return new MilpSolution(tableau.getSolution(), iterations);
+            }
+
             // Store the solution as the bestSolution
             bestBranch = branch;
             bestEvaluation = evaluation;
         } else {
+            if (iterations === 1) {
+                // Saving the first iteration
+                // TODO: implement a better strategy for saving the tableau?
+                tableau.save();
+            }
+
             // If the solution is
             //  a. Feasible
             //  b. Better than the current solution
@@ -184,17 +210,16 @@ function MILP(model) {
         }
     }
 
-    // Restoring initial solution
-    tableau.restore();
-
     // Adding cut constraints for the optimal solution
     if (bestBranch !== null) {
-        tableau.addCutConstraints(bestBranch.cuts);
-        tableau.solve();
+        // The model is feasible
+        applyCuts(tableau, bestBranch.cuts);
         tableau.updateVariableValues();
     }
+
 
     // Solving a last time
     return new MilpSolution(tableau.getSolution(), iterations);
 }
+
 module.exports = MILP;

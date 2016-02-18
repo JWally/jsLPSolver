@@ -38,6 +38,8 @@ var Solver = function () {
     this.Term = Term;
     this.Tableau = Tableau;
 
+    this.lastSolvedModel = null;
+
     /*************************************************************
      * Method: Solve
      * Scope: Public:
@@ -72,6 +74,7 @@ var Solver = function () {
         }
 
         var solution = model.solve();
+        this.lastSolvedModel = model;
         solution.solutionSet = solution.generateSolutionSet();
 
         // If the user asks for a full breakdown
