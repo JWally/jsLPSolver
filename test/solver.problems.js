@@ -3,33 +3,36 @@
 /*global it*/
 /*global console*/
 
-var assert = require("assert"),
-    problems = require("./problems.json");
+var assert = require("assert");
+var walk = require("walk");
+var fs = require("fs");
+
+var problems = [];
+
+// Parsing test problems
+var walker = walk.walkSync("test/problems", {
+    followLinks: false,
+    listeners: {
+        file: function (root, fileStats) {
+            // Add this file to the list of files
+            var fileName = fileStats.name;
+            console.log("fileName", fileName);
+
+            // Ignore files that start with a "."
+            if (fileName[0] === ".") {
+                return;
+            }
+
+            var fileRoot = root.substr("test/problems".length + 1);
+            var fullFilePath = "./" + root + "/" + fileName;
+            var jsonContent = JSON.parse(fs.readFileSync(fullFilePath));
+            problems.push(jsonContent);
+        }
+    }
+});
 
 // Kick off the second "Monster" problem
 //problems.splice(-1,1);
-
-// For testing, Function to sort an object
-function sortObject(theObj, round) {
-    var finalObj = {};
-
-    Object.keys(theObj).sort()
-        .forEach(function (d) {
-            // Also, its decided that in this function
-            // we want to be able, for testing purposes
-            // to be able to round an object to 'n' places
-            if (round){
-                if (!isNaN(theObj[d])){
-                    finalObj[d] = Math.round(theObj[d] * Math.pow(10,round)) / (Math.pow(10,round));
-                } else {
-                    finalObj[d] = theObj[d];
-                }
-            } else {
-                finalObj[d] = theObj[d];
-            }
-        });
-    return finalObj;
-}
 
 function assertSolution(model, solutionA, solutionB) {
 

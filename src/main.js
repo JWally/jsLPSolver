@@ -15,7 +15,7 @@
 // Licensed under the MIT License.
 //-------------------------------------------------------------------
 
-var Tableau = require("./Tableau");
+var Tableau = require("./Tableau/index.js");
 var Model = require("./Model");
 var MILP = require("./MILP");
 var expressions = require("./expressions.js");

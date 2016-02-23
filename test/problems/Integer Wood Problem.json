@@ -1,0 +1,40 @@
+{
+        "name": "Integer Wood Problem",
+        "optimize": "profit",
+        "opType": "max",
+        "constraints": {
+            "wood": {
+                "max": 300
+            },
+            "labor": {
+                "max": 110
+            },
+            "chair": {
+                "max": 8
+            }
+        },
+        "variables": {
+            "table": {
+                "wood": 30,
+                "labor": 5,
+                "profit": 6,
+                "table": 1
+            },
+            "chair": {
+                "wood": 20,
+                "labor": 10,
+                "profit": 8,
+                "chair": 1
+            }
+        },
+        "ints": {
+            "table": 1,
+            "chair": 1
+        },
+        "expects": {
+            "feasible": true,
+            "table": 4,
+            "chair": 8,
+            "result": 88
+        }
+    }

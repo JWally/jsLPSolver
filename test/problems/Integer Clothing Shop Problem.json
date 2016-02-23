@@ -1,0 +1,37 @@
+{
+        "name": "Integer Clothing Shop Problem",
+        "optimize": "profit",
+        "opType": "max",
+        "constraints": {
+            "yards": {
+                "max": 150
+            },
+            "hours": {
+                "max": 200
+            }
+        },
+        "variables": {
+            "coat": {
+                "hours": 10,
+                "yards": 3,
+                "profit": 50,
+                "coat": 1
+            },
+            "pants": {
+                "hours": 4,
+                "yards": 5,
+                "profit": 40,
+                "pants": 1
+            }
+        },
+        "ints": {
+            "coat": 1,
+            "pants": 1
+        },
+        "expects": {
+            "feasible": true,
+            "coat": 10,
+            "pants": 24,
+            "result": 1460
+        }
+    }

@@ -1,0 +1,33 @@
+{
+        "name": "Computer Problem",
+        "optimize": "profit",
+        "opType": "max",
+        "constraints": {
+            "cost": {
+                "max": 70000
+            },
+            "size": {
+                "max": 1000
+            }
+        },
+        "variables": {
+            "computer": {
+                "size": 12,
+                "cost": 1000,
+                "profit": 1000,
+                "computer": 1
+            },
+            "printer": {
+                "size": 8,
+                "cost": 300,
+                "profit": 350,
+                "printer": 1
+            }
+        },
+        "expects": {
+            "feasible": true,
+            "computer": 59.09090909090909,
+            "printer": 36.36363636363636,
+            "result": 71818.18181818182
+        }
+    }

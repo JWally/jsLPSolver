@@ -21,7 +21,9 @@
     "grunt-contrib-jshint": "~0.9",
     "grunt-contrib-uglify": "*",
     "grunt-jsbeautifier": "*",
-    "grunt-mocha-test": "*"
+    "grunt-mocha-test": "*",
+    "walk": "*",
+    "fs": "*"
   },
   "keywords": [
     "Linear",

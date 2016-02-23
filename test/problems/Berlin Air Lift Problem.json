@@ -1,0 +1,41 @@
+{
+        "name": "Berlin Air Lift Problem",
+        "optimize": "capacity",
+        "opType": "max",
+        "constraints": {
+            "plane": {
+                "max": 44
+            },
+            "person": {
+                "max": 512
+            },
+            "cost": {
+                "max": 300
+            },
+            "yankees": {
+                "equal": 0
+            }
+        },
+        "variables": {
+            "brit": {
+                "capacity": 20000,
+                "plane": 1,
+                "person": 8,
+                "cost": 5,
+                "yankees": -2
+            },
+            "yank": {
+                "capacity": 30000,
+                "plane": 1,
+                "person": 16,
+                "cost": 9,
+                "yankees": 1
+            }
+        },
+        "expects": {
+            "feasible": true,
+            "brit": 12.8,
+            "yank": 25.6,
+            "result": 1024000
+        }
+    }
