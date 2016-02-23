@@ -1,0 +1,46 @@
+{
+        "name": "Chevalier 1",
+        "optimize": "objective",
+        "opType": "min",
+        "constraints": {
+            "c0": {
+                "min": 50
+            },
+            "c1": {
+                "min": 8
+            },
+            "c2": {
+                "min": 7
+            },
+            "c3": {
+                "min": 6.5
+            },
+            "c4": {
+                "min": 200
+            }
+        },
+        "variables": {
+            "x1": {
+                "c0": 100,
+                "c1": 4,
+                "c2": 2,
+                "c3": 1,
+                "c4": 25,
+                "objective": 2
+            },
+            "x2": {
+                "c0": 1,
+                "c1": 1,
+                "c2": 1,
+                "c3": 1,
+                "c4": 40,
+                "objective": 1
+            }
+        },
+        "expects": {
+            "feasible": true,
+            "x1": 0.5,
+            "x2": 6,
+            "result": 7
+        }
+    }

@@ -5,7 +5,7 @@
 /*global console*/
 /*global process*/
 
-var Tableau = require("./Tableau.js");
+var Tableau = require("./Tableau/Tableau.js");
 var MILP = require("./MILP.js");
 var expressions = require("./expressions.js");
 var Constraint = expressions.Constraint;

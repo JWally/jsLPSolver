@@ -1,0 +1,37 @@
+{
+        "name": "Integer Chocolate Problem",
+        "optimize": "cost",
+        "opType": "min",
+        "constraints": {
+            "semisweet": {
+                "min": 30000
+            },
+            "milk chocolate": {
+                "min": 60000
+            }
+        },
+        "variables": {
+            "Kansas": {
+                "semisweet": 3000,
+                "milk chocolate": 2000,
+                "cost": 1000,
+                "Kansas": 1
+            },
+            "Oklahoma": {
+                "semisweet": 1000,
+                "milk chocolate": 6000,
+                "cost": 1500,
+                "Oklahoma": 1
+            }
+        },
+        "ints": {
+            "Kansas": 1,
+            "Oklahoma": 1
+        },
+        "expects": {
+            "feasible": true,
+            "Kansas": 9,
+            "Oklahoma": 7,
+            "result": 19500
+        }
+    }

@@ -104,6 +104,8 @@ function MILP(model) {
 
         applyCuts(tableau, cuts);
 
+        // console.log(tableau.matrix[0][tableau.rhsColumn], tableau.feasible);
+
         iterations++;
         if (tableau.feasible === false) {
             continue;
@@ -216,7 +218,6 @@ function MILP(model) {
         applyCuts(tableau, bestBranch.cuts);
         tableau.updateVariableValues();
     }
-
 
     // Solving a last time
     return new MilpSolution(tableau.getSolution(), iterations);

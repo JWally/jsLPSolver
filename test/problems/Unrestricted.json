@@ -1,0 +1,35 @@
+{
+        "name": "Unrestricted",
+        "optimize": "objective",
+        "opType": "min",
+        "constraints": {
+            "c0": {
+                "min": -4
+            },
+            "c1": {
+                "equal": -5
+            }
+        },
+        "variables": {
+            "x1": {
+                "c0": 2,
+                "c1": -1,
+                "objective": 1
+            },
+            "x2": {
+                "c0": 1,
+                "c1": 3,
+                "objective": 2
+            }
+        },
+        "unrestricted": {
+            "x1": 1,
+            "x2": 1
+        },
+        "expects": {
+            "feasible": true,
+            "x1": -1,
+            "x2": -2,
+            "result": -5
+        }
+    }

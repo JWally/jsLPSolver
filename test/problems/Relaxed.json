@@ -1,0 +1,38 @@
+{
+        "name": "Relaxed",
+        "constraints": {
+            "c0": {
+                "equal": 3,
+                "weight": 3
+            },
+            "c1": {
+                "equal": 4,
+                "weight": 2
+            },
+            "c2": {
+                "equal": 0,
+                "weight": 1
+            }
+        },
+        "variables": {
+            "x1": {
+                "c0": 1,
+                "c1": 2,
+                "c2": -3,
+                "objective": 1
+            },
+            "x2": {
+                "c0": 1,
+                "c1": 1,
+                "c2": 1,
+                "objective": 2
+            }
+        },
+        "expects": {
+            "feasible": true,
+            "x1": 0.75,
+            "x2": 2.25,
+            "r2": 0.25,
+            "result": 0.5
+        }
+    }

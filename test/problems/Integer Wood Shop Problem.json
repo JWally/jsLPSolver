@@ -1,0 +1,45 @@
+{
+        "name": "Integer Wood Shop Problem",
+        "optimize": "profit",
+        "opType": "max",
+        "constraints": {
+            "space": {
+                "max": 205
+            },
+            "price": {
+                "max": 40000
+            }
+        },
+        "variables": {
+            "press": {
+                "space": 15,
+                "price": 8000,
+                "profit": 100,
+                "press": 1
+            },
+            "lathe": {
+                "space": 30,
+                "price": 4000,
+                "profit": 150,
+                "lathe": 1
+            },
+            "drill": {
+                "space": 14,
+                "price": 4500,
+                "profit": 80,
+                "drill": 1
+            }
+        },
+        "ints": {
+            "press": 1,
+            "lathe": 1,
+            "drill": 1
+        },
+        "expects": {
+            "feasible": true,
+            "press": 1,
+            "lathe": 5,
+            "drill": 2,
+            "result": 1010
+        }
+    }

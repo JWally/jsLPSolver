@@ -1,0 +1,37 @@
+{
+        "name": "Artificial",
+        "optimize": "objective",
+        "background": "https://en.wikibooks.org/wiki/Operations_Research/The_Simplex_Method",
+        "opType": "min",
+        "constraints": {
+            "c1": {
+                "equal": 3
+            },
+            "c2": {
+                "min": 6
+            },
+            "c3": {
+                "max": 4
+            }
+        },
+        "variables": {
+            "x1": {
+                "c1": 3,
+                "c2": 4,
+                "c3": 1,
+                "objective": 4
+            },
+            "x2": {
+                "c1": 1,
+                "c2": 3,
+                "c3": 2,
+                "objective": 1
+            }
+        },
+        "expects": {
+            "feasible": true,
+            "x1": 0.4,
+            "x2": 1.8,
+            "result": 3.4
+        }
+    }
