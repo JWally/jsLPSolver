@@ -1,52 +1,48 @@
 {
-        "name": "Integer Clothing Shop Problem II",
-        "optimize": "profit",
-        "opType": "max",
-        "constraints": {
-            "yards": {
-                "max": 150
-            },
-            "hours": {
-                "max": 200
-            }
+    "name": "Integer Clothing Shop Problem II",
+    "optimize": "profit",
+    "opType": "max",
+    "constraints": {
+        "yards": {
+            "max": 150
         },
-        "variables": {
-            "coat": {
-                "hours": 10,
-                "yards": 3,
-                "profit": 50,
-                "coat": 1
-            },
-            "pants": {
-                "hours": 4,
-                "yards": 5,
-                "profit": 40,
-                "pants": 1
-            },
-            "hat": {
-                "hours": 12,
-                "yards": 1,
-                "profit": 10,
-                "hat": 1
-            },
-            "socks": {
-                "hours": 0.5,
-                "yards": 0.5,
-                "profit": 0.5,
-                "socks": 1
-            }
-        },
-        "ints": {
-            "coat": 1,
-            "pants": 1,
-            "hat": 1,
-            "socks": 1
-        },
-        "expects": {
-            "feasible": true,
-            "coat": 10,
-            "pants": 24,
-            "hat": 0,
-            "result": 1460
+        "hours": {
+            "max": 200
         }
+    },
+    "variables": {
+        "coat": {
+            "hours": 10,
+            "yards": 3,
+            "profit": 50
+        },
+        "pants": {
+            "hours": 4,
+            "yards": 5,
+            "profit": 40
+        },
+        "hat": {
+            "hours": 12,
+            "yards": 1,
+            "profit": 10
+        },
+        "socks": {
+            "hours": 0.5,
+            "yards": 0.5,
+            "profit": 0.5
+        }
+    },
+    "ints": {
+        "coat": 1,
+        "pants": 1,
+        "hat": 1,
+        "socks": 1
+    },
+    "expects": {
+        "feasible": true,
+        "coat": 10,
+        "pants": 24,
+        "hat": 0,
+        "result": 1460
     }
+}

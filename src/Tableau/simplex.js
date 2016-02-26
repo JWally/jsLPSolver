@@ -190,7 +190,7 @@ Tableau.prototype.phase2 = function () {
         // If no entering column could be found we're done with phase 2.
         if (enteringColumn === 0) {
             this.setEvaluation();
-            return;
+            return iterations;
         }
 
         // Selecting leaving variable
@@ -223,7 +223,7 @@ Tableau.prototype.phase2 = function () {
             // TODO: solution is not bounded
             // optimal value is -Infinity
             this.evaluation = -Infinity;
-            return;
+            return iterations;
         }
 
         this.pivot(leavingRow, enteringColumn, true);

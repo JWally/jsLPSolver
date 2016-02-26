@@ -1,72 +1,66 @@
 {
-        "name": "Shift Work Problem",
-        "background": " http://www.algebra.com/algebra/homework/coordinate/word/THEO-2012-01-26.lesson",
-        "optimize": "ppl",
-        "opType": "min",
-        "constraints": {
-            "d0": {
-                "min": 4
-            },
-            "d4": {
-                "min": 8
-            },
-            "d8": {
-                "min": 10
-            },
-            "d12": {
-                "min": 7
-            },
-            "d16": {
-                "min": 12
-            },
-            "d20": {
-                "min": 4
-            }
+    "name": "Shift Work Problem",
+    "background": " http://www.algebra.com/algebra/homework/coordinate/word/THEO-2012-01-26.lesson",
+    "optimize": "ppl",
+    "opType": "min",
+    "constraints": {
+        "d0": {
+            "min": 4
         },
-        "variables": {
-            "shft_0": {
-                "d0": 1,
-                "d4": 1,
-                "ppl": 1,
-                "shft_0": 1
-            },
-            "shft_4": {
-                "d4": 1,
-                "d8": 1,
-                "ppl": 1,
-                "shft_4": 1
-            },
-            "shft_8": {
-                "d8": 1,
-                "d12": 1,
-                "ppl": 1,
-                "shft_8": 1
-            },
-            "shft_12": {
-                "d12": 1,
-                "d16": 1,
-                "ppl": 1,
-                "shft_12": 1
-            },
-            "shft_16": {
-                "d16": 1,
-                "d20": 1,
-                "ppl": 1,
-                "shft_16": 1
-            },
-            "shft_20": {
-                "d20": 1,
-                "d0": 1,
-                "ppl": 1,
-                "shft_20": 1
-            }
+        "d4": {
+            "min": 8
         },
-        "expects": {
-            "feasible": true,
-            "shft_0": 4,
-            "shft_4": 10,
-            "shft_12": 8,
-            "shft_16": 4,
-            "result": 26
+        "d8": {
+            "min": 10
+        },
+        "d12": {
+            "min": 7
+        },
+        "d16": {
+            "min": 12
+        },
+        "d20": {
+            "min": 4
         }
+    },
+    "variables": {
+        "shft_0": {
+            "d0": 1,
+            "d4": 1,
+            "ppl": 1
+        },
+        "shft_4": {
+            "d4": 1,
+            "d8": 1,
+            "ppl": 1
+        },
+        "shft_8": {
+            "d8": 1,
+            "d12": 1,
+            "ppl": 1
+        },
+        "shft_12": {
+            "d12": 1,
+            "d16": 1,
+            "ppl": 1
+        },
+        "shft_16": {
+            "d16": 1,
+            "d20": 1,
+            "ppl": 1
+        },
+        "shft_20": {
+            "d20": 1,
+            "d0": 1,
+            "ppl": 1
+        }
+    },
+    "expects": {
+        "feasible": true,
+        "shft_0": 4,
+        "shft_4": 10,
+        "shft_12": 8,
+        "shft_16": 4,
+        "result": 26
     }
+}

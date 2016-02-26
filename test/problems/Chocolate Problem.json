@@ -1,33 +1,31 @@
 {
-        "name": "Chocolate Problem",
-        "optimize": "cost",
-        "opType": "min",
-        "constraints": {
-            "semisweet": {
-                "min": 30000
-            },
-            "milk chocolate": {
-                "min": 60000
-            }
+    "name": "Chocolate Problem",
+    "optimize": "cost",
+    "opType": "min",
+    "constraints": {
+        "semisweet": {
+            "min": 30000
         },
-        "variables": {
-            "Kansas": {
-                "semisweet": 3000,
-                "milk chocolate": 2000,
-                "cost": 1000,
-                "Kansas": 1
-            },
-            "Oklahoma": {
-                "semisweet": 1000,
-                "milk chocolate": 6000,
-                "cost": 1500,
-                "Oklahoma": 1
-            }
-        },
-        "expects": {
-            "feasible": true,
-            "Kansas": 7.5,
-            "Oklahoma": 7.5,
-            "result": 18750
+        "milk chocolate": {
+            "min": 60000
         }
+    },
+    "variables": {
+        "Kansas": {
+            "semisweet": 3000,
+            "milk chocolate": 2000,
+            "cost": 1000
+        },
+        "Oklahoma": {
+            "semisweet": 1000,
+            "milk chocolate": 6000,
+            "cost": 1500
+        }
+    },
+    "expects": {
+        "feasible": true,
+        "Kansas": 7.5,
+        "Oklahoma": 7.5,
+        "result": 18750
     }
+}
