@@ -104,7 +104,7 @@ function MILP(model) {
 
         applyCuts(tableau, cuts);
 
-        // console.log(tableau.matrix[0][tableau.rhsColumn], tableau.feasible);
+        // console.log(iterations, tableau.matrix[0][tableau.rhsColumn], tableau.feasible, branches.length);
 
         iterations++;
         if (tableau.feasible === false) {

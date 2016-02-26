@@ -298,6 +298,7 @@ Model.prototype.loadJson = function (jsonModel) {
     var nVariables = variableIds.length;
 
     var integerVarIds = jsonModel.ints || {};
+    var binaryVarIds = jsonModel.binaries || {};
     var unrestrictedVarIds = jsonModel.unrestricted || {};
 
     // Instantiating variables and constraint terms
@@ -307,9 +308,15 @@ Model.prototype.loadJson = function (jsonModel) {
         var variableId = variableIds[v];
         var variableConstraints = variables[variableId];
         var cost = variableConstraints[objectiveName] || 0;
-        var isInteger = !!integerVarIds[variableId];
+        var isBinary = !!binaryVarIds[variableId];
+        var isInteger = !!integerVarIds[variableId] || isBinary;
         var isUnrestricted = !!unrestrictedVarIds[variableId];
         var variable = this.addVariable(cost, variableId, isInteger, isUnrestricted);
+
+        if (isBinary) {
+            // Creating an upperbound constraint for this variable
+            this.smallerThan(1).addTerm(1, variable);
+        }
 
         var constraintNames = Object.keys(variableConstraints);
         for (c = 0; c < constraintNames.length; c += 1) {
