@@ -1,52 +1,52 @@
 {
-        "name": "Degenerate Max",
-        "optimize": "objective",
-        "background": "http://arxiv.org/pdf/1304.2107.pdf",
-        "opType": "max",
-        "constraints": {
-            "c1": {
-                "max": 4
-            },
-            "c2": {
-                "min": 6
-            },
-            "c3": {
-                "min": 18
-            },
-            "c4": {
-                "min": 8
-            },
-            "c5": {
-                "min": 32
-            },
-            "c6": {
-                "equal": 4
-            }
+    "name": "Degenerate Max",
+    "optimize": "objective",
+    "background": "http://arxiv.org/pdf/1304.2107.pdf",
+    "opType": "max",
+    "constraints": {
+        "c1": {
+            "max": 4
         },
-        "variables": {
-            "x1": {
-                "c1": 1,
-                "c2": 0,
-                "c3": 3,
-                "c4": 1,
-                "c5": 5,
-                "c6": 4,
-                "objective": 3
-            },
-            "x2": {
-                "c1": 0,
-                "c2": 1,
-                "c3": 2,
-                "c4": 1,
-                "c5": 4,
-                "c6": -1,
-                "objective": 5
-            }
+        "c2": {
+            "min": 6
         },
-        "expects": {
-            "feasible": true,
-            "x1": 4,
-            "x2": 12,
-            "result": 72
+        "c3": {
+            "min": 18
+        },
+        "c4": {
+            "min": 8
+        },
+        "c5": {
+            "min": 32
+        },
+        "c6": {
+            "equal": 4
         }
+    },
+    "variables": {
+        "x1": {
+            "c1": 1,
+            "c2": 0,
+            "c3": 3,
+            "c4": 1,
+            "c5": 5,
+            "c6": 4,
+            "objective": 3
+        },
+        "x2": {
+            "c1": 0,
+            "c2": 1,
+            "c3": 2,
+            "c4": 1,
+            "c5": 4,
+            "c6": -1,
+            "objective": 5
+        }
+    },
+    "expects": {
+        "feasible": true,
+        "x1": 4,
+        "x2": 12,
+        "result": 72
     }
+}

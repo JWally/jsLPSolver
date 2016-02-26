@@ -1,0 +1,32 @@
+{
+    "name": "Quadratic Relaxation 2",
+    "constraints" : {
+        "cst1": { "equal": 5 },
+        "cst2": { "equal": 1 },
+        "cst3": { "equal": 1 },
+        "cst4": { "max": 3 },
+        "fritzJohn1": { "equal": 0 },
+        "fritzJohn2": { "equal": 0 }
+    },
+    "variables" : {
+        "x": { "cst1" : 1, "cst2" : 1, "cst4" : 1, "fritzJohn1" : 2 },
+        "y": { "cst1" : 1, "cst3" : 1, "cst4" : 1, "fritzJohn2" : 2 },
+        "relaxation1": { "cst1": -1, "fritzJohn1" : 2, "fritzJohn2" : 2 },
+        "relaxation2": { "cst2": -1, "fritzJohn1" : 2 },
+        "relaxation3": { "cst3": -1, "fritzJohn2" : 2 },
+        "relaxation4": { "cst4": -1, "fritzJohn1" : 2, "fritzJohn2" : 2 }
+    },
+    "unrestricted": {
+        "relaxation1": 1,
+        "relaxation2": 1,
+        "relaxation3": 1
+    },
+    "expects": {
+        "feasible": true,
+        "x": 1.5,
+        "y": 1.5,
+        "relaxation1": -2,
+        "relaxation2": 0.5,
+        "relaxation3": 0.5
+    }
+}

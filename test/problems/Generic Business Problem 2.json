@@ -1,32 +1,30 @@
 {
-        "name": "Generic Business Problem 2",
-        "optimize": "profit",
-        "opType": "max",
-        "constraints": {
-            "size": {
-                "max": 2400
-            },
-            "units": {
-                "min": 40
-            }
+    "name": "Generic Business Problem 2",
+    "optimize": "profit",
+    "opType": "max",
+    "constraints": {
+        "size": {
+            "max": 2400
         },
-        "variables": {
-            "large": {
-                "size": 60,
-                "units": 1,
-                "profit": 250,
-                "large": 1
-            },
-            "small": {
-                "size": 40,
-                "units": 1,
-                "profit": 150,
-                "small": 1
-            }
-        },
-        "expects": {
-            "feasible": true,
-            "large": 40,
-            "result": 10000
+        "units": {
+            "min": 40
         }
+    },
+    "variables": {
+        "large": {
+            "size": 60,
+            "units": 1,
+            "profit": 250
+        },
+        "small": {
+            "size": 40,
+            "units": 1,
+            "profit": 150
+        }
+    },
+    "expects": {
+        "feasible": true,
+        "large": 40,
+        "result": 10000
     }
+}

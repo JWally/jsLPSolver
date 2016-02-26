@@ -1,33 +1,31 @@
 {
-        "name": "Wood Shop Problem",
-        "optimize": "profit",
-        "opType": "max",
-        "constraints": {
-            "wood": {
-                "max": 300
-            },
-            "labor": {
-                "max": 110
-            }
+    "name": "Wood Shop Problem",
+    "optimize": "profit",
+    "opType": "max",
+    "constraints": {
+        "wood": {
+            "max": 300
         },
-        "variables": {
-            "table": {
-                "wood": 30,
-                "labor": 5,
-                "profit": 6,
-                "table": 1
-            },
-            "chair": {
-                "wood": 20,
-                "labor": 10,
-                "profit": 8,
-                "chair": 1
-            }
-        },
-        "expects": {
-            "feasible": true,
-            "table": 4,
-            "chair": 9,
-            "result": 96
+        "labor": {
+            "max": 110
         }
+    },
+    "variables": {
+        "table": {
+            "wood": 30,
+            "labor": 5,
+            "profit": 6
+        },
+        "chair": {
+            "wood": 20,
+            "labor": 10,
+            "profit": 8
+        }
+    },
+    "expects": {
+        "feasible": true,
+        "table": 4,
+        "chair": 9,
+        "result": 96
     }
+}
