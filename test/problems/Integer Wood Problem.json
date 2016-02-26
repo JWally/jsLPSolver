@@ -9,7 +9,7 @@
         "labor": {
             "max": 110
         },
-        "chair": {
+        "chairs": {
             "max": 8
         }
     },
@@ -22,7 +22,8 @@
         "chair": {
             "wood": 20,
             "labor": 10,
-            "profit": 8
+            "profit": 8,
+            "chairs": 1
         }
     },
     "ints": {

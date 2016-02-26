@@ -9,16 +9,16 @@
         "land": {
             "max": 12
         },
-        "pool": {
+        "pools": {
             "max": 1
         },
-        "tennis": {
+        "tennisCourts": {
             "max": 1
         },
-        "field": {
+        "fields": {
             "max": 1
         },
-        "gym": {
+        "gyms": {
             "max": 1
         }
     },
@@ -26,34 +26,38 @@
         "pool": {
             "land": 4,
             "cost": 35000,
-            "usage": 300
+            "usage": 300,
+            "pools": 1
         },
-        "tennis": {
+        "tennisCourt": {
             "land": 2,
             "cost": 10000,
-            "usage": 90
+            "usage": 90,
+            "tennisCourts": 1
         },
         "field": {
             "land": 7,
             "cost": 25000,
-            "usage": 400
+            "usage": 400,
+            "fields": 1
         },
         "gym": {
             "land": 3,
             "cost": 90000,
-            "usage": 150
+            "usage": 150,
+            "gyms": 1
         }
     },
     "ints": {
         "pool": 1,
-        "tennis": 1,
+        "tennisCourt": 1,
         "field": 1,
         "gym": 1
     },
     "expects": {
         "feasible": true,
         "pool": 1,
-        "tennis": 0,
+        "tennisCourt": 0,
         "field": 1,
         "gym": 0,
         "result": 700

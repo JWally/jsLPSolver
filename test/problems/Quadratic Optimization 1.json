@@ -20,6 +20,7 @@
         "feasible": true,
         "lambda2": 1,
         "x": 3.5,
-        "y": 3.5
+        "y": 3.5,
+        "result": 0
     }
 }

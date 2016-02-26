@@ -27,6 +27,7 @@
         "y": 1.5,
         "relaxation1": -2,
         "relaxation2": 0.5,
-        "relaxation3": 0.5
+        "relaxation3": 0.5,
+        "result": 0
     }
 }
