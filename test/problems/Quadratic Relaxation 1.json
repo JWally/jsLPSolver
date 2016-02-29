@@ -1,26 +1,18 @@
 {
     "name": "Quadratic Relaxation 1",
+    "background": "Quadratic relaxation of problem Infeasible 1",
     "constraints" : {
-        "cst1": { "max": 2 },
-        "cst2": { "min": 1 },
-        "cst3": { "min": 1 },
-        "fritzJohn1": { "equal": 0 },
-        "fritzJohn2": { "equal": 0 }
+        "fritzJohn1": { "equal": 2.5 },
+        "fritzJohn2": { "equal": 2.5 }
     },
     "variables" : {
-        "x": { "cst1" : 1, "cst2" : 1, "cst3" : -0.5 },
-        "y": { "cst1" : 1, "cst2" : -0.5, "cst3" : 1 },
-        "relaxation1": { "cst1" : -1, "fritzJohn1" :  2, "fritzJohn2":  2 },
-        "relaxation2": { "cst2" :  1, "fritzJohn1" : -2, "fritzJohn2":  1 },
-        "relaxation3": { "cst3" :  1, "fritzJohn1" :  1, "fritzJohn2": -2 }
+        "x": { "fritzJohn1" : 2.25 },
+        "y": { "fritzJohn2" : 2.25 }
     },
     "expects": {
         "feasible": true,
         "x": 1.11111111,
         "y": 1.11111111,
-        "relaxation1": 0.22222222,
-        "relaxation2": 0.44444444,
-        "relaxation3": 0.44444444,
-        "result": 0
+        "result": 0.0
     }
 }
