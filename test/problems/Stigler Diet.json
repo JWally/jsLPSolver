@@ -1,6 +1,6 @@
 {
 	"name": "Stigler Diet",
-    "background": "https://developers.google.com/optimization/lp/glop",
+	"background": "https://developers.google.com/optimization/lp/glop",
 	"optimize": "Price",
 	"opType": "min",
 	"constraints" : {
@@ -96,11 +96,11 @@
 	"expects": {
 		"feasible": true,
 		"Navy Beans, Dried": 0.06102856,
-        "Liver (Beef)": 0.00189256,
-        "Spinach": 0.00500766,
-        "Wheat Flour (Enriched)": 0.02951906,
-        "Cabbage": 0.01121444,
-        "result": 0.10866228
+		"Liver (Beef)": 0.00189256,
+		"Spinach": 0.00500766,
+		"Wheat Flour (Enriched)": 0.02951906,
+		"Cabbage": 0.01121444,
+		"result": 0.10866228
 	}
 }
 
