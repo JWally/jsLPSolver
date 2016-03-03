@@ -9,8 +9,8 @@
 
 
 
- 
- 
+
+
  /*************************************************************
  * Method: to_JSON
  * Scope: Public:
@@ -20,18 +20,22 @@
  *          work with
  **************************************************************/
 function to_JSON(input){
-    var rxo = {
+    var rxo = {//^(\-|\+){0,1}\w{1,}(?!:)
         /* jshint ignore:start */
         "is_blank": /^\W{0,}$/,
         "is_objective": /(max|min)(imize){0,}\:/i,
-        "is_int": /^\W{0,}int/i,
+        //previous version
+        //"is_int": /^\W{0,}int/i,
+        //new version to avoid comments
+        "is_int": /^(?!\/\*)\W{0,}int/i,
+        "constraint_element": /(\-|\+){0,1}\w{0,}/i,
         "is_constraint": /(\>|\<){0,}\=/i,
         "is_unrestricted": /^\S{0,}unrestricted/i,
         "parse_lhs":  /(\-|\+){0,1}\s{0,1}\d{0,}\.{0,}\d{0,}\s{0,}[A-Za-z]\S{0,}/gi,
         "parse_rhs": /(\-|\+){0,1}\d{1,}\.{0,}\d{0,}\W{0,}\;{0,1}$/i,
         "parse_dir": /(\>|\<){0,}\=/gi,
         "parse_int": /[^\s|^\,]+/gi,
-        "get_num": /(\-|\+){0,1}(\W|^)\d+\.{0,}\d{0,}/g,
+        "get_num": /(\-|\+){0,1}(\W|^)\d+\.{0,1}\d{0,}/g, // Why accepting character \W before the first digit?
         "get_word": /[A-Za-z].*/
         /* jshint ignore:end */
     },
@@ -48,7 +52,7 @@ function to_JSON(input){
     },
     tmp = "", tst = 0, ary = null, hldr = "", hldr2 = "",
     constraint = "", rhs = 0;
-    
+
     // Handle input if its coming
     // to us as a hard string
     // instead of as an array of
@@ -56,42 +60,41 @@ function to_JSON(input){
     if(typeof input === "string"){
         input = input.split("\n");
     }
-    
+
     // Start iterating over the rows
     // to see what all we have
     for(var i = 0; i < input.length; i++){
-    
+
         constraint = "__" + i;
-        
+
         // Get the string we're working with
         tmp = input[i];
-        
+
         // Set the test = 0
         tst = 0;
-        
+
         // Reset the array
         ary = null;
-                
+
         // Test to see if we're the objective
         if(rxo.is_objective.test(tmp)){
-        
             // Set up in model the opType
             model.opType = tmp.match(/(max|min)/gi)[0];
-        
+
             // Pull apart lhs
             ary = tmp.match(rxo.parse_lhs).map(function(d){
                 return d.replace(/\s+/,"");
             }).slice(1);
-            
-            
-            
+
+
+
             // *** STEP 1 *** ///
             // Get the variables out
             ary.forEach(function(d){
-            
+
                 // Get the number if its there
                 hldr = d.match(rxo.get_num);
-            
+
                 // If it isn't a number, it might
                 // be a standalone variable
                 if(hldr === null){
@@ -103,12 +106,12 @@ function to_JSON(input){
                 } else {
                     hldr = hldr[0];
                 }
-                
+
                 hldr = parseFloat(hldr);
-                
+
                 // Get the variable type
                 hldr2 = d.match(rxo.get_word)[0].replace(/\;$/,"");
-                
+
                 // Make sure the variable is in the model
                 model.variables[hldr2] = model.variables[hldr2] || {};
                 model.variables[hldr2]._obj = hldr;
@@ -118,28 +121,30 @@ function to_JSON(input){
         }else if(rxo.is_int.test(tmp)){
             // Get the array of ints
             ary = tmp.match(rxo.parse_int).slice(1);
-            
+
             // Since we have an int, our model should too
             model.ints = model.ints || {};
-            
+
             ary.forEach(function(d){
                 d = d.replace(";","");
                 model.ints[d] = 1;
             });
         ////////////////////////////////////
         } else if(rxo.is_constraint.test(tmp)){
+            var separatorIndex = tmp.indexOf(':');
+            var constraintExpression = (separatorIndex === -1) ? tmp : tmp.slice(separatorIndex + 1);
+
             // Pull apart lhs
-            ary = tmp.match(rxo.parse_lhs).map(function(d){
+            ary = constraintExpression.match(rxo.parse_lhs).map(function(d){
                 return d.replace(/\s+/,"");
             });
 
-            
             // *** STEP 1 *** ///
             // Get the variables out
             ary.forEach(function(d){
                 // Get the number if its there
                 hldr = d.match(rxo.get_num);
-                
+
                 if(hldr === null){
                     if(d.substr(0,1) === "-"){
                         hldr = -1;
@@ -149,36 +154,36 @@ function to_JSON(input){
                 } else {
                     hldr = hldr[0];
                 }
-                
-                hldr = parseFloat(hldr);                
 
-                
-                // Get the variable type
+                hldr = parseFloat(hldr);
+
+
+                // Get the variable name
                 hldr2 = d.match(rxo.get_word)[0];
-                
+
                 // Make sure the variable is in the model
                 model.variables[hldr2] = model.variables[hldr2] || {};
                 model.variables[hldr2][constraint] = hldr;
 
             });
-            
+
             // *** STEP 2 *** ///
-            // Get the RHS out            
+            // Get the RHS out
             rhs = parseFloat(tmp.match(rxo.parse_rhs)[0]);
 
             // *** STEP 3 *** ///
-            // Get the Constrainer out   
+            // Get the Constrainer out
             tmp = constraints[tmp.match(rxo.parse_dir)[0]];
             model.constraints[constraint] = model.constraints[constraint] || {};
-            model.constraints[constraint][tmp] = rhs; 
+            model.constraints[constraint][tmp] = rhs;
         ////////////////////////////////////
         } else if(rxo.is_unrestricted.test(tmp)){
             // Get the array of unrestricted
             ary = tmp.match(rxo.parse_int).slice(1);
-            
+
             // Since we have an int, our model should too
             model.unrestricted = model.unrestricted || {};
-            
+
             ary.forEach(function(d){
                 d = d.replace(";","");
                 model.unrestricted[d] = 1;
@@ -261,7 +266,7 @@ function from_JSON(model){
             output += "unrestricted " + x.replace(rxClean,"_") + ";\n";
         }
     }
-    
+
     // And kick the string back
     return output;
 }
