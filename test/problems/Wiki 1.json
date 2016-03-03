@@ -1,37 +1,37 @@
 {
-        "name": "Wiki 1",
-        "optimize": "objective",
-        "background": "https://en.wikipedia.org/wiki/Simplex_algorithm",
-        "opType": "max",
-        "constraints": {
-            "c1": {
-                "equal": 10
-            },
-            "c2": {
-                "equal": 15
-            }
+    "name": "Wiki 1",
+    "optimize": "objective",
+    "background": "https://en.wikipedia.org/wiki/Simplex_algorithm",
+    "opType": "max",
+    "constraints": {
+        "c1": {
+            "equal": 10
         },
-        "variables": {
-            "x": {
-                "c1": 3,
-                "c2": 2,
-                "objective": 2
-            },
-            "y": {
-                "c1": 2,
-                "c2": 5,
-                "objective": 3
-            },
-            "z": {
-                "c1": 1,
-                "c2": 3,
-                "objective": 4
-            }
-        },
-        "expects": {
-            "feasible": true,
-            "x": 2.142857142857143,
-            "z": 3.5714285714285716,
-            "result": 18.571428571428573
+        "c2": {
+            "equal": 15
         }
+    },
+    "variables": {
+        "x": {
+            "c1": 3,
+            "c2": 2,
+            "objective": 2
+        },
+        "y": {
+            "c1": 2,
+            "c2": 5,
+            "objective": 3
+        },
+        "z": {
+            "c1": 1,
+            "c2": 3,
+            "objective": 4
+        }
+    },
+    "expects": {
+        "feasible": true,
+        "x": 2.142857142857143,
+        "z": 3.5714285714285716,
+        "result": 18.571428571428573
     }
+}

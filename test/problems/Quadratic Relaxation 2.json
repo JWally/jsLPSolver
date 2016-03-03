@@ -1,0 +1,18 @@
+{
+    "name": "Quadratic Relaxation 2",
+    "background": "Quadratic relaxation of problem Infeasible 2",
+    "constraints" : {
+        "fritzJohn1": { "equal": 5.4 },
+        "fritzJohn2": { "equal": 0.6 }
+    },
+    "variables" : {
+        "x": { "fritzJohn1" : 2, "fritzJohn2" : 0.2 },
+        "y": { "fritzJohn1" : 0.2, "fritzJohn2" : 2 }
+    },
+    "expects": {
+        "feasible": true,
+        "x": 2.6969697,
+        "y": 0.03030303,
+        "result": 0
+    }
+}

@@ -1,0 +1,26 @@
+{
+    "name": "Quadratic Optimization 1",
+    "constraints" : {
+        "cst1": { "min": 3 },
+        "cst2": { "max": 7 },
+        "cst3": { "min": 1 },
+        "cst4": { "min": 1 },
+        "fritzJohn1": { "equal": 8 },
+        "fritzJohn2": { "equal": 8 }
+    },
+    "variables" : {
+        "x": { "cst1" : 1, "cst2" : 1, "cst3" : 1, "fritzJohn1" : 2 },
+        "y": { "cst1" : 1, "cst2" : 1, "cst4" : 1, "fritzJohn2" : 2 },
+        "lambda1": { "fritzJohn1" : -1, "fritzJohn2" : -1 },
+        "lambda2": { "fritzJohn1" :  1, "fritzJohn2" :  1 },
+        "lambda3": { "fritzJohn1" : -1 },
+        "lambda4": { "fritzJohn2" : -1 }
+    },
+    "expects": {
+        "feasible": true,
+        "lambda2": 1,
+        "x": 3.5,
+        "y": 3.5,
+        "result": 0
+    }
+}
