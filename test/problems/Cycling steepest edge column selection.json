@@ -1,0 +1,48 @@
+{
+    "name": "Steepest edge column selection",
+    "optimize": "profit",
+    "opType": "max",
+    "constraints": {
+        "cst1": {
+            "max": 0
+        },
+        "cst2": {
+            "max": 0
+        },
+        "cst3": {
+            "max": 1
+        }
+    },
+    "variables": {
+        "x1": {
+            "cst1": 0.4,
+            "cst2": -7.8,
+            "cst3": 0,
+            "profit": -1
+        },
+        "x2": {
+            "cst1": 0.2,
+            "cst2": -1.4,
+            "cst3": -20,
+            "profit": -1.75
+        },
+        "x3": {
+            "cst1": -1.4,
+            "cst2": 7.8,
+            "cst3": 156,
+            "profit": 12.25
+        },
+        "x4": {
+            "cst1": -0.2,
+            "cst2": 0.4,
+            "cst3": 8,
+            "profit": 0.5
+        }
+    },
+    "expects": {
+        "feasible": true,
+        "x1": 0.00641026,
+        "x3": 0.00641026,
+        "result": 0.07211538
+    }
+}

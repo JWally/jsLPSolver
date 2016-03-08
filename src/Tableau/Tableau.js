@@ -52,6 +52,9 @@ function Tableau(precision) {
 
     this.variables = null;
     this.nVars = 0;
+
+    this.bounded = true;
+    this.unboundedVarIndex = null;
 }
 module.exports = Tableau;
 
@@ -229,5 +232,5 @@ Tableau.prototype.getSolution = function () {
     var evaluation = (this.model.isMinimization === true) ?
         this.evaluation : -this.evaluation;
 
-    return new Solution(this, evaluation, this.feasible);
+    return new Solution(this, evaluation, this.feasible, this.bounded);
 };

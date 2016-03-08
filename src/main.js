@@ -94,6 +94,8 @@ var Solver = function () {
             // 2.) Add in the objective value
             store.result = solution.evaluation;
 
+            store.bounded = solution.bounded;
+
             // 3.) Load all of the variable values
             Object.keys(solution.solutionSet)
                 .map(function (d) {

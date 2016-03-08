@@ -20,7 +20,7 @@
  *          work with
  **************************************************************/
 function to_JSON(input){
-    var rxo = {//^(\-|\+){0,1}\w{1,}(?!:)
+    var rxo = {
         /* jshint ignore:start */
         "is_blank": /^\W{0,}$/,
         "is_objective": /(max|min)(imize){0,}\:/i,
@@ -28,7 +28,6 @@ function to_JSON(input){
         //"is_int": /^\W{0,}int/i,
         //new version to avoid comments
         "is_int": /^(?!\/\*)\W{0,}int/i,
-        "constraint_element": /(\-|\+){0,1}\w{0,}/i,
         "is_constraint": /(\>|\<){0,}\=/i,
         "is_unrestricted": /^\S{0,}unrestricted/i,
         "parse_lhs":  /(\-|\+){0,1}\s{0,1}\d{0,}\.{0,}\d{0,}\s{0,}[A-Za-z]\S{0,}/gi,
@@ -131,7 +130,7 @@ function to_JSON(input){
             });
         ////////////////////////////////////
         } else if(rxo.is_constraint.test(tmp)){
-            var separatorIndex = tmp.indexOf(':');
+            var separatorIndex = tmp.indexOf(":");
             var constraintExpression = (separatorIndex === -1) ? tmp : tmp.slice(separatorIndex + 1);
 
             // Pull apart lhs

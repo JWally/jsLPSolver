@@ -1,8 +1,58 @@
 /*global require*/
+/*global console*/
 var Tableau = require("./Tableau.js");
 
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
+Tableau.prototype._putInBase = function (varIndex) {
+    // Is varIndex in the base?
+    var r = this.rowByVarIndex[varIndex];
+    if (r === -1) {
+        // Outside the base
+        // pivoting to take it out
+        var c = this.colByVarIndex[varIndex];
+
+        // Selecting pivot row
+        // (Any row with coefficient different from 0)
+        for (var r1 = 1; r1 < this.height; r1 += 1) {
+            var coefficient = this.matrix[r1][c];
+            if (coefficient < -this.precision || this.precision < coefficient) {
+                r = r1;
+                break;
+            }
+        }
+
+        this.pivot(r, c);
+    }
+
+    return r;
+};
+
+Tableau.prototype._takeOutOfBase = function (varIndex) {
+    // Is varIndex in the base?
+    var c = this.colByVarIndex[varIndex];
+    if (c === -1) {
+        // Inside the base
+        // pivoting to take it out
+        var r = this.rowByVarIndex[varIndex];
+
+        // Selecting pivot column
+        // (Any column with coefficient different from 0)
+        var pivotRow = this.matrix[r];
+        for (var c1 = 1; c1 < this.height; c1 += 1) {
+            var coefficient = pivotRow[c1];
+            if (coefficient < -this.precision || this.precision < coefficient) {
+                c = c1;
+                break;
+            }
+        }
+
+        this.pivot(r, c);
+    }
+
+    return c;
+};
+
 Tableau.prototype.updateVariableValues = function () {
     var nVars = this.variables.length;
     var roundingCoeff = Math.round(1 / this.precision);
@@ -51,11 +101,9 @@ Tableau.prototype.updateRightHandSide = function (constraint, difference) {
 };
 
 Tableau.prototype.updateConstraintCoefficient = function (constraint, variable, difference) {
-
     // Updates variable coefficient within a constraint
     if (constraint.index === variable.index) {
-        // console.log('constraint index is', constraint.index);
-        throw new Error("In tableau.updateConstraintCoefficient : constraint index = variable index !");
+        throw new Error("[Tableau.updateConstraintCoefficient] constraint index should not be equal to variable index !");
     }
 
     var r = this._putInBase(constraint.index);
@@ -64,7 +112,7 @@ Tableau.prototype.updateConstraintCoefficient = function (constraint, variable, 
     if (colVar === -1) {
         var rowVar = this.rowByVarIndex[variable.index];
         for (var c = 0; c < this.width; c += 1){
-            this.matrix[r][c] -= difference * this.matrix[rowVar][c];
+            this.matrix[r][c] += difference * this.matrix[rowVar][c];
         }
     } else {
         this.matrix[r][colVar] -= difference;
@@ -172,6 +220,8 @@ Tableau.prototype.removeConstraint = function (constraint) {
     // Putting associated slack variable index in index manager
     this.availableIndexes[this.availableIndexes.length] = slackIndex;
 
+    constraint.slack.index = -1;
+
     this.height -= 1;
 };
 
@@ -220,7 +270,6 @@ Tableau.prototype.removeVariable = function (variable) {
 
     // Putting the variable out of the base
     var c = this._takeOutOfBase(varIndex);
-
     var lastColumn = this.width - 1;
     if (c !== lastColumn) {
         var lastRow = this.height - 1;
@@ -248,6 +297,8 @@ Tableau.prototype.removeVariable = function (variable) {
 
     // Adding index into index manager
     this.availableIndexes[this.availableIndexes.length] = varIndex;
+
+    variable.index = -1;
 
     this.width -= 1;
 };
