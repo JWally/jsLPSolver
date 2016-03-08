@@ -1,5 +1,6 @@
 {
     "name": "Sudoku 4x4",
+    "background": "http://www.sudokuweb.org/easy-sudoku-4x4-for-kids/",
     "constraints": {
         "unique11": {
             "equal": 1
@@ -664,6 +665,6 @@
         "x423": 1,
         "x432": 1,
         "x441": 1,
-        "feasible": true 
+        "feasible": true
     }
 }
