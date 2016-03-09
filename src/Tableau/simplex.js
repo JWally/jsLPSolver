@@ -12,7 +12,9 @@ var Tableau = require("./Tableau.js");
 // Detail: Main function, linear programming solver
 //-------------------------------------------------------------------
 Tableau.prototype.solve = function () {
-// this.log('INIT')
+    // Bounded until proven otherwise
+    this.bounded = true;
+
     // Execute Phase 1 to obtain a Basic Feasible Solution (BFS)
     this.phase1();
 
@@ -220,9 +222,10 @@ Tableau.prototype.phase2 = function () {
         }
 
         if (minQuotient === Infinity) {
-            // TODO: solution is not bounded
             // optimal value is -Infinity
             this.evaluation = -Infinity;
+            this.bounded = false;
+            this.unboundedVarIndex = this.varIndexByCol[enteringColumn];
             return iterations;
         }
 

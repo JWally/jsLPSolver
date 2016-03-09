@@ -1,0 +1,36 @@
+{
+    "name": "Degeneracy solved by rounding errors",
+    "optimize": "profit",
+    "opType": "max",
+    "constraints": {
+        "cst1": {
+            "max": 6
+        },
+        "cst2": {
+            "max": 2
+        },
+        "cst3": {
+            "max": 3
+        }
+    },
+    "variables": {
+        "x1": {
+            "cst1": 3,
+            "cst2": 1,
+            "cst3": 0,
+            "profit": 2
+        },
+        "x2": {
+            "cst1": 1,
+            "cst2": -1,
+            "cst3": 1,
+            "profit": 1
+        }
+    },
+    "expects": {
+        "feasible": true,
+        "x1": 1,
+        "x2": 3,
+        "result": 5
+    }
+}

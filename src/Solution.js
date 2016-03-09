@@ -1,8 +1,9 @@
 /*global module*/
 
-function Solution(tableau, evaluation, feasible) {
+function Solution(tableau, evaluation, feasible, bounded) {
     this.feasible = feasible;
     this.evaluation = evaluation;
+    this.bounded = bounded;
     this._tableau = tableau;
 }
 module.exports = Solution;

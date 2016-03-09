@@ -24,7 +24,7 @@ function Branch(relaxedEvaluation, cuts) {
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
 function MilpSolution(relaxedSolution, iterations) {
-    Solution.call(this, relaxedSolution._tableau, relaxedSolution.evaluation, relaxedSolution.feasible);
+    Solution.call(this, relaxedSolution._tableau, relaxedSolution.evaluation, relaxedSolution.feasible, relaxedSolution.bounded);
     this.iter = iterations;
 }
 

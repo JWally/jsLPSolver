@@ -26,7 +26,7 @@ function Branch(relaxedEvaluation, cuts) {
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
 function MilpSolution(relaxedSolution, iterations) {
-    Solution.call(this, relaxedSolution._tableau, relaxedSolution.evaluation, relaxedSolution.feasible);
+    Solution.call(this, relaxedSolution._tableau, relaxedSolution.evaluation, relaxedSolution.feasible, relaxedSolution.bounded);
     this.iter = iterations;
 }
 
@@ -105,6 +105,8 @@ function MILP(model) {
         var cuts = branch.cuts;
 
         applyCuts(tableau, cuts);
+
+        // console.log(iterations, tableau.matrix[0][tableau.rhsColumn], tableau.feasible, branches.length);
 
         iterations++;
         if (tableau.feasible === false) {
@@ -219,7 +221,6 @@ function MILP(model) {
         tableau.updateVariableValues();
     }
 
-
     // Solving a last time
     return new MilpSolution(tableau.getSolution(), iterations);
 }
@@ -234,7 +235,7 @@ module.exports = MILP;
 /*global console*/
 /*global process*/
 
-var Tableau = require("./Tableau.js");
+var Tableau = require("./Tableau/Tableau.js");
 var MILP = require("./MILP.js");
 var expressions = require("./expressions.js");
 var Constraint = expressions.Constraint;
@@ -395,8 +396,6 @@ Model.prototype._removeConstraint = function (constraint) {
         return;
     }
 
-    this._removeVariable(constraint.slack);
-
     this.constraints.splice(idx, 1);
     this.nConstraints -= 1;
 
@@ -423,12 +422,6 @@ Model.prototype.removeConstraint = function (constraint) {
     return this;
 };
 
-Model.prototype._removeVariable = function (variable) {
-    // TODO ? remove variable term from every constraint?
-    this.availableIndexes.push(variable.index);
-    variable.index = -1;
-};
-
 Model.prototype.removeVariable = function (variable) {
     var idx = this.variables.indexOf(variable);
     if (idx === -1) {
@@ -436,8 +429,6 @@ Model.prototype.removeVariable = function (variable) {
         return;
     }
     this.variables.splice(idx, 1);
-
-    this._removeVariable(variable);
 
     if (this.tableauInitialized === true) {
         this.tableau.removeVariable(variable);
@@ -527,6 +518,7 @@ Model.prototype.loadJson = function (jsonModel) {
     var nVariables = variableIds.length;
 
     var integerVarIds = jsonModel.ints || {};
+    var binaryVarIds = jsonModel.binaries || {};
     var unrestrictedVarIds = jsonModel.unrestricted || {};
 
     // Instantiating variables and constraint terms
@@ -536,9 +528,15 @@ Model.prototype.loadJson = function (jsonModel) {
         var variableId = variableIds[v];
         var variableConstraints = variables[variableId];
         var cost = variableConstraints[objectiveName] || 0;
-        var isInteger = !!integerVarIds[variableId];
+        var isBinary = !!binaryVarIds[variableId];
+        var isInteger = !!integerVarIds[variableId] || isBinary;
         var isUnrestricted = !!unrestrictedVarIds[variableId];
         var variable = this.addVariable(cost, variableId, isInteger, isUnrestricted);
+
+        if (isBinary) {
+            // Creating an upperbound constraint for this variable
+            this.smallerThan(1).addTerm(1, variable);
+        }
 
         var constraintNames = Object.keys(variableConstraints);
         for (c = 0; c < constraintNames.length; c += 1) {
@@ -606,7 +604,7 @@ Model.prototype.log = function (message) {
     return this.tableau.log(message);
 };
 
-},{"./MILP.js":1,"./Tableau.js":6,"./expressions.js":8}],3:[function(require,module,exports){
+},{"./MILP.js":1,"./Tableau/Tableau.js":6,"./expressions.js":16}],3:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -817,8 +815,8 @@ module.exports = function(solver, model){
 
 
 
- 
- 
+
+
  /*************************************************************
  * Method: to_JSON
  * Scope: Public:
@@ -832,14 +830,17 @@ function to_JSON(input){
         /* jshint ignore:start */
         "is_blank": /^\W{0,}$/,
         "is_objective": /(max|min)(imize){0,}\:/i,
-        "is_int": /^\W{0,}int/i,
+        //previous version
+        //"is_int": /^\W{0,}int/i,
+        //new version to avoid comments
+        "is_int": /^(?!\/\*)\W{0,}int/i,
         "is_constraint": /(\>|\<){0,}\=/i,
         "is_unrestricted": /^\S{0,}unrestricted/i,
         "parse_lhs":  /(\-|\+){0,1}\s{0,1}\d{0,}\.{0,}\d{0,}\s{0,}[A-Za-z]\S{0,}/gi,
         "parse_rhs": /(\-|\+){0,1}\d{1,}\.{0,}\d{0,}\W{0,}\;{0,1}$/i,
         "parse_dir": /(\>|\<){0,}\=/gi,
         "parse_int": /[^\s|^\,]+/gi,
-        "get_num": /(\-|\+){0,1}(\W|^)\d+\.{0,}\d{0,}/g,
+        "get_num": /(\-|\+){0,1}(\W|^)\d+\.{0,1}\d{0,}/g, // Why accepting character \W before the first digit?
         "get_word": /[A-Za-z].*/
         /* jshint ignore:end */
     },
@@ -856,7 +857,7 @@ function to_JSON(input){
     },
     tmp = "", tst = 0, ary = null, hldr = "", hldr2 = "",
     constraint = "", rhs = 0;
-    
+
     // Handle input if its coming
     // to us as a hard string
     // instead of as an array of
@@ -864,42 +865,41 @@ function to_JSON(input){
     if(typeof input === "string"){
         input = input.split("\n");
     }
-    
+
     // Start iterating over the rows
     // to see what all we have
     for(var i = 0; i < input.length; i++){
-    
+
         constraint = "__" + i;
-        
+
         // Get the string we're working with
         tmp = input[i];
-        
+
         // Set the test = 0
         tst = 0;
-        
+
         // Reset the array
         ary = null;
-                
+
         // Test to see if we're the objective
         if(rxo.is_objective.test(tmp)){
-        
             // Set up in model the opType
             model.opType = tmp.match(/(max|min)/gi)[0];
-        
+
             // Pull apart lhs
             ary = tmp.match(rxo.parse_lhs).map(function(d){
                 return d.replace(/\s+/,"");
             }).slice(1);
-            
-            
-            
+
+
+
             // *** STEP 1 *** ///
             // Get the variables out
             ary.forEach(function(d){
-            
+
                 // Get the number if its there
                 hldr = d.match(rxo.get_num);
-            
+
                 // If it isn't a number, it might
                 // be a standalone variable
                 if(hldr === null){
@@ -911,12 +911,12 @@ function to_JSON(input){
                 } else {
                     hldr = hldr[0];
                 }
-                
+
                 hldr = parseFloat(hldr);
-                
+
                 // Get the variable type
                 hldr2 = d.match(rxo.get_word)[0].replace(/\;$/,"");
-                
+
                 // Make sure the variable is in the model
                 model.variables[hldr2] = model.variables[hldr2] || {};
                 model.variables[hldr2]._obj = hldr;
@@ -926,28 +926,30 @@ function to_JSON(input){
         }else if(rxo.is_int.test(tmp)){
             // Get the array of ints
             ary = tmp.match(rxo.parse_int).slice(1);
-            
+
             // Since we have an int, our model should too
             model.ints = model.ints || {};
-            
+
             ary.forEach(function(d){
                 d = d.replace(";","");
                 model.ints[d] = 1;
             });
         ////////////////////////////////////
         } else if(rxo.is_constraint.test(tmp)){
+            var separatorIndex = tmp.indexOf(":");
+            var constraintExpression = (separatorIndex === -1) ? tmp : tmp.slice(separatorIndex + 1);
+
             // Pull apart lhs
-            ary = tmp.match(rxo.parse_lhs).map(function(d){
+            ary = constraintExpression.match(rxo.parse_lhs).map(function(d){
                 return d.replace(/\s+/,"");
             });
 
-            
             // *** STEP 1 *** ///
             // Get the variables out
             ary.forEach(function(d){
                 // Get the number if its there
                 hldr = d.match(rxo.get_num);
-                
+
                 if(hldr === null){
                     if(d.substr(0,1) === "-"){
                         hldr = -1;
@@ -957,36 +959,36 @@ function to_JSON(input){
                 } else {
                     hldr = hldr[0];
                 }
-                
-                hldr = parseFloat(hldr);                
 
-                
-                // Get the variable type
+                hldr = parseFloat(hldr);
+
+
+                // Get the variable name
                 hldr2 = d.match(rxo.get_word)[0];
-                
+
                 // Make sure the variable is in the model
                 model.variables[hldr2] = model.variables[hldr2] || {};
                 model.variables[hldr2][constraint] = hldr;
 
             });
-            
+
             // *** STEP 2 *** ///
-            // Get the RHS out            
+            // Get the RHS out
             rhs = parseFloat(tmp.match(rxo.parse_rhs)[0]);
 
             // *** STEP 3 *** ///
-            // Get the Constrainer out   
+            // Get the Constrainer out
             tmp = constraints[tmp.match(rxo.parse_dir)[0]];
             model.constraints[constraint] = model.constraints[constraint] || {};
-            model.constraints[constraint][tmp] = rhs; 
+            model.constraints[constraint][tmp] = rhs;
         ////////////////////////////////////
         } else if(rxo.is_unrestricted.test(tmp)){
             // Get the array of unrestricted
             ary = tmp.match(rxo.parse_int).slice(1);
-            
+
             // Since we have an int, our model should too
             model.unrestricted = model.unrestricted || {};
-            
+
             ary.forEach(function(d){
                 d = d.replace(";","");
                 model.unrestricted[d] = 1;
@@ -1069,7 +1071,7 @@ function from_JSON(model){
             output += "unrestricted " + x.replace(rxClean,"_") + ";\n";
         }
     }
-    
+
     // And kick the string back
     return output;
 }
@@ -1085,12 +1087,14 @@ module.exports = function (model) {
         return from_JSON(model);
     }
 };
+
 },{}],5:[function(require,module,exports){
 /*global module*/
 
-function Solution(tableau, evaluation, feasible) {
+function Solution(tableau, evaluation, feasible, bounded) {
     this.feasible = feasible;
     this.evaluation = evaluation;
+    this.bounded = bounded;
     this._tableau = tableau;
 }
 module.exports = Solution;
@@ -1128,10 +1132,7 @@ Solution.prototype.generateSolutionSet = function () {
 /*global it*/
 /*global console*/
 /*global process*/
-var Solution = require("./Solution.js");
-var expressions = require("./expressions.js");
-var Constraint = expressions.Constraint;
-
+var Solution = require("../Solution.js");
 
 /*************************************************************
  * Class: Tableau
@@ -1167,14 +1168,6 @@ function Tableau(precision) {
     this.rowByVarIndex = null;
     this.colByVarIndex = null;
 
-    // this.model.variables[this.varIndexByRow[1]];
-
-        // this.varIndexByRow = null;
-        // this.varIndexByCol = null;
-        //
-        // this.rowByVarIndex = null;
-        // this.colByVarIndex = null;
-
     this.precision = precision || 1e-8;
 
     this.optionalObjectives = [];
@@ -1187,8 +1180,34 @@ function Tableau(precision) {
 
     this.variables = null;
     this.nVars = 0;
+
+    this.bounded = true;
+    this.unboundedVarIndex = null;
 }
 module.exports = Tableau;
+
+function OptionalObjective(priority, nColumns) {
+    this.priority = priority;
+    this.reducedCosts = new Array(nColumns);
+    for (var c = 0; c < nColumns; c += 1) {
+        this.reducedCosts[c] = 0;
+    }
+}
+
+Tableau.prototype.setOptionalObjective = function (priority, column, cost) {
+    var objectiveForPriority = this.objectivesByPriority[priority];
+    if (objectiveForPriority === undefined) {
+        var nColumns = Math.max(this.width, column) + 1;
+        objectiveForPriority = new OptionalObjective(priority, nColumns);
+        this.objectivesByPriority[priority] = objectiveForPriority;
+        this.optionalObjectives.push(objectiveForPriority);
+        this.optionalObjectives.sort(function (a, b) {
+            return a.priority - b.priority;
+        });
+    }
+
+    objectiveForPriority.reducedCosts[column] = cost;
+};
 
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
@@ -1224,140 +1243,105 @@ Tableau.prototype.initialize = function (width, height, variables, unrestrictedV
     this.lastElementIndex = this.nVars;
 };
 
-//-------------------------------------------------------------------
-// Function: solve
-// Detail: Main function, linear programming solver
-//-------------------------------------------------------------------
-Tableau.prototype.solve = function () {
-// this.log('INIT')
-    // Execute Phase 1 to obtain a Basic Feasible Solution (BFS)
-    this.phase1();
+Tableau.prototype._resetMatrix = function () {
+    var variables = this.model.variables;
+    var constraints = this.model.constraints;
 
-    // Execute Phase 2
-    if (this.feasible === true) {
-        // Running simplex on Initial Basic Feasible Solution (BFS)
-        // N.B current solution is feasible
-        this.phase2();
+    var nVars = variables.length;
+    var nConstraints = constraints.length;
+
+    var v, varIndex;
+    var costRow = this.matrix[0];
+    var coeff = (this.model.isMinimization === true) ? -1 : 1;
+    for (v = 0; v < nVars; v += 1) {
+        var variable = variables[v];
+        var priority = variable.priority;
+        var cost = coeff * variable.cost;
+        if (priority === 0) {
+            costRow[v + 1] = cost;
+        } else {
+            this.setOptionalObjective(priority, v + 1, cost);
+        }
     }
 
+    for (v = 0; v < nVars; v += 1) {
+        varIndex = variables[v].index;
+        this.rowByVarIndex[varIndex] = -1;
+        this.colByVarIndex[varIndex] = v + 1;
+        this.varIndexByCol[v + 1] = varIndex;
+    }
+
+    var rowIndex = 1;
+    for (var c = 0; c < nConstraints; c += 1) {
+        var constraint = constraints[c];
+
+        var constraintIndex = constraint.index;
+        this.rowByVarIndex[constraintIndex] = rowIndex;
+        this.colByVarIndex[constraintIndex] = -1;
+        this.varIndexByRow[rowIndex] = constraintIndex;
+
+        var t, term, column;
+        var terms = constraint.terms;
+        var nTerms = terms.length;
+        var row = this.matrix[rowIndex++];
+        if (constraint.isUpperBound) {
+            for (t = 0; t < nTerms; t += 1) {
+                term = terms[t];
+                column = this.colByVarIndex[term.variable.index];
+                row[column] = term.coefficient;
+            }
+
+            row[0] = constraint.rhs;
+        } else {
+            for (t = 0; t < nTerms; t += 1) {
+                term = terms[t];
+                column = this.colByVarIndex[term.variable.index];
+                row[column] = -term.coefficient;
+            }
+
+            row[0] = -constraint.rhs;
+        }
+    }
+};
+
+//-------------------------------------------------------------------
+//-------------------------------------------------------------------
+Tableau.prototype.setModel = function (model) {
+    this.model = model;
+
+    var width = model.nVariables + 1;
+    var height = model.nConstraints + 1;
+
+
+    this.initialize(width, height, model.variables, model.unrestrictedVariables);
+    this._resetMatrix();
     return this;
 };
 
-//-------------------------------------------------------------------
-//-------------------------------------------------------------------
-Tableau.prototype.updateVariableValues = function () {
-    var nVars = this.variables.length;
-    var roundingCoeff = Math.round(1 / this.precision);
-    for (var v = 0; v < nVars; v += 1) {
-        var variable = this.variables[v];
-        var varIndex = variable.index;
-
-        var r = this.rowByVarIndex[varIndex];
-        if (r === -1) {
-            // Variable is non basic
-            variable.value = 0;
-        } else {
-            // Variable is basic
-            var varValue = this.matrix[r][this.rhsColumn];
-            variable.value = Math.round(varValue * roundingCoeff) / roundingCoeff;
-        }
-    }
-};
-
-//-------------------------------------------------------------------
-//-------------------------------------------------------------------
-Tableau.prototype.getSolution = function () {
-    var evaluation = (this.model.isMinimization === true) ?
-        this.evaluation : -this.evaluation;
-
-    return new Solution(this, evaluation, this.feasible);
-};
-
-//-------------------------------------------------------------------
-//-------------------------------------------------------------------
-Tableau.prototype.isIntegral = function () {
-    var integerVariables = this.model.integerVariables;
-
-    var nIntegerVars = integerVariables.length;
-    for (var v = 0; v < nIntegerVars; v++) {
-        var varRow = this.rowByVarIndex[integerVariables[v].index];
-        if (varRow === -1) {
-            continue;
-        }
-
-        var varValue = this.matrix[varRow][this.rhsColumn];
-        if (Math.abs(varValue - Math.round(varValue)) > this.precision) {
-            return false;
-        }
-    }
-    return true;
-};
-
-function VariableData(index, value) {
-    this.index = index;
-    this.value = value;
-}
-
-//-------------------------------------------------------------------
-//-------------------------------------------------------------------
-Tableau.prototype.getMostFractionalVar = function () {
-    var biggestFraction = 0;
-    var selectedVarIndex = null;
-    var selectedVarValue = null;
-    var mid = 0.5;
-
-    var integerVariables = this.model.integerVariables;
-    var nIntegerVars = integerVariables.length;
-    for (var v = 0; v < nIntegerVars; v++) {
-        var varIndex = integerVariables[v].index;
-        var varRow = this.rowByVarIndex[varIndex];
-        if (varRow === -1) {
-            continue;
-        }
-
-        var varValue = this.matrix[varRow][this.rhsColumn];
-        var fraction = Math.abs(varValue - Math.round(varValue));
-        if (biggestFraction < fraction) {
-            biggestFraction = fraction;
-            selectedVarIndex = varIndex;
-            selectedVarValue = varValue;
-        }
+Tableau.prototype.getNewElementIndex = function () {
+    if (this.availableIndexes.length > 0) {
+        return this.availableIndexes.pop();
     }
 
-    return new VariableData(selectedVarIndex, selectedVarValue);
+    var index = this.lastElementIndex;
+    this.lastElementIndex += 1;
+    return index;
 };
 
-//-------------------------------------------------------------------
-//-------------------------------------------------------------------
-Tableau.prototype.getFractionalVarWithLowestCost = function () {
-    var highestCost = Infinity;
-    var selectedVarIndex = null;
-    var selectedVarValue = null;
+Tableau.prototype.density = function () {
+    var density = 0;
 
-    var integerVariables = this.model.integerVariables;
-    var nIntegerVars = integerVariables.length;
-    for (var v = 0; v < nIntegerVars; v++) {
-        var variable = integerVariables[v];
-        var varIndex = variable.index;
-        var varRow = this.rowByVarIndex[varIndex];
-        if (varRow === -1) {
-            // Variable value is non basic
-            // its value is 0
-            continue;
-        }
-
-        var varValue = this.matrix[varRow][this.rhsColumn];
-        if (Math.abs(varValue - Math.round(varValue)) > this.precision) {
-            var cost = variable.cost;
-            if (highestCost > cost) {
-                highestCost = cost;
-                selectedVarIndex = varIndex;
-                selectedVarValue = varValue;
+    var matrix = this.matrix;
+    for (var r = 0; r < this.height; r++) {
+        var row = matrix[r];
+        for (var c = 0; c < this.width; c++) {
+            if (row[c] !== 0) {
+                density += 1;
             }
         }
     }
 
-    return new VariableData(selectedVarIndex, selectedVarValue);
+    return density / (this.height * this.width);
 };
 
 //-------------------------------------------------------------------
@@ -1371,299 +1355,17 @@ Tableau.prototype.setEvaluation = function () {
 };
 
 //-------------------------------------------------------------------
-// Description: Convert a non standard form tableau
-//              to a standard form tableau by eliminating
-//              all negative values in the Right Hand Side (RHS)
-//              This results in a Basic Feasible Solution (BFS)
-//
 //-------------------------------------------------------------------
-Tableau.prototype.phase1 = function () {
-    var matrix = this.matrix;
-    var rhsColumn = this.rhsColumn;
-    var lastColumn = this.width - 1;
-    var lastRow = this.height - 1;
+Tableau.prototype.getSolution = function () {
+    var evaluation = (this.model.isMinimization === true) ?
+        this.evaluation : -this.evaluation;
 
-    var unrestricted;
-    var iterations = 0;
-    while (true) {
-        // Selecting leaving variable (feasibility condition):
-        // Basic variable with most negative value
-        var leavingRowIndex = 0;
-        var rhsValue = -this.precision;
-        for (var r = 1; r <= lastRow; r++) {
-            unrestricted = this.unrestrictedVars[this.varIndexByRow[r]] === true;
-            if (unrestricted) {
-                continue;
-            }
-
-            var value = matrix[r][rhsColumn];
-            if (value < rhsValue) {
-                rhsValue = value;
-                leavingRowIndex = r;
-            }
-        }
-
-        // If nothing is strictly smaller than 0; we're done with phase 1.
-        if (leavingRowIndex === 0) {
-            // Feasible, champagne!
-            this.feasible = true;
-            return iterations;
-        }
-
-        // Selecting entering variable
-        var enteringColumn = 0;
-        var maxQuotient = -Infinity;
-        var costRow = matrix[0];
-        var leavingRow = matrix[leavingRowIndex];
-        for (var c = 1; c <= lastColumn; c++) {
-            var reducedCost = leavingRow[c];
-            if (-this.precision < reducedCost && reducedCost < this.precision) {
-                continue;
-            }
-
-            unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
-            if (unrestricted || reducedCost < -this.precision) {
-                var quotient = -costRow[c] / reducedCost;
-                if (maxQuotient < quotient) {
-                    maxQuotient = quotient;
-                    enteringColumn = c;
-                }
-            }
-        }
-
-        if (enteringColumn === 0) {
-            // Not feasible
-            this.feasible = false;
-            return iterations;
-        }
-
-        this.pivot(leavingRowIndex, enteringColumn);
-        iterations += 1;
-    }
+    return new Solution(this, evaluation, this.feasible, this.bounded);
 };
 
-//-------------------------------------------------------------------
-// Description: Apply simplex to obtain optimal soltuion
-//              used as phase2 of the simplex
-//
-//-------------------------------------------------------------------
-Tableau.prototype.phase2 = function () {
-    var matrix = this.matrix;
-    var rhsColumn = this.rhsColumn;
-    var lastColumn = this.width - 1;
-    var lastRow = this.height - 1;
-
-    var precision = this.precision;
-    var nOptionalObjectives = this.optionalObjectives.length;
-    var optionalCostsColumns = null;
-
-    var iterations = 0;
-    var reducedCost, unrestricted;
-    while (true) {
-        var costRow = matrix[this.costRowIndex];
-
-        // Selecting entering variable (optimality condition)
-        if (nOptionalObjectives > 0) {
-            optionalCostsColumns = [];
-        }
-
-        var enteringColumn = 0;
-        var enteringValue = this.precision;
-        var isReducedCostNegative = false;
-        for (var c = 1; c <= lastColumn; c++) {
-            reducedCost = costRow[c];
-            unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
-
-            if (nOptionalObjectives > 0 && -this.precision < reducedCost && reducedCost < this.precision) {
-                optionalCostsColumns.push(c);
-                continue;
-            }
-
-            if (unrestricted && reducedCost < 0) {
-                if (-reducedCost > enteringValue) {
-                    enteringValue = -reducedCost;
-                    enteringColumn = c;
-                    isReducedCostNegative = true;
-                }
-                continue;
-            }
-
-            if (reducedCost > enteringValue) {
-                enteringValue = reducedCost;
-                enteringColumn = c;
-                isReducedCostNegative = false;
-            }
-        }
-
-        if (nOptionalObjectives > 0) {
-            // There exist optional improvable objectives
-            var o = 0;
-            while (enteringColumn === 0 && optionalCostsColumns.length > 0 && o < nOptionalObjectives) {
-                var optionalCostsColumns2 = [];
-                var reducedCosts = this.optionalObjectives[o].reducedCosts;
-                for (var i = 0; i <= optionalCostsColumns.length; i++) {
-                    c = optionalCostsColumns[i];
-                    reducedCost = reducedCosts[c];
-                    unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
-
-                    if (-this.precision < reducedCost && reducedCost < this.precision) {
-                        optionalCostsColumns2.push(c);
-                        continue;
-                    }
-
-                    if (unrestricted && reducedCost < 0) {
-                        if (-reducedCost > enteringValue) {
-                            enteringValue = -reducedCost;
-                            enteringColumn = c;
-                            isReducedCostNegative = true;
-                        }
-                        continue;
-                    }
-
-                    if (reducedCost > enteringValue) {
-                        enteringValue = reducedCost;
-                        enteringColumn = c;
-                        isReducedCostNegative = false;
-                    }
-                }
-                optionalCostsColumns = optionalCostsColumns2;
-                o += 1;
-            }
-        }
-
-        // If no entering column could be found we're done with phase 2.
-        if (enteringColumn === 0) {
-            this.setEvaluation();
-            return;
-        }
-
-        // Selecting leaving variable
-        var leavingRow = 0;
-        var minQuotient = Infinity;
-
-        for (var r = 1; r <= lastRow; r++) {
-            var row = matrix[r];
-            var rhsValue = row[rhsColumn];
-            var colValue = row[enteringColumn];
-
-            if (-precision < colValue && colValue < precision) {
-                continue;
-            }
-
-            if (colValue > 0 && precision > rhsValue && rhsValue > -precision) {
-                minQuotient = 0;
-                leavingRow = r;
-                break;
-            }
-
-            var quotient = isReducedCostNegative ? -rhsValue / colValue : rhsValue / colValue;
-            if (quotient > 0 && minQuotient > quotient) {
-                minQuotient = quotient;
-                leavingRow = r;
-            }
-        }
-
-        if (minQuotient === Infinity) {
-            // TODO: solution is not bounded
-            // optimal value is -Infinity
-            this.evaluation = -Infinity;
-            return;
-        }
-
-        this.pivot(leavingRow, enteringColumn, true);
-        iterations += 1;
-    }
-};
-
-// Array holding the column indexes for which the value is not null
-// on the pivot row
-// Shared by all tableaux for smaller overhead and lower memory usage
-var nonZeroColumns = [];
-//-------------------------------------------------------------------
-// Description: Execute pivot operations over a 2d array,
-//          on a given row, and column
-//
-//-------------------------------------------------------------------
-Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex) {
-    var matrix = this.matrix;
-    
-    var quotient = matrix[pivotRowIndex][pivotColumnIndex];
-
-    var lastRow = this.height - 1;
-    var lastColumn = this.width - 1;
-
-    var leavingBasicIndex = this.varIndexByRow[pivotRowIndex];
-    var enteringBasicIndex = this.varIndexByCol[pivotColumnIndex];
-
-    this.varIndexByRow[pivotRowIndex] = enteringBasicIndex;
-    this.varIndexByCol[pivotColumnIndex] = leavingBasicIndex;
-
-    this.rowByVarIndex[enteringBasicIndex] = pivotRowIndex;
-    this.rowByVarIndex[leavingBasicIndex] = -1;
-
-    this.colByVarIndex[enteringBasicIndex] = -1;
-    this.colByVarIndex[leavingBasicIndex] = pivotColumnIndex;
-
-    // Divide everything in the target row by the element @
-    // the target column
-    var pivotRow = matrix[pivotRowIndex];
-    var nNonZeroColumns = 0;
-    for (var c = 0; c <= lastColumn; c++) {
-        if (pivotRow[c] !== 0) {
-            pivotRow[c] /= quotient;
-            nonZeroColumns[nNonZeroColumns] = c;
-            nNonZeroColumns += 1;
-        }
-    }
-    pivotRow[pivotColumnIndex] = 1 / quotient;
-
-    // for every row EXCEPT the pivot row,
-    // set the value in the pivot column = 0 by
-    // multiplying the value of all elements in the objective
-    // row by ... yuck... just look below; better explanation later
-    var coefficient, i, v0;
-    var precision = this.precision;
-    for (var r = 0; r <= lastRow; r++) {
-        var row = matrix[r];
-        if (r !== pivotRowIndex) {
-            coefficient = row[pivotColumnIndex];
-            // No point Burning Cycles if
-            // Zero to the thing
-            if (coefficient !== 0) {
-                for (i = 0; i < nNonZeroColumns; i++) {
-                    c = nonZeroColumns[i];
-                    // No point in doing math if you're just adding
-                    // Zero to the thing
-                    v0 = pivotRow[c];
-                    if (v0 !== 0) {
-                        row[c] = row[c] - coefficient * v0;
-                    }
-                }
-
-                row[pivotColumnIndex] = -coefficient / quotient;
-            }
-        }
-    }
-
-    var nOptionalObjectives = this.optionalObjectives.length;
-    if (nOptionalObjectives > 0) {
-        for (var o = 0; o < nOptionalObjectives; o += 1) {
-            var reducedCosts = this.optionalObjectives[o].reducedCosts;
-            coefficient = reducedCosts[pivotColumnIndex];
-            if (coefficient !== 0) {
-                for (i = 0; i < nNonZeroColumns; i++) {
-                    c = nonZeroColumns[i];
-                    v0 = pivotRow[c];
-                    if (v0 !== 0) {
-                        reducedCosts[c] = reducedCosts[c] - coefficient * v0;
-                    }
-                }
-
-                reducedCosts[pivotColumnIndex] = -coefficient / quotient;
-            }
-        }
-    }
-};
+},{"../Solution.js":5}],7:[function(require,module,exports){
+/*global require*/
+var Tableau = require("./Tableau.js");
 
 Tableau.prototype.copy = function () {
     var copy = new Tableau(this.precision);
@@ -1764,6 +1466,82 @@ Tableau.prototype.restore = function () {
     this.availableIndexes = save.availableIndexes.slice();
 };
 
+},{"./Tableau.js":6}],8:[function(require,module,exports){
+/*global require*/
+var Tableau = require("./Tableau.js");
+
+function VariableData(index, value) {
+    this.index = index;
+    this.value = value;
+}
+
+//-------------------------------------------------------------------
+//-------------------------------------------------------------------
+Tableau.prototype.getMostFractionalVar = function () {
+    var biggestFraction = 0;
+    var selectedVarIndex = null;
+    var selectedVarValue = null;
+    var mid = 0.5;
+
+    var integerVariables = this.model.integerVariables;
+    var nIntegerVars = integerVariables.length;
+    for (var v = 0; v < nIntegerVars; v++) {
+        var varIndex = integerVariables[v].index;
+        var varRow = this.rowByVarIndex[varIndex];
+        if (varRow === -1) {
+            continue;
+        }
+
+        var varValue = this.matrix[varRow][this.rhsColumn];
+        var fraction = Math.abs(varValue - Math.round(varValue));
+        if (biggestFraction < fraction) {
+            biggestFraction = fraction;
+            selectedVarIndex = varIndex;
+            selectedVarValue = varValue;
+        }
+    }
+
+    return new VariableData(selectedVarIndex, selectedVarValue);
+};
+
+//-------------------------------------------------------------------
+//-------------------------------------------------------------------
+Tableau.prototype.getFractionalVarWithLowestCost = function () {
+    var highestCost = Infinity;
+    var selectedVarIndex = null;
+    var selectedVarValue = null;
+
+    var integerVariables = this.model.integerVariables;
+    var nIntegerVars = integerVariables.length;
+    for (var v = 0; v < nIntegerVars; v++) {
+        var variable = integerVariables[v];
+        var varIndex = variable.index;
+        var varRow = this.rowByVarIndex[varIndex];
+        if (varRow === -1) {
+            // Variable value is non basic
+            // its value is 0
+            continue;
+        }
+
+        var varValue = this.matrix[varRow][this.rhsColumn];
+        if (Math.abs(varValue - Math.round(varValue)) > this.precision) {
+            var cost = variable.cost;
+            if (highestCost > cost) {
+                highestCost = cost;
+                selectedVarIndex = varIndex;
+                selectedVarValue = varValue;
+            }
+        }
+    }
+
+    return new VariableData(selectedVarIndex, selectedVarValue);
+};
+
+},{"./Tableau.js":6}],9:[function(require,module,exports){
+/*global require*/
+var Tableau = require("./Tableau.js");
+var SlackVariable = require("../expressions.js").SlackVariable;
+
 Tableau.prototype.addCutConstraints = function (cutConstraints) {
     var nCutConstraints = cutConstraints.length;
 
@@ -1817,7 +1595,7 @@ Tableau.prototype.addCutConstraints = function (cutConstraints) {
         this.varIndexByRow[r] = slackVarIndex;
         this.rowByVarIndex[slackVarIndex] = r;
         this.colByVarIndex[slackVarIndex] = -1;
-        this.variablesPerIndex[slackVarIndex] = new expressions.SlackVariable("s"+slackVarIndex, slackVarIndex);
+        this.variablesPerIndex[slackVarIndex] = new SlackVariable("s"+slackVarIndex, slackVarIndex);
         this.nVars += 1;
     }
 };
@@ -1855,7 +1633,7 @@ Tableau.prototype._addLowerBoundMIRCut = function(rowIndex) {
 	this.varIndexByRow[r] = slackVarIndex;
 	this.rowByVarIndex[slackVarIndex] = r;
 	this.colByVarIndex[slackVarIndex] = -1;
-	this.variablesPerIndex[slackVarIndex] = new expressions.SlackVariable("s"+slackVarIndex, slackVarIndex);
+	this.variablesPerIndex[slackVarIndex] = new SlackVariable("s"+slackVarIndex, slackVarIndex);
 
 	matrix[r][this.rhsColumn] = Math.floor(d);
 
@@ -1911,7 +1689,7 @@ Tableau.prototype._addUpperBoundMIRCut = function(rowIndex) {
 	this.varIndexByRow[r] = slackVarIndex;
 	this.rowByVarIndex[slackVarIndex] = r;
 	this.colByVarIndex[slackVarIndex] = -1;
-	this.variablesPerIndex[slackVarIndex] = new expressions.SlackVariable("s"+slackVarIndex, slackVarIndex);
+	this.variablesPerIndex[slackVarIndex] = new SlackVariable("s"+slackVarIndex, slackVarIndex);
 
 	matrix[r][this.rhsColumn] = -f;
 
@@ -1952,73 +1730,16 @@ Tableau.prototype.applyMIRCuts = function () {
     }
 };
 
-Tableau.prototype.countIntegerValues = function(){
+},{"../expressions.js":16,"./Tableau.js":6}],10:[function(require,module,exports){
+/*global require*/
+/*global console*/
+var Tableau = require("./Tableau.js");
 
-    var count = 0;
-
-    for (var r = 1; r < this.height; r += 1) {
-        if (this.variablesPerIndex[this.varIndexByRow[r]].isInteger) {
-            var decimalPart = this.matrix[r][this.rhsColumn];
-            decimalPart = decimalPart - Math.floor(decimalPart);
-            if (decimalPart < this.precision && -decimalPart < this.precision) {
-                count += 1;
-            }
-        }
-    }
-
-    return count;
-};
-
-// Multiply all the fractional parts of variables supposed to be integer
-Tableau.prototype.computeFractionalVolume = function(ignoreIntegerValues) {
-
-    var volume = -1;
-
-    for (var r = 1; r < this.height; r += 1) {
-        if (this.variablesPerIndex[this.varIndexByRow[r]].isInteger) {
-            var rhs = this.matrix[r][this.rhsColumn];
-            rhs = Math.abs(rhs);
-            var decimalPart = Math.min(rhs - Math.floor(rhs), Math.floor(rhs + 1));
-            if (decimalPart < this.precision) {
-                if (!ignoreIntegerValues) {
-                    return 0;
-                }
-            } else {
-                if (volume === -1) {
-                    volume = rhs;
-                } else {
-                    volume *= rhs;
-                }
-            }
-        }
-    }
-
-    if (volume === -1){
-        return 0;
-    }
-    return volume;
-};
-
-Tableau.prototype.density = function () {
-    var density = 0;
-
-    var matrix = this.matrix;
-    for (var r = 0; r < this.height; r++) {
-        var row = matrix[r];
-        for (var c = 0; c < this.width; c++) {
-            if (row[c] !== 0) {
-                density += 1;
-            }
-        }
-    }
-
-    return density / (this.height * this.width);
-};
-
+//-------------------------------------------------------------------
+//-------------------------------------------------------------------
 Tableau.prototype._putInBase = function (varIndex) {
     // Is varIndex in the base?
     var r = this.rowByVarIndex[varIndex];
-
     if (r === -1) {
         // Outside the base
         // pivoting to take it out
@@ -2051,7 +1772,7 @@ Tableau.prototype._takeOutOfBase = function (varIndex) {
         // Selecting pivot column
         // (Any column with coefficient different from 0)
         var pivotRow = this.matrix[r];
-        for (var c1 = 1; c1 < this.width; c1 += 1) {
+        for (var c1 = 1; c1 < this.height; c1 += 1) {
             var coefficient = pivotRow[c1];
             if (coefficient < -this.precision || this.precision < coefficient) {
                 c = c1;
@@ -2063,6 +1784,25 @@ Tableau.prototype._takeOutOfBase = function (varIndex) {
     }
 
     return c;
+};
+
+Tableau.prototype.updateVariableValues = function () {
+    var nVars = this.variables.length;
+    var roundingCoeff = Math.round(1 / this.precision);
+    for (var v = 0; v < nVars; v += 1) {
+        var variable = this.variables[v];
+        var varIndex = variable.index;
+
+        var r = this.rowByVarIndex[varIndex];
+        if (r === -1) {
+            // Variable is non basic
+            variable.value = 0;
+        } else {
+            // Variable is basic
+            var varValue = this.matrix[r][this.rhsColumn];
+            variable.value = Math.round(varValue * roundingCoeff) / roundingCoeff;
+        }
+    }
 };
 
 Tableau.prototype.updateRightHandSide = function (constraint, difference) {
@@ -2094,11 +1834,9 @@ Tableau.prototype.updateRightHandSide = function (constraint, difference) {
 };
 
 Tableau.prototype.updateConstraintCoefficient = function (constraint, variable, difference) {
-
     // Updates variable coefficient within a constraint
     if (constraint.index === variable.index) {
-        // console.log('constraint index is', constraint.index);
-        throw new Error("In tableau.updateConstraintCoefficient : constraint index = variable index !");
+        throw new Error("[Tableau.updateConstraintCoefficient] constraint index should not be equal to variable index !");
     }
 
     var r = this._putInBase(constraint.index);
@@ -2107,7 +1845,7 @@ Tableau.prototype.updateConstraintCoefficient = function (constraint, variable, 
     if (colVar === -1) {
         var rowVar = this.rowByVarIndex[variable.index];
         for (var c = 0; c < this.width; c += 1){
-            this.matrix[r][c] -= difference * this.matrix[rowVar][c];
+            this.matrix[r][c] += difference * this.matrix[rowVar][c];
         }
     } else {
         this.matrix[r][colVar] -= difference;
@@ -2215,30 +1953,9 @@ Tableau.prototype.removeConstraint = function (constraint) {
     // Putting associated slack variable index in index manager
     this.availableIndexes[this.availableIndexes.length] = slackIndex;
 
+    constraint.slack.index = -1;
+
     this.height -= 1;
-};
-
-function OptionalObjective(priority, nColumns) {
-    this.priority = priority;
-    this.reducedCosts = new Array(nColumns);
-    for (var c = 0; c < nColumns; c += 1) {
-        this.reducedCosts[c] = 0;
-    }
-}
-
-Tableau.prototype.setOptionalObjective = function (priority, column, cost) {
-    var objectiveForPriority = this.objectivesByPriority[priority];
-    if (objectiveForPriority === undefined) {
-        var nColumns = Math.max(this.width, column) + 1;
-        objectiveForPriority = new OptionalObjective(priority, nColumns);
-        this.objectivesByPriority[priority] = objectiveForPriority;
-        this.optionalObjectives.push(objectiveForPriority);
-        this.optionalObjectives.sort(function (a, b) {
-            return a.priority - b.priority;
-        });
-    }
-
-    objectiveForPriority.reducedCosts[column] = cost;
 };
 
 Tableau.prototype.addVariable = function (variable) {
@@ -2286,7 +2003,6 @@ Tableau.prototype.removeVariable = function (variable) {
 
     // Putting the variable out of the base
     var c = this._takeOutOfBase(varIndex);
-
     var lastColumn = this.width - 1;
     if (c !== lastColumn) {
         var lastRow = this.height - 1;
@@ -2315,96 +2031,117 @@ Tableau.prototype.removeVariable = function (variable) {
     // Adding index into index manager
     this.availableIndexes[this.availableIndexes.length] = varIndex;
 
+    variable.index = -1;
+
     this.width -= 1;
 };
 
-Tableau.prototype._resetMatrix = function () {
-    var variables = this.model.variables;
-    var constraints = this.model.constraints;
+},{"./Tableau.js":6}],11:[function(require,module,exports){
+/*global require*/
+/*global module*/
+require("./simplex.js");
+require("./cuttingStrategies.js");
+require("./dynamicModification.js");
+require("./log.js");
+require("./backup.js");
+require("./branchingStrategies.js");
+require("./integerProperties.js");
 
-    var nVars = variables.length;
-    var nConstraints = constraints.length;
+module.exports = require("./Tableau.js");
 
-    var v, varIndex;
-    var costRow = this.matrix[0];
-    var coeff = (this.model.isMinimization === true) ? -1 : 1;
-    for (v = 0; v < nVars; v += 1) {
-        var variable = variables[v];
-        var priority = variable.priority;
-        var cost = coeff * variable.cost;
-        if (priority === 0) {
-            costRow[v + 1] = cost;
-        } else {
-            this.setOptionalObjective(priority, v + 1, cost);
+},{"./Tableau.js":6,"./backup.js":7,"./branchingStrategies.js":8,"./cuttingStrategies.js":9,"./dynamicModification.js":10,"./integerProperties.js":12,"./log.js":13,"./simplex.js":14}],12:[function(require,module,exports){
+/*global require*/
+var Tableau = require("./Tableau.js");
+
+Tableau.prototype.countIntegerValues = function(){
+    var count = 0;
+    for (var r = 1; r < this.height; r += 1) {
+        if (this.variablesPerIndex[this.varIndexByRow[r]].isInteger) {
+            var decimalPart = this.matrix[r][this.rhsColumn];
+            decimalPart = decimalPart - Math.floor(decimalPart);
+            if (decimalPart < this.precision && -decimalPart < this.precision) {
+                count += 1;
+            }
         }
     }
 
-    for (v = 0; v < nVars; v += 1) {
-        varIndex = variables[v].index;
-        this.rowByVarIndex[varIndex] = -1;
-        this.colByVarIndex[varIndex] = v + 1;
-        this.varIndexByCol[v + 1] = varIndex;
-    }
+    return count;
+};
 
-    var rowIndex = 1;
-    for (var c = 0; c < nConstraints; c += 1) {
-        var constraint = constraints[c];
+//-------------------------------------------------------------------
+//-------------------------------------------------------------------
+Tableau.prototype.isIntegral = function () {
+    var integerVariables = this.model.integerVariables;
+    var nIntegerVars = integerVariables.length;
+    for (var v = 0; v < nIntegerVars; v++) {
+        var varRow = this.rowByVarIndex[integerVariables[v].index];
+        if (varRow === -1) {
+            continue;
+        }
 
-        var constraintIndex = constraint.index;
-        this.rowByVarIndex[constraintIndex] = rowIndex;
-        this.colByVarIndex[constraintIndex] = -1;
-        this.varIndexByRow[rowIndex] = constraintIndex;
-
-        var t, term, column;
-        var terms = constraint.terms;
-        var nTerms = terms.length;
-        var row = this.matrix[rowIndex++];
-        if (constraint.isUpperBound) {
-            for (t = 0; t < nTerms; t += 1) {
-                term = terms[t];
-                column = this.colByVarIndex[term.variable.index];
-                row[column] = term.coefficient;
-            }
-
-            row[0] = constraint.rhs;
-        } else {
-            for (t = 0; t < nTerms; t += 1) {
-                term = terms[t];
-                column = this.colByVarIndex[term.variable.index];
-                row[column] = -term.coefficient;
-            }
-
-            row[0] = -constraint.rhs;
+        var varValue = this.matrix[varRow][this.rhsColumn];
+        if (Math.abs(varValue - Math.round(varValue)) > this.precision) {
+            return false;
         }
     }
+    return true;
 };
 
+// Multiply all the fractional parts of variables supposed to be integer
+Tableau.prototype.computeFractionalVolume = function(ignoreIntegerValues) {
+    var volume = -1;
+    // var integerVariables = this.model.integerVariables;
+    // var nIntegerVars = integerVariables.length;
+    // for (var v = 0; v < nIntegerVars; v++) {
+    //     var r = this.rowByVarIndex[integerVariables[v].index];
+    //     if (r === -1) {
+    //         continue;
+    //     }
+    //     var rhs = this.matrix[r][this.rhsColumn];
+    //     rhs = Math.abs(rhs);
+    //     var decimalPart = Math.min(rhs - Math.floor(rhs), Math.floor(rhs + 1));
+    //     if (decimalPart < this.precision) {
+    //         if (!ignoreIntegerValues) {
+    //             return 0;
+    //         }
+    //     } else {
+    //         if (volume === -1) {
+    //             volume = rhs;
+    //         } else {
+    //             volume *= rhs;
+    //         }
+    //     }
+    // }
 
-Tableau.prototype.getNewElementIndex = function () {
-    if (this.availableIndexes.length > 0) {
-        return this.availableIndexes.pop();
+    for (var r = 1; r < this.height; r += 1) {
+        if (this.variablesPerIndex[this.varIndexByRow[r]].isInteger) {
+            var rhs = this.matrix[r][this.rhsColumn];
+            rhs = Math.abs(rhs);
+            var decimalPart = Math.min(rhs - Math.floor(rhs), Math.floor(rhs + 1));
+            if (decimalPart < this.precision) {
+                if (!ignoreIntegerValues) {
+                    return 0;
+                }
+            } else {
+                if (volume === -1) {
+                    volume = rhs;
+                } else {
+                    volume *= rhs;
+                }
+            }
+        }
     }
 
-    var index = this.lastElementIndex;
-    this.lastElementIndex += 1;
-    return index;
+    if (volume === -1){
+        return 0;
+    }
+    return volume;
 };
 
-
-//-------------------------------------------------------------------
-//-------------------------------------------------------------------
-Tableau.prototype.setModel = function (model) {
-    this.model = model;
-
-    var width = model.nVariables + 1;
-    var height = model.nConstraints + 1;
-
-
-    this.initialize(width, height, model.variables, model.unrestrictedVariables);
-    this._resetMatrix();
-    return this;
-};
-
+},{"./Tableau.js":6}],13:[function(require,module,exports){
+/*global require*/
+/*global console*/
+var Tableau = require("./Tableau.js");
 
 //-------------------------------------------------------------------
 // Description: Display a tableau matrix
@@ -2573,7 +2310,334 @@ Tableau.prototype.log = function (message, force) {
     return this;
 };
 
-},{"./Solution.js":5,"./expressions.js":8}],7:[function(require,module,exports){
+},{"./Tableau.js":6}],14:[function(require,module,exports){
+/*global describe*/
+/*global require*/
+/*global module*/
+/*global it*/
+/*global console*/
+/*global process*/
+
+var Tableau = require("./Tableau.js");
+
+//-------------------------------------------------------------------
+// Function: solve
+// Detail: Main function, linear programming solver
+//-------------------------------------------------------------------
+Tableau.prototype.solve = function () {
+    // Bounded until proven otherwise
+    this.bounded = true;
+
+    // Execute Phase 1 to obtain a Basic Feasible Solution (BFS)
+    this.phase1();
+
+    // Execute Phase 2
+    if (this.feasible === true) {
+        // Running simplex on Initial Basic Feasible Solution (BFS)
+        // N.B current solution is feasible
+        this.phase2();
+    }
+
+    return this;
+};
+
+//-------------------------------------------------------------------
+// Description: Convert a non standard form tableau
+//              to a standard form tableau by eliminating
+//              all negative values in the Right Hand Side (RHS)
+//              This results in a Basic Feasible Solution (BFS)
+//
+//-------------------------------------------------------------------
+Tableau.prototype.phase1 = function () {
+    var matrix = this.matrix;
+    var rhsColumn = this.rhsColumn;
+    var lastColumn = this.width - 1;
+    var lastRow = this.height - 1;
+
+    var unrestricted;
+    var iterations = 0;
+    while (true) {
+        // Selecting leaving variable (feasibility condition):
+        // Basic variable with most negative value
+        var leavingRowIndex = 0;
+        var rhsValue = -this.precision;
+        for (var r = 1; r <= lastRow; r++) {
+            unrestricted = this.unrestrictedVars[this.varIndexByRow[r]] === true;
+            if (unrestricted) {
+                continue;
+            }
+
+            var value = matrix[r][rhsColumn];
+            if (value < rhsValue) {
+                rhsValue = value;
+                leavingRowIndex = r;
+            }
+        }
+
+        // If nothing is strictly smaller than 0; we're done with phase 1.
+        if (leavingRowIndex === 0) {
+            // Feasible, champagne!
+            this.feasible = true;
+            return iterations;
+        }
+
+        // Selecting entering variable
+        var enteringColumn = 0;
+        var maxQuotient = -Infinity;
+        var costRow = matrix[0];
+        var leavingRow = matrix[leavingRowIndex];
+        for (var c = 1; c <= lastColumn; c++) {
+            var coefficient = leavingRow[c];
+            if (-this.precision < coefficient && coefficient < this.precision) {
+                continue;
+            }
+
+            unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
+            if (unrestricted || coefficient < -this.precision) {
+                var quotient = -costRow[c] / coefficient;
+                if (maxQuotient < quotient) {
+                    maxQuotient = quotient;
+                    enteringColumn = c;
+                }
+            }
+        }
+
+        if (enteringColumn === 0) {
+            // Not feasible
+            this.feasible = false;
+            return iterations;
+        }
+
+        this.pivot(leavingRowIndex, enteringColumn);
+        iterations += 1;
+    }
+};
+
+//-------------------------------------------------------------------
+// Description: Apply simplex to obtain optimal soltuion
+//              used as phase2 of the simplex
+//
+//-------------------------------------------------------------------
+Tableau.prototype.phase2 = function () {
+    var matrix = this.matrix;
+    var rhsColumn = this.rhsColumn;
+    var lastColumn = this.width - 1;
+    var lastRow = this.height - 1;
+
+    var precision = this.precision;
+    var nOptionalObjectives = this.optionalObjectives.length;
+    var optionalCostsColumns = null;
+
+    var iterations = 0;
+    var reducedCost, unrestricted;
+    while (true) {
+        var costRow = matrix[this.costRowIndex];
+
+        // Selecting entering variable (optimality condition)
+        if (nOptionalObjectives > 0) {
+            optionalCostsColumns = [];
+        }
+
+        var enteringColumn = 0;
+        var enteringValue = this.precision;
+        var isReducedCostNegative = false;
+        for (var c = 1; c <= lastColumn; c++) {
+            reducedCost = costRow[c];
+            unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
+
+            if (nOptionalObjectives > 0 && -this.precision < reducedCost && reducedCost < this.precision) {
+                optionalCostsColumns.push(c);
+                continue;
+            }
+
+            if (unrestricted && reducedCost < 0) {
+                if (-reducedCost > enteringValue) {
+                    enteringValue = -reducedCost;
+                    enteringColumn = c;
+                    isReducedCostNegative = true;
+                }
+                continue;
+            }
+
+            if (reducedCost > enteringValue) {
+                enteringValue = reducedCost;
+                enteringColumn = c;
+                isReducedCostNegative = false;
+            }
+        }
+
+        if (nOptionalObjectives > 0) {
+            // There exist optional improvable objectives
+            var o = 0;
+            while (enteringColumn === 0 && optionalCostsColumns.length > 0 && o < nOptionalObjectives) {
+                var optionalCostsColumns2 = [];
+                var reducedCosts = this.optionalObjectives[o].reducedCosts;
+                for (var i = 0; i <= optionalCostsColumns.length; i++) {
+                    c = optionalCostsColumns[i];
+                    reducedCost = reducedCosts[c];
+                    unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
+
+                    if (-this.precision < reducedCost && reducedCost < this.precision) {
+                        optionalCostsColumns2.push(c);
+                        continue;
+                    }
+
+                    if (unrestricted && reducedCost < 0) {
+                        if (-reducedCost > enteringValue) {
+                            enteringValue = -reducedCost;
+                            enteringColumn = c;
+                            isReducedCostNegative = true;
+                        }
+                        continue;
+                    }
+
+                    if (reducedCost > enteringValue) {
+                        enteringValue = reducedCost;
+                        enteringColumn = c;
+                        isReducedCostNegative = false;
+                    }
+                }
+                optionalCostsColumns = optionalCostsColumns2;
+                o += 1;
+            }
+        }
+
+        // If no entering column could be found we're done with phase 2.
+        if (enteringColumn === 0) {
+            this.setEvaluation();
+            return iterations;
+        }
+
+        // Selecting leaving variable
+        var leavingRow = 0;
+        var minQuotient = Infinity;
+
+        for (var r = 1; r <= lastRow; r++) {
+            var row = matrix[r];
+            var rhsValue = row[rhsColumn];
+            var colValue = row[enteringColumn];
+
+            if (-precision < colValue && colValue < precision) {
+                continue;
+            }
+
+            if (colValue > 0 && precision > rhsValue && rhsValue > -precision) {
+                minQuotient = 0;
+                leavingRow = r;
+                break;
+            }
+
+            var quotient = isReducedCostNegative ? -rhsValue / colValue : rhsValue / colValue;
+            if (quotient > 0 && minQuotient > quotient) {
+                minQuotient = quotient;
+                leavingRow = r;
+            }
+        }
+
+        if (minQuotient === Infinity) {
+            // optimal value is -Infinity
+            this.evaluation = -Infinity;
+            this.bounded = false;
+            this.unboundedVarIndex = this.varIndexByCol[enteringColumn];
+            return iterations;
+        }
+
+        this.pivot(leavingRow, enteringColumn, true);
+        iterations += 1;
+    }
+};
+
+// Array holding the column indexes for which the value is not null
+// on the pivot row
+// Shared by all tableaux for smaller overhead and lower memory usage
+var nonZeroColumns = [];
+//-------------------------------------------------------------------
+// Description: Execute pivot operations over a 2d array,
+//          on a given row, and column
+//
+//-------------------------------------------------------------------
+Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex) {
+    var matrix = this.matrix;
+
+    var quotient = matrix[pivotRowIndex][pivotColumnIndex];
+
+    var lastRow = this.height - 1;
+    var lastColumn = this.width - 1;
+
+    var leavingBasicIndex = this.varIndexByRow[pivotRowIndex];
+    var enteringBasicIndex = this.varIndexByCol[pivotColumnIndex];
+
+    this.varIndexByRow[pivotRowIndex] = enteringBasicIndex;
+    this.varIndexByCol[pivotColumnIndex] = leavingBasicIndex;
+
+    this.rowByVarIndex[enteringBasicIndex] = pivotRowIndex;
+    this.rowByVarIndex[leavingBasicIndex] = -1;
+
+    this.colByVarIndex[enteringBasicIndex] = -1;
+    this.colByVarIndex[leavingBasicIndex] = pivotColumnIndex;
+
+    // Divide everything in the target row by the element @
+    // the target column
+    var pivotRow = matrix[pivotRowIndex];
+    var nNonZeroColumns = 0;
+    for (var c = 0; c <= lastColumn; c++) {
+        if (pivotRow[c] !== 0) {
+            pivotRow[c] /= quotient;
+            nonZeroColumns[nNonZeroColumns] = c;
+            nNonZeroColumns += 1;
+        }
+    }
+    pivotRow[pivotColumnIndex] = 1 / quotient;
+
+    // for every row EXCEPT the pivot row,
+    // set the value in the pivot column = 0 by
+    // multiplying the value of all elements in the objective
+    // row by ... yuck... just look below; better explanation later
+    var coefficient, i, v0;
+    var precision = this.precision;
+    for (var r = 0; r <= lastRow; r++) {
+        var row = matrix[r];
+        if (r !== pivotRowIndex) {
+            coefficient = row[pivotColumnIndex];
+            // No point Burning Cycles if
+            // Zero to the thing
+            if (coefficient !== 0) {
+                for (i = 0; i < nNonZeroColumns; i++) {
+                    c = nonZeroColumns[i];
+                    // No point in doing math if you're just adding
+                    // Zero to the thing
+                    v0 = pivotRow[c];
+                    if (v0 !== 0) {
+                        row[c] = row[c] - coefficient * v0;
+                    }
+                }
+
+                row[pivotColumnIndex] = -coefficient / quotient;
+            }
+        }
+    }
+
+    var nOptionalObjectives = this.optionalObjectives.length;
+    if (nOptionalObjectives > 0) {
+        for (var o = 0; o < nOptionalObjectives; o += 1) {
+            var reducedCosts = this.optionalObjectives[o].reducedCosts;
+            coefficient = reducedCosts[pivotColumnIndex];
+            if (coefficient !== 0) {
+                for (i = 0; i < nNonZeroColumns; i++) {
+                    c = nonZeroColumns[i];
+                    v0 = pivotRow[c];
+                    if (v0 !== 0) {
+                        reducedCosts[c] = reducedCosts[c] - coefficient * v0;
+                    }
+                }
+
+                reducedCosts[pivotColumnIndex] = -coefficient / quotient;
+            }
+        }
+    }
+};
+
+},{"./Tableau.js":6}],15:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -2652,7 +2716,7 @@ exports.CleanObjectiveAttributes = function(model){
     }
 };
 
-},{}],8:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -2842,7 +2906,7 @@ module.exports = {
     Term: Term
 };
 
-},{}],9:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -2860,7 +2924,7 @@ module.exports = {
 // Licensed under the MIT License.
 //-------------------------------------------------------------------
 
-var Tableau = require("./Tableau");
+var Tableau = require("./Tableau/index.js");
 var Model = require("./Model");
 var MILP = require("./MILP");
 var expressions = require("./expressions.js");
@@ -2938,6 +3002,8 @@ var Solver = function () {
 
             // 2.) Add in the objective value
             store.result = solution.evaluation;
+
+            store.bounded = solution.bounded;
 
             // 3.) Load all of the variable values
             Object.keys(solution.solutionSet)
@@ -3021,4 +3087,4 @@ var Solver = function () {
 
 /* jshint ignore:end */
 
-},{"./MILP":1,"./Model":2,"./Polyopt":3,"./Reformat":4,"./Tableau":6,"./Validation":7,"./expressions.js":8}]},{},[9]);
+},{"./MILP":1,"./Model":2,"./Polyopt":3,"./Reformat":4,"./Tableau/index.js":11,"./Validation":15,"./expressions.js":16}]},{},[17]);

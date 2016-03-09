@@ -1,0 +1,39 @@
+{
+    "name": "Introductory example",
+    "optimize": "profit",
+    "opType": "max",
+    "constraints": {
+        "cst1": {
+            "max": 0
+        },
+        "cst2": {
+            "max": 0
+        }
+    },
+    "variables": {
+        "x1": {
+            "cst1": 0.4,
+            "cst2": -7.8,
+            "profit": 2.3
+        },
+        "x2": {
+            "cst1": 0.2,
+            "cst2": -1.4,
+            "profit": 2.15
+        },
+        "x3": {
+            "cst1": -1.4,
+            "cst2": 7.8,
+            "profit": -13.55
+        },
+        "x4": {
+            "cst1": -0.2,
+            "cst2": 0.4,
+            "profit": -0.4
+        }
+    },
+    "expects": {
+        "feasible": true,
+        "bounded": false
+    }
+}

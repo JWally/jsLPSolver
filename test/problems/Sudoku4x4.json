@@ -1,0 +1,670 @@
+{
+    "name": "Sudoku 4x4",
+    "background": "http://www.sudokuweb.org/easy-sudoku-4x4-for-kids/",
+    "constraints": {
+        "unique11": {
+            "equal": 1
+        },
+        "unique12": {
+            "equal": 1
+        },
+        "unique13": {
+            "equal": 1
+        },
+        "unique14": {
+            "equal": 1
+        },
+        "unique21": {
+            "equal": 1
+        },
+        "unique22": {
+            "equal": 1
+        },
+        "unique23": {
+            "equal": 1
+        },
+        "unique24": {
+            "equal": 1
+        },
+        "unique31": {
+            "equal": 1
+        },
+        "unique32": {
+            "equal": 1
+        },
+        "unique33": {
+            "equal": 1
+        },
+        "unique34": {
+            "equal": 1
+        },
+        "unique41": {
+            "equal": 1
+        },
+        "unique42": {
+            "equal": 1
+        },
+        "unique43": {
+            "equal": 1
+        },
+        "unique44": {
+            "equal": 1
+        },
+        "oncePerRow11": {
+            "equal": 1
+        },
+        "oncePerColumn11": {
+            "equal": 1
+        },
+        "oncePerRow12": {
+            "equal": 1
+        },
+        "oncePerColumn12": {
+            "equal": 1
+        },
+        "oncePerRow13": {
+            "equal": 1
+        },
+        "oncePerColumn13": {
+            "equal": 1
+        },
+        "oncePerRow14": {
+            "equal": 1
+        },
+        "oncePerColumn14": {
+            "equal": 1
+        },
+        "oncePerRow21": {
+            "equal": 1
+        },
+        "oncePerColumn21": {
+            "equal": 1
+        },
+        "oncePerRow22": {
+            "equal": 1
+        },
+        "oncePerColumn22": {
+            "equal": 1
+        },
+        "oncePerRow23": {
+            "equal": 1
+        },
+        "oncePerColumn23": {
+            "equal": 1
+        },
+        "oncePerRow24": {
+            "equal": 1
+        },
+        "oncePerColumn24": {
+            "equal": 1
+        },
+        "oncePerRow31": {
+            "equal": 1
+        },
+        "oncePerColumn31": {
+            "equal": 1
+        },
+        "oncePerRow32": {
+            "equal": 1
+        },
+        "oncePerColumn32": {
+            "equal": 1
+        },
+        "oncePerRow33": {
+            "equal": 1
+        },
+        "oncePerColumn33": {
+            "equal": 1
+        },
+        "oncePerRow34": {
+            "equal": 1
+        },
+        "oncePerColumn34": {
+            "equal": 1
+        },
+        "oncePerRow41": {
+            "equal": 1
+        },
+        "oncePerColumn41": {
+            "equal": 1
+        },
+        "oncePerRow42": {
+            "equal": 1
+        },
+        "oncePerColumn42": {
+            "equal": 1
+        },
+        "oncePerRow43": {
+            "equal": 1
+        },
+        "oncePerColumn43": {
+            "equal": 1
+        },
+        "oncePerRow44": {
+            "equal": 1
+        },
+        "oncePerColumn44": {
+            "equal": 1
+        },
+        "oncePerBlock001": {
+            "equal": 1
+        },
+        "oncePerBlock002": {
+            "equal": 1
+        },
+        "oncePerBlock003": {
+            "equal": 1
+        },
+        "oncePerBlock004": {
+            "equal": 1
+        },
+        "oncePerBlock011": {
+            "equal": 1
+        },
+        "oncePerBlock012": {
+            "equal": 1
+        },
+        "oncePerBlock013": {
+            "equal": 1
+        },
+        "oncePerBlock014": {
+            "equal": 1
+        },
+        "oncePerBlock101": {
+            "equal": 1
+        },
+        "oncePerBlock102": {
+            "equal": 1
+        },
+        "oncePerBlock103": {
+            "equal": 1
+        },
+        "oncePerBlock104": {
+            "equal": 1
+        },
+        "oncePerBlock111": {
+            "equal": 1
+        },
+        "oncePerBlock112": {
+            "equal": 1
+        },
+        "oncePerBlock113": {
+            "equal": 1
+        },
+        "oncePerBlock114": {
+            "equal": 1
+        }
+    },
+    "variables": {
+        "x111": {
+            "unique11": 1,
+            "oncePerRow11": 1,
+            "oncePerColumn11": 1,
+            "oncePerBlock001": 1
+        },
+        "x112": {
+            "unique11": 1,
+            "oncePerRow12": 1,
+            "oncePerColumn12": 1,
+            "oncePerBlock002": 1
+        },
+        "x113": {
+            "unique11": 1,
+            "oncePerRow13": 1,
+            "oncePerColumn13": 1,
+            "oncePerBlock003": 1
+        },
+        "x114": {
+            "unique11": 1,
+            "oncePerRow14": 1,
+            "oncePerColumn14": 1,
+            "oncePerBlock004": 1
+        },
+        "x121": {
+            "unique12": 1,
+            "oncePerRow11": 1,
+            "oncePerColumn21": 1,
+            "oncePerBlock001": 1
+        },
+        "x122": {
+            "unique12": 1,
+            "oncePerRow12": 1,
+            "oncePerColumn22": 1,
+            "oncePerBlock002": 1
+        },
+        "x123": {
+            "unique12": 1,
+            "oncePerRow13": 1,
+            "oncePerColumn23": 1,
+            "oncePerBlock003": 1
+        },
+        "x124": {
+            "unique12": 1,
+            "oncePerRow14": 1,
+            "oncePerColumn24": 1,
+            "oncePerBlock004": 1
+        },
+        "x131": {
+            "unique13": 1,
+            "oncePerRow11": 1,
+            "oncePerColumn31": 1,
+            "oncePerBlock011": 1
+        },
+        "x132": {
+            "unique13": 1,
+            "oncePerRow12": 1,
+            "oncePerColumn32": 1,
+            "oncePerBlock012": 1
+        },
+        "x133": {
+            "unique13": 1,
+            "oncePerRow13": 1,
+            "oncePerColumn33": 1,
+            "oncePerBlock013": 1
+        },
+        "x134": {
+            "unique13": 1,
+            "oncePerRow14": 1,
+            "oncePerColumn34": 1,
+            "oncePerBlock014": 1
+        },
+        "x141": {
+            "unique14": 1,
+            "oncePerRow11": 1,
+            "oncePerColumn41": 1,
+            "oncePerBlock011": 1
+        },
+        "x142": {
+            "unique14": 1,
+            "oncePerRow12": 1,
+            "oncePerColumn42": 1,
+            "oncePerBlock012": 1
+        },
+        "x143": {
+            "unique14": 1,
+            "oncePerRow13": 1,
+            "oncePerColumn43": 1,
+            "oncePerBlock013": 1
+        },
+        "x144": {
+            "unique14": 1,
+            "oncePerRow14": 1,
+            "oncePerColumn44": 1,
+            "oncePerBlock014": 1
+        },
+        "x211": {
+            "unique21": 1,
+            "oncePerColumn11": 1,
+            "oncePerRow21": 1,
+            "oncePerBlock001": 1
+        },
+        "x212": {
+            "unique21": 1,
+            "oncePerColumn12": 1,
+            "oncePerRow22": 1,
+            "oncePerBlock002": 1
+        },
+        "x213": {
+            "unique21": 1,
+            "oncePerColumn13": 1,
+            "oncePerRow23": 1,
+            "oncePerBlock003": 1
+        },
+        "x214": {
+            "unique21": 1,
+            "oncePerColumn14": 1,
+            "oncePerRow24": 1,
+            "oncePerBlock004": 1
+        },
+        "x221": {
+            "unique22": 1,
+            "oncePerRow21": 1,
+            "oncePerColumn21": 1,
+            "oncePerBlock001": 1
+        },
+        "x222": {
+            "unique22": 1,
+            "oncePerRow22": 1,
+            "oncePerColumn22": 1,
+            "oncePerBlock002": 1
+        },
+        "x223": {
+            "unique22": 1,
+            "oncePerRow23": 1,
+            "oncePerColumn23": 1,
+            "oncePerBlock003": 1
+        },
+        "x224": {
+            "unique22": 1,
+            "oncePerRow24": 1,
+            "oncePerColumn24": 1,
+            "oncePerBlock004": 1
+        },
+        "x231": {
+            "unique23": 1,
+            "oncePerRow21": 1,
+            "oncePerColumn31": 1,
+            "oncePerBlock011": 1
+        },
+        "x232": {
+            "unique23": 1,
+            "oncePerRow22": 1,
+            "oncePerColumn32": 1,
+            "oncePerBlock012": 1
+        },
+        "x233": {
+            "unique23": 1,
+            "oncePerRow23": 1,
+            "oncePerColumn33": 1,
+            "oncePerBlock013": 1
+        },
+        "x234": {
+            "unique23": 1,
+            "oncePerRow24": 1,
+            "oncePerColumn34": 1,
+            "oncePerBlock014": 1
+        },
+        "x241": {
+            "unique24": 1,
+            "oncePerRow21": 1,
+            "oncePerColumn41": 1,
+            "oncePerBlock011": 1
+        },
+        "x242": {
+            "unique24": 1,
+            "oncePerRow22": 1,
+            "oncePerColumn42": 1,
+            "oncePerBlock012": 1
+        },
+        "x243": {
+            "unique24": 1,
+            "oncePerRow23": 1,
+            "oncePerColumn43": 1,
+            "oncePerBlock013": 1
+        },
+        "x244": {
+            "unique24": 1,
+            "oncePerRow24": 1,
+            "oncePerColumn44": 1,
+            "oncePerBlock014": 1
+        },
+        "x311": {
+            "unique31": 1,
+            "oncePerColumn11": 1,
+            "oncePerRow31": 1,
+            "oncePerBlock101": 1
+        },
+        "x312": {
+            "unique31": 1,
+            "oncePerColumn12": 1,
+            "oncePerRow32": 1,
+            "oncePerBlock102": 1
+        },
+        "x313": {
+            "unique31": 1,
+            "oncePerColumn13": 1,
+            "oncePerRow33": 1,
+            "oncePerBlock103": 1
+        },
+        "x314": {
+            "unique31": 1,
+            "oncePerColumn14": 1,
+            "oncePerRow34": 1,
+            "oncePerBlock104": 1
+        },
+        "x321": {
+            "unique32": 1,
+            "oncePerColumn21": 1,
+            "oncePerRow31": 1,
+            "oncePerBlock101": 1
+        },
+        "x322": {
+            "unique32": 1,
+            "oncePerColumn22": 1,
+            "oncePerRow32": 1,
+            "oncePerBlock102": 1
+        },
+        "x323": {
+            "unique32": 1,
+            "oncePerColumn23": 1,
+            "oncePerRow33": 1,
+            "oncePerBlock103": 1
+        },
+        "x324": {
+            "unique32": 1,
+            "oncePerColumn24": 1,
+            "oncePerRow34": 1,
+            "oncePerBlock104": 1
+        },
+        "x331": {
+            "unique33": 1,
+            "oncePerRow31": 1,
+            "oncePerColumn31": 1,
+            "oncePerBlock111": 1
+        },
+        "x332": {
+            "unique33": 1,
+            "oncePerRow32": 1,
+            "oncePerColumn32": 1,
+            "oncePerBlock112": 1
+        },
+        "x333": {
+            "unique33": 1,
+            "oncePerRow33": 1,
+            "oncePerColumn33": 1,
+            "oncePerBlock113": 1
+        },
+        "x334": {
+            "unique33": 1,
+            "oncePerRow34": 1,
+            "oncePerColumn34": 1,
+            "oncePerBlock114": 1
+        },
+        "x341": {
+            "unique34": 1,
+            "oncePerRow31": 1,
+            "oncePerColumn41": 1,
+            "oncePerBlock111": 1
+        },
+        "x342": {
+            "unique34": 1,
+            "oncePerRow32": 1,
+            "oncePerColumn42": 1,
+            "oncePerBlock112": 1
+        },
+        "x343": {
+            "unique34": 1,
+            "oncePerRow33": 1,
+            "oncePerColumn43": 1,
+            "oncePerBlock113": 1
+        },
+        "x344": {
+            "unique34": 1,
+            "oncePerRow34": 1,
+            "oncePerColumn44": 1,
+            "oncePerBlock114": 1
+        },
+        "x411": {
+            "unique41": 1,
+            "oncePerColumn11": 1,
+            "oncePerRow41": 1,
+            "oncePerBlock101": 1
+        },
+        "x412": {
+            "unique41": 1,
+            "oncePerColumn12": 1,
+            "oncePerRow42": 1,
+            "oncePerBlock102": 1
+        },
+        "x413": {
+            "unique41": 1,
+            "oncePerColumn13": 1,
+            "oncePerRow43": 1,
+            "oncePerBlock103": 1
+        },
+        "x414": {
+            "unique41": 1,
+            "oncePerColumn14": 1,
+            "oncePerRow44": 1,
+            "oncePerBlock104": 1
+        },
+        "x421": {
+            "unique42": 1,
+            "oncePerColumn21": 1,
+            "oncePerRow41": 1,
+            "oncePerBlock101": 1
+        },
+        "x422": {
+            "unique42": 1,
+            "oncePerColumn22": 1,
+            "oncePerRow42": 1,
+            "oncePerBlock102": 1
+        },
+        "x423": {
+            "unique42": 1,
+            "oncePerColumn23": 1,
+            "oncePerRow43": 1,
+            "oncePerBlock103": 1
+        },
+        "x424": {
+            "unique42": 1,
+            "oncePerColumn24": 1,
+            "oncePerRow44": 1,
+            "oncePerBlock104": 1
+        },
+        "x431": {
+            "unique43": 1,
+            "oncePerColumn31": 1,
+            "oncePerRow41": 1,
+            "oncePerBlock111": 1
+        },
+        "x432": {
+            "unique43": 1,
+            "oncePerColumn32": 1,
+            "oncePerRow42": 1,
+            "oncePerBlock112": 1
+        },
+        "x433": {
+            "unique43": 1,
+            "oncePerColumn33": 1,
+            "oncePerRow43": 1,
+            "oncePerBlock113": 1
+        },
+        "x434": {
+            "unique43": 1,
+            "oncePerColumn34": 1,
+            "oncePerRow44": 1,
+            "oncePerBlock114": 1
+        },
+        "x441": {
+            "unique44": 1,
+            "oncePerRow41": 1,
+            "oncePerColumn41": 1,
+            "oncePerBlock111": 1
+        },
+        "x442": {
+            "unique44": 1,
+            "oncePerRow42": 1,
+            "oncePerColumn42": 1,
+            "oncePerBlock112": 1
+        },
+        "x443": {
+            "unique44": 1,
+            "oncePerRow43": 1,
+            "oncePerColumn43": 1,
+            "oncePerBlock113": 1
+        },
+        "x444": {
+            "unique44": 1,
+            "oncePerRow44": 1,
+            "oncePerColumn44": 1,
+            "oncePerBlock114": 1
+        }
+    },
+    "binaries": {
+        "x111": 1,
+        "x112": 1,
+        "x113": 1,
+        "x114": 1,
+        "x121": 1,
+        "x122": 1,
+        "x123": 1,
+        "x124": 1,
+        "x131": 1,
+        "x132": 1,
+        "x133": 1,
+        "x134": 1,
+        "x141": 1,
+        "x142": 1,
+        "x143": 1,
+        "x144": 1,
+        "x211": 1,
+        "x212": 1,
+        "x213": 1,
+        "x214": 1,
+        "x221": 1,
+        "x222": 1,
+        "x223": 1,
+        "x224": 1,
+        "x231": 1,
+        "x232": 1,
+        "x233": 1,
+        "x234": 1,
+        "x241": 1,
+        "x242": 1,
+        "x243": 1,
+        "x244": 1,
+        "x311": 1,
+        "x312": 1,
+        "x313": 1,
+        "x314": 1,
+        "x321": 1,
+        "x322": 1,
+        "x323": 1,
+        "x324": 1,
+        "x331": 1,
+        "x332": 1,
+        "x333": 1,
+        "x334": 1,
+        "x341": 1,
+        "x342": 1,
+        "x343": 1,
+        "x344": 1,
+        "x411": 1,
+        "x412": 1,
+        "x413": 1,
+        "x414": 1,
+        "x421": 1,
+        "x422": 1,
+        "x423": 1,
+        "x424": 1,
+        "x431": 1,
+        "x432": 1,
+        "x433": 1,
+        "x434": 1,
+        "x441": 1,
+        "x442": 1,
+        "x443": 1,
+        "x444": 1
+    },
+    "expects": {
+        "result": 0,
+        "x111": 1,
+        "x122": 1,
+        "x134": 1,
+        "x143": 1,
+        "x213": 1,
+        "x224": 1,
+        "x231": 1,
+        "x242": 1,
+        "x312": 1,
+        "x321": 1,
+        "x333": 1,
+        "x344": 1,
+        "x414": 1,
+        "x423": 1,
+        "x432": 1,
+        "x441": 1,
+        "feasible": true
+    }
+}

@@ -20,7 +20,7 @@ module.exports = function(grunt){
                     "quite": "true",
                     "captureFile": "test_results.txt"
                 },
-                "src": ["test/solver.problems.js"]
+                "src": ["test/*.js"]
             }
         },
         "browserify": {
@@ -29,12 +29,12 @@ module.exports = function(grunt){
                     "src/solver.js": ["./src/main.js"]
                 },
                 "options": {
-                    "banner": "(function(){if (typeof exports === \"object\") {module.exports =  require(\"./main\");}})();"                
+                    "banner": "(function(){if (typeof exports === \"object\") {module.exports =  require(\"./main\");}})();"
                 }
             }
         }
     });
-    
+
     grunt.loadNpmTasks("grunt-contrib-uglify");
     grunt.loadNpmTasks("grunt-contrib-jshint");
     grunt.loadNpmTasks("grunt-mocha-test");
@@ -43,5 +43,5 @@ module.exports = function(grunt){
     grunt.registerTask("test", ["jshint","mochaTest"]);
     grunt.registerTask("speed", function(){require("./benchmark/bench.test_suite");});
     grunt.registerTask("prod", ["jshint","mochaTest","browserify"]);
-    
+
 }

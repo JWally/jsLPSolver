@@ -11,7 +11,6 @@
         "y": { "cst1" : 1, "cst3": 1, "cst3": 1 }
     },
     "expects": {
-        "feasible": false,
-        "result": 0.0
+        "feasible": false
     }
 }
