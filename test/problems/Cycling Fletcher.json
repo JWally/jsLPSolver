@@ -1,0 +1,222 @@
+{
+    "name": "Fletcher",
+    "optimize": "cost",
+    "opType": "min",
+    "constraints": {
+        "cst1": {
+            "min": 0
+        },
+        "cst2": {
+            "min": 8
+        },
+        "cst3": {
+            "min": 6
+        },
+        "cst4": {
+            "min": -11
+        },
+        "cst5": {
+            "min": 9
+        },
+        "cst6": {
+            "min": 1
+        },
+        "cst7": {
+            "min": -14
+        },
+        "cst8": {
+            "min": 0
+        },
+        "cst9": {
+            "min": -8
+        },
+        "cst10": {
+            "min": 8
+        },
+        "cstx1": {
+            "max": 1
+        },
+        "cstx2": {
+            "max": 1
+        },
+        "cstx3": {
+            "max": 1
+        },
+        "cstx4": {
+            "max": 1
+        },
+        "cstx5": {
+            "max": 1
+        },
+        "cstx6": {
+            "max": 1
+        },
+        "cstx7": {
+            "max": 1
+        },
+        "cstx8": {
+            "max": 1
+        },
+        "cstx9": {
+            "max": 1
+        },
+        "cstx10": {
+            "max": 1
+        }
+    },
+    "variables": {
+        "x1": {
+            "cst1": 0,
+            "cst2": 0,
+            "cst3": 0,
+            "cst4": -9,
+            "cst5": -4,
+            "cst6": 0,
+            "cst7": 0,
+            "cst8": 0,
+            "cst9": -3,
+            "cst10": 0,
+            "cstx1": 1,
+            "cost": -2
+        },
+        "x2": {
+            "cst1": 0,
+            "cst2": 9,
+            "cst3": 0,
+            "cst4": -1,
+            "cst5": 0,
+            "cst6": 0,
+            "cst7": 0,
+            "cst8": -3,
+            "cst9": -9,
+            "cst10": 0,
+            "cstx2": 1,
+            "cost": -5
+        },
+        "x3": {
+            "cst1": 0,
+            "cst2": 0,
+            "cst3": 0,
+            "cst4": 0,
+            "cst5": 9,
+            "cst6": 0,
+            "cst7": 0,
+            "cst8": 0,
+            "cst9": 0,
+            "cst10": 7,
+            "cstx3": 1,
+            "cost": -8
+        },
+        "x4": {
+            "cst1": 0,
+            "cst2": 0,
+            "cst3": 0,
+            "cst4": 0,
+            "cst5": 0,
+            "cst6": 0,
+            "cst7": 0,
+            "cst8": 0,
+            "cst9": -2,
+            "cst10": 0,
+            "cstx4": 1,
+            "cost": -4
+        },
+        "x5": {
+            "cst1": 0,
+            "cst2": 0,
+            "cst3": 0,
+            "cst4": 9,
+            "cst5": 0,
+            "cst6": 0,
+            "cst7": -7,
+            "cst8": 0,
+            "cst9": 0,
+            "cst10": 0,
+            "cstx5": 1,
+            "cost": 0
+        },
+        "x6": {
+            "cst1": 0,
+            "cst2": 0,
+            "cst3": 0,
+            "cst4": 7,
+            "cst5": 0,
+            "cst6": 2,
+            "cst7": -5,
+            "cst8": 0,
+            "cst9": 0,
+            "cst10": 0,
+            "cstx6": 1,
+            "cost": -2
+        },
+        "x7": {
+            "cst1": 0,
+            "cst2": 1,
+            "cst3": 0,
+            "cst4": -7,
+            "cst5": 0,
+            "cst6": 0,
+            "cst7": -1,
+            "cst8": 0,
+            "cst9": 0,
+            "cst10": 0,
+            "cstx7": 1,
+            "cost": 0
+        },
+        "x8": {
+            "cst1": 0,
+            "cst2": 0,
+            "cst3": 3,
+            "cst4": -9,
+            "cst5": 7,
+            "cst6": 0,
+            "cst7": 0,
+            "cst8": 0,
+            "cst9": 0,
+            "cst10": 0,
+            "cstx8": 1,
+            "cost": 0
+        },
+        "x9": {
+            "cst1": 0,
+            "cst2": -1,
+            "cst3": 0,
+            "cst4": 0,
+            "cst5": -2,
+            "cst6": 0,
+            "cst7": 0,
+            "cst8": 0,
+            "cst9": 6,
+            "cst10": 2,
+            "cstx9": 1,
+            "cost": -5
+        },
+        "x10": {
+            "cst1": 0,
+            "cst2": 0,
+            "cst3": 5,
+            "cst4": 0,
+            "cst5": 0,
+            "cst6": 0,
+            "cst7": 0,
+            "cst8": 4,
+            "cst9": 0,
+            "cst10": 0,
+            "cstx10": 1,
+            "cost": -3
+        }
+    },
+    "expects": {
+        "feasible": true,
+        "x1": 1,
+        "x2": 1,
+        "x3": 1,
+        "x4": 1,
+        "x6": 1,
+        "x7": 0.04081633,
+        "x8": 0.85714286,
+        "x9": 1,
+        "x10": 1,
+        "result": -29
+    }
+}

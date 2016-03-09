@@ -10,7 +10,6 @@
         "y": { "cst1": 1, "cst2": -0.5, "cst3": 1 }
     },
     "expects": {
-        "feasible": false,
-        "result": 0.0
+        "feasible": false
     }
 }

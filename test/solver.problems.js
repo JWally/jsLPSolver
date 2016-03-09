@@ -44,6 +44,14 @@ function assertSolution(model, solutionA, solutionB) {
         return assert.deepEqual({ feasible: solutionA.feasible }, { feasible: solutionB.feasible });
     }
 
+    var solutionAIsBounded = solutionA.bounded === undefined ? true : solutionA.bounded;
+    var solutionBIsBounded = solutionB.bounded === undefined ? true : solutionB.bounded;
+    if (solutionAIsBounded !== solutionBIsBounded){
+        return assert.deepEqual({ bounded: solutionAIsBounded }, { bounded: solutionBIsBounded });
+    } else if (!solutionAIsBounded) {
+        return assert.deepEqual({ bounded: solutionAIsBounded }, { bounded: solutionBIsBounded });
+    }
+
     // If the expected evaluation of the objective function is different from the actual evaluation then failure
     if (solutionA.result.toFixed(6) !== solutionB.result.toFixed(6)){
         return assert.deepEqual(

@@ -166,8 +166,6 @@ Model.prototype._removeConstraint = function (constraint) {
         return;
     }
 
-    this._removeVariable(constraint.slack);
-
     this.constraints.splice(idx, 1);
     this.nConstraints -= 1;
 
@@ -194,12 +192,6 @@ Model.prototype.removeConstraint = function (constraint) {
     return this;
 };
 
-Model.prototype._removeVariable = function (variable) {
-    // TODO ? remove variable term from every constraint?
-    this.availableIndexes.push(variable.index);
-    variable.index = -1;
-};
-
 Model.prototype.removeVariable = function (variable) {
     var idx = this.variables.indexOf(variable);
     if (idx === -1) {
@@ -207,8 +199,6 @@ Model.prototype.removeVariable = function (variable) {
         return;
     }
     this.variables.splice(idx, 1);
-
-    this._removeVariable(variable);
 
     if (this.tableauInitialized === true) {
         this.tableau.removeVariable(variable);
