@@ -130,7 +130,7 @@ Constraint.prototype.setVariableCoefficient = function (newCoefficient, variable
 
 Constraint.prototype.relax = function (weight, priority) {
     this.relaxation = createRelaxationVariable(this.model, weight, priority);
-    this._relax(this.relaxation, priority);
+    this._relax(this.relaxation);
 };
 
 Constraint.prototype._relax = function (error) {

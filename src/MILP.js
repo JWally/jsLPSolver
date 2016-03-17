@@ -5,6 +5,7 @@
 /*global console*/
 /*global process*/
 var Solution = require("./Solution.js");
+var Tableau = require("./Tableau/Tableau.js");
 
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
@@ -42,22 +43,20 @@ function sortByEvaluation(a, b) {
 //-------------------------------------------------------------------
 // Applying cuts on a tableau and resolving
 //-------------------------------------------------------------------
-function applyCuts(tableau, cuts){
+Tableau.prototype.applyCuts = function (branchingCuts){
     // Restoring initial solution
-    tableau.restore();
+    this.restore();
 
-    tableau.addCutConstraints(cuts);
-    tableau.solve();
-
+    this.addCutConstraints(branchingCuts);
+    this.simplex();
     // Adding MIR cuts
     var fractionalVolumeImproved = true;
     while(fractionalVolumeImproved){
-        var fractionalVolumeBefore = tableau.computeFractionalVolume(true);
+        var fractionalVolumeBefore = this.computeFractionalVolume(true);
+        this.applyMIRCuts();
+        this.simplex();
 
-        tableau.applyMIRCuts();
-        tableau.solve();
-
-        var fractionalVolumeAfter = tableau.computeFractionalVolume(true);
+        var fractionalVolumeAfter = this.computeFractionalVolume(true);
 
         // If the new fractional volume is bigger than 90% of the previous one
         // we assume there is no improvement from the MIR cuts
@@ -65,22 +64,25 @@ function applyCuts(tableau, cuts){
             fractionalVolumeImproved = false;
         }
     }
-}
+};
 
 //-------------------------------------------------------------------
 // Function: MILP
 // Detail: Main function, my attempt at a mixed integer linear programming
 //         solver
 //-------------------------------------------------------------------
-function MILP(model) {
+Tableau.prototype.MILP = function () {
     var branches = [];
     var iterations = 0;
-    var tableau = model.tableau;
 
     // This is the default result
     // If nothing is both *integral* and *feasible*
     var bestEvaluation = Infinity;
     var bestBranch = null;
+    var bestOptionalObjectivesEvaluations = [];
+    for (var oInit = 0; oInit < this.optionalObjectives.length; oInit += 1){
+        bestOptionalObjectivesEvaluations.push(Infinity);
+    }
 
     // And here...we...go!
 
@@ -92,7 +94,7 @@ function MILP(model) {
     while (branches.length > 0) {
         // Get a model from the queue
         branch = branches.pop();
-        if (branch.relaxedEvaluation >= bestEvaluation) {
+        if (branch.relaxedEvaluation > bestEvaluation) {
             continue;
         }
 
@@ -101,37 +103,53 @@ function MILP(model) {
 
         // Adding cut constraints
         var cuts = branch.cuts;
-
-        applyCuts(tableau, cuts);
-
-        // console.log(iterations, tableau.matrix[0][tableau.rhsColumn], tableau.feasible, branches.length);
+        this.applyCuts(cuts);
 
         iterations++;
-        if (tableau.feasible === false) {
+        if (this.feasible === false) {
             continue;
         }
 
-        var evaluation = tableau.evaluation;
-        if (evaluation >= bestEvaluation) {
+        var evaluation = this.evaluation;
+        if (evaluation > bestEvaluation) {
             // This branch does not contain the optimal solution
             continue;
         }
 
-        // Is the model both integral and feasible?
-        if (tableau.isIntegral() === true) {
-            if (iterations === 1) {
-                tableau.updateVariableValues();
-                return new MilpSolution(tableau.getSolution(), iterations);
+        // To deal with the optional objectives
+        if (evaluation === bestEvaluation){
+            var isCurrentEvaluationWorse = true;
+            for (var o = 0; o < this.optionalObjectives.length; o += 1){
+                if (this.optionalObjectives[o].reducedCosts[0] > bestOptionalObjectivesEvaluations[o]){
+                    break;
+                } else if (this.optionalObjectives[o].reducedCosts[0] < bestOptionalObjectivesEvaluations[o]) {
+                    isCurrentEvaluationWorse = false;
+                    break;
+                }
             }
 
+            if (isCurrentEvaluationWorse){
+                continue;
+            }
+        }
+
+        // Is the model both integral and feasible?
+        if (this.isIntegral() === true) {
+            if (iterations === 1) {
+                // tableau.updateVariableValues();
+                return new MilpSolution(this.getSolution(), iterations);
+            }
             // Store the solution as the bestSolution
             bestBranch = branch;
             bestEvaluation = evaluation;
+            for (var oCopy = 0; oCopy < this.optionalObjectives.length; oCopy += 1){
+                bestOptionalObjectivesEvaluations[oCopy] = this.optionalObjectives[oCopy].reducedCosts[0];
+            }
         } else {
             if (iterations === 1) {
                 // Saving the first iteration
                 // TODO: implement a better strategy for saving the tableau?
-                tableau.save();
+                this.save();
             }
 
             // If the solution is
@@ -171,7 +189,7 @@ function MILP(model) {
             // the model is not integral at this point, and fails.
 
             // Find out where we want to split the solution
-            var variable = tableau.getMostFractionalVar();
+            var variable = this.getMostFractionalVar();
             // var variable = tableau.getFractionalVarWithLowestCost();
             var varIndex = variable.index;
 
@@ -215,12 +233,10 @@ function MILP(model) {
     // Adding cut constraints for the optimal solution
     if (bestBranch !== null) {
         // The model is feasible
-        applyCuts(tableau, bestBranch.cuts);
-        tableau.updateVariableValues();
+        this.applyCuts(bestBranch.cuts);
+        // tableau.updateVariableValues();
     }
 
     // Solving a last time
-    return new MilpSolution(tableau.getSolution(), iterations);
-}
-
-module.exports = MILP;
+    return new MilpSolution(this.getSolution(), iterations);
+};
