@@ -95,6 +95,9 @@ describe("The Solve method takes a problem and solves it",
             // (should come up with a better test scheme and description...)
             it("should be able to solve the " + jsonModel.name,
                 function () {
+                    // Reset default timeout to a lot
+                    this.timeout(1000 * 60 * 30);
+
                     // Each problem has its correct answer attached to its
                     // JSON as an "expects" object
                     var expectedResult = jsonModel.expects,
