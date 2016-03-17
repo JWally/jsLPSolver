@@ -346,13 +346,6 @@ Model.prototype.solve = function () {
     }
 
     return this.tableau.solve();
-    // if (this.getNumberOfIntegerVariables() > 0) {
-    //     return MILP(this);
-    // } else {
-    //     var solution = this.tableau.solve().getSolution();
-    //     this.tableau.updateVariableValues();
-    //     return solution;
-    // }
 };
 
 Model.prototype.isFeasible = function () {
