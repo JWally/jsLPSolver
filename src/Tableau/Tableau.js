@@ -58,6 +58,16 @@ function Tableau(precision) {
 }
 module.exports = Tableau;
 
+Tableau.prototype.solve = function () {
+    if (this.model.getNumberOfIntegerVariables() > 0) {
+        this.MILP();
+    } else {
+        this.simplex();
+    }
+    this.updateVariableValues();
+    return this.getSolution();
+};
+
 function OptionalObjective(priority, nColumns) {
     this.priority = priority;
     this.reducedCosts = new Array(nColumns);
@@ -65,6 +75,12 @@ function OptionalObjective(priority, nColumns) {
         this.reducedCosts[c] = 0;
     }
 }
+
+OptionalObjective.prototype.copy = function () {
+    var copy = new OptionalObjective(this.priority, this.reducedCosts.length);
+    copy.reducedCosts = this.reducedCosts.slice();
+    return copy;
+};
 
 Tableau.prototype.setOptionalObjective = function (priority, column, cost) {
     var objectiveForPriority = this.objectivesByPriority[priority];

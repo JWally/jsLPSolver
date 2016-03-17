@@ -26,6 +26,12 @@ Tableau.prototype.copy = function () {
 
     copy.availableIndexes = this.availableIndexes.slice();
 
+    var optionalObjectivesCopy = [];
+    for(var o = 0; o < this.optionalObjectives.length; o++){
+        optionalObjectivesCopy[o] = this.optionalObjectives[o].copy();
+    }
+    copy.optionalObjectives = optionalObjectivesCopy;
+
 
     var matrix = this.matrix;
     var matrixCopy = new Array(this.height);
@@ -97,5 +103,14 @@ Tableau.prototype.restore = function () {
         this.colByVarIndex[v] = savedCols[v];
     }
 
-    this.availableIndexes = save.availableIndexes.slice();
+
+    if (save.optionalObjectives.length > 0 && this.optionalObjectives.length > 0) {
+        this.optionalObjectives = [];
+        this.optionalObjectivePerPriority = {};
+        for(var o = 0; o < save.optionalObjectives.length; o++){
+            var optionalObjectiveCopy = save.optionalObjectives[o].copy();
+            this.optionalObjectives[o] = optionalObjectiveCopy;
+            this.optionalObjectivePerPriority[optionalObjectiveCopy.priority] = optionalObjectiveCopy;
+        }
+    }
 };

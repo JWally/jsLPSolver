@@ -11,7 +11,7 @@ var Tableau = require("./Tableau.js");
 // Function: solve
 // Detail: Main function, linear programming solver
 //-------------------------------------------------------------------
-Tableau.prototype.solve = function () {
+Tableau.prototype.simplex = function () {
     // Bounded until proven otherwise
     this.bounded = true;
 
@@ -159,6 +159,9 @@ Tableau.prototype.phase2 = function () {
             while (enteringColumn === 0 && optionalCostsColumns.length > 0 && o < nOptionalObjectives) {
                 var optionalCostsColumns2 = [];
                 var reducedCosts = this.optionalObjectives[o].reducedCosts;
+
+                enteringValue = this.precision;
+
                 for (var i = 0; i <= optionalCostsColumns.length; i++) {
                     c = optionalCostsColumns[i];
                     reducedCost = reducedCosts[c];
@@ -198,6 +201,8 @@ Tableau.prototype.phase2 = function () {
         // Selecting leaving variable
         var leavingRow = 0;
         var minQuotient = Infinity;
+
+        var varIndexByRow = this.varIndexByRow;
 
         for (var r = 1; r <= lastRow; r++) {
             var row = matrix[r];
