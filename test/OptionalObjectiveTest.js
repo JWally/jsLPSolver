@@ -12,91 +12,93 @@ describe("Testing if optional objectives are taken into account", function () {
 		// Elements composing the UI
 		var nUIElements = 0;
 		function UIElement(model){
-			this.varULCornerX = model.addVariable(0, "varULCornerX"+nUIElements, false, false);
-			this.varULCornerY = model.addVariable(0, "varULCornerY"+nUIElements, false, false);
+			this.x = model.addVariable(0, "x" + nUIElements, false, false);
+			this.y = model.addVariable(0, "y" + nUIElements, false, false);
 
-			this.varWidth = model.addVariable(0, "varWidth"+nUIElements, false, false);
-			this.varHeight = model.addVariable(0, "varHeight"+nUIElements, false, false);
+			this.w = model.addVariable(0, "w" + nUIElements, false, false);
+			this.h = model.addVariable(0, "h" + nUIElements, false, false);
+
+			this.id = nUIElements;
 
 			nUIElements += 1;
 		}
 
 
-		function setMinWidth(model, element, minWidth){
-			return [model.greaterThan(minWidth).addTerm(1, element.varWidth)];
+		function setMinW(model, element, minW){
+			return [model.greaterThan(minW).addTerm(1, element.w)];
 		}
-		function setMaxWidth(model, element, maxWidth){
-			return [model.smallerThan(maxWidth).addTerm(1, element.varWidth)];
+		function setMaxW(model, element, maxW){
+			return [model.smallerThan(maxW).addTerm(1, element.w)];
 		}
-		function setMinHeight(model, element, minHeight){
-			return [model.greaterThan(minHeight).addTerm(1, element.varHeight)];
+		function setMinH(model, element, minH){
+			return [model.greaterThan(minH).addTerm(1, element.h)];
 		}
-		function setMaxHeight(model, element, maxHeight){
-			return [model.smallerThan(maxHeight).addTerm(1, element.varHeight)];
+		function setMaxH(model, element, maxH){
+			return [model.smallerThan(maxH).addTerm(1, element.h)];
 		}
 
-		function setMinXPosition(model, element, minXPosition){
-			return [model.greaterThan(minXPosition).addTerm(1, element.varULCornerX)];
+		function setMinX(model, element, minX){
+			return [model.greaterThan(minX).addTerm(1, element.x)];
 		}
-		function setMaxXPosition(model, element, maxXPosition){
-			return [model.smallerThan(maxXPosition).addTerm(1, element.varULCornerX)];
+		function setMaxX(model, element, maxX){
+			return [model.smallerThan(maxX).addTerm(1, element.x)];
 		}
-		function setMinYPosition(model, element, minYPosition){
-			return [model.greaterThan(minYPosition).addTerm(1, element.varULCornerY)];
+		function setMinY(model, element, minY){
+			return [model.greaterThan(minY).addTerm(1, element.y)];
 		}
-		function setMaxYPosition(model, element, maxYPosition){
-			return [model.smallerThan(maxYPosition).addTerm(1, element.varULCornerY)];
+		function setMaxY(model, element, maxY){
+			return [model.smallerThan(maxY).addTerm(1, element.y)];
 		}
 
 		function noOverlap(model, element1, element2){
 			var constraintSet = [];
 
-			var xC1 = element1.varULCornerX;
-			var yC1 = element1.varULCornerY;
-			var xC2 = element2.varULCornerX;
-			var yC2 = element2.varULCornerY;
+			var x1 = element1.x;
+			var y1 = element1.y;
+			var x2 = element2.x;
+			var y2 = element2.y;
 
-			var W1 = element1.varWidth;
-			var H1 = element1.varHeight;
-			var W2 = element2.varWidth;
-			var H2 = element2.varHeight;
+			var w1 = element1.w;
+			var h1 = element1.h;
+			var w2 = element2.w;
+			var h2 = element2.h;
 
 			var MWidth = 1920;
 			var MHeight = 1080;
 
-			var binXC1 = model.addVariable(0, "bx"+xC1.id, true, false);
+			// "a" variables are activation variables
 
-			constraintSet.push(model.smallerThan(0).addTerm(1, xC1).addTerm(1, W1).addTerm(-1, xC2).addTerm(-MWidth, binXC1));
+			// Element 1 can either be...
 
+			// ... on the left of element 2
+			var a1 = model.addVariable(0, element1.id + "_onLeftOf_" + element2.id, true, false);
+			constraintSet.push(model.smallerThan(0).addTerm(1, x1).addTerm(1, w1).addTerm(-1, x2).addTerm(-MWidth, a1));
 
-			var binYC1 = model.addVariable(0, "by"+yC1.id, true, false);
+			// ... above element 2
+			var a2 = model.addVariable(0, element1.id + "_above_" + element2.id, true, false);
+			constraintSet.push(model.smallerThan(0).addTerm(1, y1).addTerm(1, h1).addTerm(-1, y2).addTerm(-MHeight, a2));
 
-			constraintSet.push(model.smallerThan(0).addTerm(1, yC1).addTerm(1, H1).addTerm(-1, yC2).addTerm(-MHeight, binYC1));
+			// ... on the right of element 2
+			var a3 = model.addVariable(0, element1.id + "_onRight_" +  element2.id, true, false);
+			constraintSet.push(model.smallerThan(0).addTerm(1, x2).addTerm(1, w2).addTerm(-1, x1).addTerm(-MWidth, a3));
 
+			// ... below element 2
+			var a4 = model.addVariable(0, element1.id + "_below_" + element2.id, true, false);
+			constraintSet.push(model.smallerThan(0).addTerm(1, y2).addTerm(1, h2).addTerm(-1, y1).addTerm(-MHeight, a4));
 
-			var binXC2 = model.addVariable(0, "bx"+xC2.id, true, false);
-
-			constraintSet.push(model.smallerThan(0).addTerm(1, xC2).addTerm(1, W2).addTerm(-1, xC1).addTerm(-MWidth, binXC2));
-
-
-			var binYC2 = model.addVariable(0, "by"+yC2.id, true, false);
-
-			constraintSet.push(model.smallerThan(0).addTerm(1, yC2).addTerm(1, H2).addTerm(-1, yC1).addTerm(-MHeight, binYC2));
-
-
-			var equality = model.equal(3).addTerm(1, binXC1).addTerm(1, binYC1).addTerm(1, binXC2).addTerm(1, binYC2);
+			var equality = model.equal(3).addTerm(1, a1).addTerm(1, a2).addTerm(1, a3).addTerm(1, a4);
 
 			return constraintSet;
 		}
 
 
 		function respectRightSide(model, element, displayWidth, offset){
-			return [model.smallerThan(displayWidth-offset).addTerm(1, element.varULCornerX).addTerm(1, element.varWidth)];
+			return [model.smallerThan(displayWidth-offset).addTerm(1, element.x).addTerm(1, element.w)];
 		}
 
 
 		function setConstraintSetPriority(constraintSet, priority){
-			for(var constraintIndex = 0; constraintIndex < constraintSet.length; constraintIndex += 1){
+			for (var constraintIndex = 0; constraintIndex < constraintSet.length; constraintIndex += 1) {
 				var constraint = constraintSet[constraintIndex];
 				constraint.relax(1,priority);
 			}
@@ -117,27 +119,27 @@ describe("Testing if optional objectives are taken into account", function () {
 
 		// Creating UI elements
 		var elt1 = new UIElement(model);
-		setMinWidth(model, elt1, 100);
-		setMaxWidth(model, elt1, 200);
-		setMinHeight(model, elt1, 200);
-		setMaxHeight(model, elt1, 200);
+		setMinW(model, elt1, 100);
+		setMaxW(model, elt1, 200);
+		setMinH(model, elt1, 200);
+		setMaxH(model, elt1, 200);
 
-		setMinXPosition(model, elt1, 100);
-		setMaxXPosition(model, elt1, 200);
-		setMinYPosition(model, elt1, 300);
-		setMaxYPosition(model, elt1, 300);
+		setMinX(model, elt1, 100);
+		setMaxX(model, elt1, 200);
+		setMinY(model, elt1, 300);
+		setMaxY(model, elt1, 300);
 
 
 		var elt2 = new UIElement(model);
-		setMinWidth(model, elt2, 200);
-		setMaxWidth(model, elt2, 300);
-		setMinHeight(model, elt2, 50);
-		setMaxHeight(model, elt2, 50);
+		setMinW(model, elt2, 200);
+		setMaxW(model, elt2, 300);
+		setMinH(model, elt2, 50);
+		setMaxH(model, elt2, 50);
 
-		setMinXPosition(model, elt2, 150);
-		setMaxXPosition(model, elt2, 400);
-		setMinYPosition(model, elt2, 400);
-		setMaxYPosition(model, elt2, 400);
+		setMinX(model, elt2, 150);
+		setMaxX(model, elt2, 400);
+		setMinY(model, elt2, 400);
+		setMaxY(model, elt2, 400);
 
 
 		respectRightSide(model, elt2, displayWidth, 50);
@@ -153,13 +155,13 @@ describe("Testing if optional objectives are taken into account", function () {
 
 		var d = model.solve();
 
-		assert.deepEqual(elt1.varULCornerX.value, 100);
-		assert.deepEqual(elt1.varULCornerY.value, 300);
-		assert.deepEqual(elt1.varWidth.value, 150);
-		assert.deepEqual(elt1.varHeight.value, 200);
-		assert.deepEqual(elt2.varULCornerX.value, 250);
-		assert.deepEqual(elt2.varULCornerY.value, 400);
-		assert.deepEqual(elt2.varWidth.value, 200);
-		assert.deepEqual(elt2.varHeight.value, 50);
+		assert.deepEqual(elt1.x.value, 100);
+		assert.deepEqual(elt1.y.value, 300);
+		assert.deepEqual(elt1.w.value, 150);
+		assert.deepEqual(elt1.h.value, 200);
+		assert.deepEqual(elt2.x.value, 250);
+		assert.deepEqual(elt2.y.value, 400);
+		assert.deepEqual(elt2.w.value, 200);
+		assert.deepEqual(elt2.h.value, 50);
 	});
 });

@@ -136,7 +136,6 @@ Tableau.prototype.MILP = function () {
         // Is the model both integral and feasible?
         if (this.isIntegral() === true) {
             if (iterations === 1) {
-                // tableau.updateVariableValues();
                 return new MilpSolution(this.getSolution(), iterations);
             }
             // Store the solution as the bestSolution
@@ -190,7 +189,7 @@ Tableau.prototype.MILP = function () {
 
             // Find out where we want to split the solution
             var variable = this.getMostFractionalVar();
-            // var variable = tableau.getFractionalVarWithLowestCost();
+
             var varIndex = variable.index;
 
             var cutsHigh = [];
@@ -234,7 +233,6 @@ Tableau.prototype.MILP = function () {
     if (bestBranch !== null) {
         // The model is feasible
         this.applyCuts(bestBranch.cuts);
-        // tableau.updateVariableValues();
     }
 
     // Solving a last time
