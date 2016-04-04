@@ -4,8 +4,7 @@
 /*global it*/
 /*global console*/
 /*global process*/
-var Solution = require("./Solution.js");
-var Tableau = require("./Tableau/Tableau.js");
+var Tableau = require("./Tableau.js");
 
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
@@ -21,16 +20,6 @@ function Branch(relaxedEvaluation, cuts) {
     this.relaxedEvaluation = relaxedEvaluation;
     this.cuts = cuts;
 }
-
-//-------------------------------------------------------------------
-//-------------------------------------------------------------------
-function MilpSolution(relaxedSolution, iterations) {
-    Solution.call(this, relaxedSolution._tableau, relaxedSolution.evaluation, relaxedSolution.feasible, relaxedSolution.bounded);
-    this.iter = iterations;
-}
-
-MilpSolution.prototype = Object.create(Solution.prototype);
-MilpSolution.prototype.constructor = MilpSolution;
 
 //-------------------------------------------------------------------
 // Branch sorting strategies
@@ -50,18 +39,20 @@ Tableau.prototype.applyCuts = function (branchingCuts){
     this.addCutConstraints(branchingCuts);
     this.simplex();
     // Adding MIR cuts
-    var fractionalVolumeImproved = true;
-    while(fractionalVolumeImproved){
-        var fractionalVolumeBefore = this.computeFractionalVolume(true);
-        this.applyMIRCuts();
-        this.simplex();
+    if (this.model.useMIRCuts){
+        var fractionalVolumeImproved = true;
+        while(fractionalVolumeImproved){
+            var fractionalVolumeBefore = this.computeFractionalVolume(true);
+            this.applyMIRCuts();
+            this.simplex();
 
-        var fractionalVolumeAfter = this.computeFractionalVolume(true);
+            var fractionalVolumeAfter = this.computeFractionalVolume(true);
 
-        // If the new fractional volume is bigger than 90% of the previous one
-        // we assume there is no improvement from the MIR cuts
-        if(fractionalVolumeAfter >= 0.9 * fractionalVolumeBefore){
-            fractionalVolumeImproved = false;
+            // If the new fractional volume is bigger than 90% of the previous one
+            // we assume there is no improvement from the MIR cuts
+            if(fractionalVolumeAfter >= 0.9 * fractionalVolumeBefore){
+                fractionalVolumeImproved = false;
+            }
         }
     }
 };
@@ -71,7 +62,7 @@ Tableau.prototype.applyCuts = function (branchingCuts){
 // Detail: Main function, my attempt at a mixed integer linear programming
 //         solver
 //-------------------------------------------------------------------
-Tableau.prototype.MILP = function () {
+Tableau.prototype.branchAndCut = function () {
     var branches = [];
     var iterations = 0;
 
@@ -136,7 +127,8 @@ Tableau.prototype.MILP = function () {
         // Is the model both integral and feasible?
         if (this.isIntegral() === true) {
             if (iterations === 1) {
-                return new MilpSolution(this.getSolution(), iterations);
+                this.branchAndCutIterations = iterations;
+                return;
             }
             // Store the solution as the bestSolution
             bestBranch = branch;
@@ -234,7 +226,5 @@ Tableau.prototype.MILP = function () {
         // The model is feasible
         this.applyCuts(bestBranch.cuts);
     }
-
-    // Solving a last time
-    return new MilpSolution(this.getSolution(), iterations);
+    this.branchAndCutIterations = iterations;
 };

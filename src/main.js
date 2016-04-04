@@ -17,7 +17,7 @@
 
 var Tableau = require("./Tableau/index.js");
 var Model = require("./Model");
-var MILP = require("./MILP");
+var branchAndCut = require("./Tableau/branchAndCut");
 var expressions = require("./expressions.js");
 var validation = require("./Validation");
 var Constraint = expressions.Constraint;
@@ -31,7 +31,7 @@ var Solver = function () {
     "use strict";
 
     this.Model = Model;
-    this.MILP = MILP;
+    this.branchAndCut = branchAndCut;
     this.Constraint = Constraint;
     this.Variable = Variable;
     this.Numeral = Numeral;

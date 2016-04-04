@@ -153,8 +153,7 @@ describe("Testing if optional objectives are taken into account", function () {
 			model.tableauInitialized = true;
 		}
 
-		var d = model.solve();
-
+		var solution = model.solve();
 		assert.deepEqual(elt1.x.value, 100);
 		assert.deepEqual(elt1.y.value, 300);
 		assert.deepEqual(elt1.w.value, 150);
@@ -163,5 +162,6 @@ describe("Testing if optional objectives are taken into account", function () {
 		assert.deepEqual(elt2.y.value, 400);
 		assert.deepEqual(elt2.w.value, 200);
 		assert.deepEqual(elt2.h.value, 50);
+		assert.deepEqual(solution.iter !== undefined, true);
 	});
 });

@@ -36,6 +36,9 @@ Tableau.prototype.simplex = function () {
 //
 //-------------------------------------------------------------------
 Tableau.prototype.phase1 = function () {
+    var debugCheckForCycles = this.model.checkForCycles;
+    var varIndexesCycle = [];
+
     var matrix = this.matrix;
     var rhsColumn = this.rhsColumn;
     var lastColumn = this.width - 1;
@@ -95,17 +98,32 @@ Tableau.prototype.phase1 = function () {
             return iterations;
         }
 
+        if(debugCheckForCycles){
+            varIndexesCycle.push([this.varIndexByRow[leavingRowIndex], this.varIndexByCol[enteringColumn]]);
+
+            var cycleData = this.checkForCycles(varIndexesCycle);
+            if(cycleData.length > 0){
+                console.log("Cycle in phase 1");
+                console.log("Start :", cycleData[0]);
+                console.log("Length :", cycleData[1]);
+                throw new Error();
+            }
+        }
+
         this.pivot(leavingRowIndex, enteringColumn);
         iterations += 1;
     }
 };
 
 //-------------------------------------------------------------------
-// Description: Apply simplex to obtain optimal soltuion
+// Description: Apply simplex to obtain optimal solution
 //              used as phase2 of the simplex
 //
 //-------------------------------------------------------------------
 Tableau.prototype.phase2 = function () {
+    var debugCheckForCycles = this.model.checkForCycles;
+    var varIndexesCycle = [];
+
     var matrix = this.matrix;
     var rhsColumn = this.rhsColumn;
     var lastColumn = this.width - 1;
@@ -126,13 +144,13 @@ Tableau.prototype.phase2 = function () {
         }
 
         var enteringColumn = 0;
-        var enteringValue = this.precision;
+        var enteringValue = precision;
         var isReducedCostNegative = false;
         for (var c = 1; c <= lastColumn; c++) {
             reducedCost = costRow[c];
             unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
 
-            if (nOptionalObjectives > 0 && -this.precision < reducedCost && reducedCost < this.precision) {
+            if (nOptionalObjectives > 0 && -precision < reducedCost && reducedCost < precision) {
                 optionalCostsColumns.push(c);
                 continue;
             }
@@ -160,14 +178,15 @@ Tableau.prototype.phase2 = function () {
                 var optionalCostsColumns2 = [];
                 var reducedCosts = this.optionalObjectives[o].reducedCosts;
 
-                enteringValue = this.precision;
+                enteringValue = precision;
 
-                for (var i = 0; i <= optionalCostsColumns.length; i++) {
+                for (var i = 0; i < optionalCostsColumns.length; i++) {
                     c = optionalCostsColumns[i];
+
                     reducedCost = reducedCosts[c];
                     unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
 
-                    if (-this.precision < reducedCost && reducedCost < this.precision) {
+                    if (-precision < reducedCost && reducedCost < precision) {
                         optionalCostsColumns2.push(c);
                         continue;
                     }
@@ -191,6 +210,7 @@ Tableau.prototype.phase2 = function () {
                 o += 1;
             }
         }
+
 
         // If no entering column could be found we're done with phase 2.
         if (enteringColumn === 0) {
@@ -220,7 +240,7 @@ Tableau.prototype.phase2 = function () {
             }
 
             var quotient = isReducedCostNegative ? -rhsValue / colValue : rhsValue / colValue;
-            if (quotient > 0 && minQuotient > quotient) {
+            if (quotient > precision && minQuotient > quotient) {
                 minQuotient = quotient;
                 leavingRow = r;
             }
@@ -232,6 +252,18 @@ Tableau.prototype.phase2 = function () {
             this.bounded = false;
             this.unboundedVarIndex = this.varIndexByCol[enteringColumn];
             return iterations;
+        }
+
+        if(debugCheckForCycles){
+            varIndexesCycle.push([this.varIndexByRow[leavingRow], this.varIndexByCol[enteringColumn]]);
+
+            var cycleData = this.checkForCycles(varIndexesCycle);
+            if(cycleData.length > 0){
+                console.log("Cycle in phase 2");
+                console.log("Start :", cycleData[0]);
+                console.log("Length :", cycleData[1]);
+                throw new Error();
+            }
         }
 
         this.pivot(leavingRow, enteringColumn, true);
@@ -327,4 +359,33 @@ Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex) {
             }
         }
     }
+};
+
+
+
+Tableau.prototype.checkForCycles = function (varIndexes) {
+    for (var e1 = 0; e1 < varIndexes.length - 1; e1++) {
+        for (var e2 = e1 + 1; e2 < varIndexes.length; e2++) {
+            var elt1 = varIndexes[e1];
+            var elt2 = varIndexes[e2];
+            if (elt1[0] === elt2[0] && elt1[1] === elt2[1]) {
+                if (e2 - e1 > varIndexes.length - e2) {
+                    break;
+                }
+                var cycleFound = true;
+                for (var i = 1; i < e2 - e1; i++) {
+                    var tmp1 = varIndexes[e1+i];
+                    var tmp2 = varIndexes[e2+i];
+                    if(tmp1[0] !== tmp2[0] || tmp1[1] !== tmp2[1]) {
+                        cycleFound = false;
+                        break;
+                    }
+                }
+                if (cycleFound) {
+                    return [e1, e2 - e1];
+                }
+            }
+        }
+    }
+    return [];
 };
