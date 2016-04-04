@@ -6,251 +6,9 @@
 /*global it*/
 /*global console*/
 /*global process*/
-var Solution = require("./Solution.js");
-var Tableau = require("./Tableau/Tableau.js");
-
-//-------------------------------------------------------------------
-//-------------------------------------------------------------------
-function Cut(type, varIndex, value) {
-    this.type = type;
-    this.varIndex = varIndex;
-    this.value = value;
-}
-
-//-------------------------------------------------------------------
-//-------------------------------------------------------------------
-function Branch(relaxedEvaluation, cuts) {
-    this.relaxedEvaluation = relaxedEvaluation;
-    this.cuts = cuts;
-}
-
-//-------------------------------------------------------------------
-//-------------------------------------------------------------------
-function MilpSolution(relaxedSolution, iterations) {
-    Solution.call(this, relaxedSolution._tableau, relaxedSolution.evaluation, relaxedSolution.feasible, relaxedSolution.bounded);
-    this.iter = iterations;
-}
-
-MilpSolution.prototype = Object.create(Solution.prototype);
-MilpSolution.prototype.constructor = MilpSolution;
-
-//-------------------------------------------------------------------
-// Branch sorting strategies
-//-------------------------------------------------------------------
-function sortByEvaluation(a, b) {
-    return b.relaxedEvaluation - a.relaxedEvaluation;
-}
-
-
-//-------------------------------------------------------------------
-// Applying cuts on a tableau and resolving
-//-------------------------------------------------------------------
-Tableau.prototype.applyCuts = function (branchingCuts){
-    // Restoring initial solution
-    this.restore();
-
-    this.addCutConstraints(branchingCuts);
-    this.simplex();
-    // Adding MIR cuts
-    var fractionalVolumeImproved = true;
-    while(fractionalVolumeImproved){
-        var fractionalVolumeBefore = this.computeFractionalVolume(true);
-        this.applyMIRCuts();
-        this.simplex();
-
-        var fractionalVolumeAfter = this.computeFractionalVolume(true);
-
-        // If the new fractional volume is bigger than 90% of the previous one
-        // we assume there is no improvement from the MIR cuts
-        if(fractionalVolumeAfter >= 0.9 * fractionalVolumeBefore){
-            fractionalVolumeImproved = false;
-        }
-    }
-};
-
-//-------------------------------------------------------------------
-// Function: MILP
-// Detail: Main function, my attempt at a mixed integer linear programming
-//         solver
-//-------------------------------------------------------------------
-Tableau.prototype.MILP = function () {
-    var branches = [];
-    var iterations = 0;
-
-    // This is the default result
-    // If nothing is both *integral* and *feasible*
-    var bestEvaluation = Infinity;
-    var bestBranch = null;
-    var bestOptionalObjectivesEvaluations = [];
-    for (var oInit = 0; oInit < this.optionalObjectives.length; oInit += 1){
-        bestOptionalObjectivesEvaluations.push(Infinity);
-    }
-
-    // And here...we...go!
-
-    // 1.) Load a model into the queue
-    var branch = new Branch(-Infinity, []);
-    branches.push(branch);
-
-    // If all branches have been exhausted terminate the loop
-    while (branches.length > 0) {
-        // Get a model from the queue
-        branch = branches.pop();
-        if (branch.relaxedEvaluation > bestEvaluation) {
-            continue;
-        }
-
-        // Solving from initial relaxed solution
-        // with additional cut constraints
-
-        // Adding cut constraints
-        var cuts = branch.cuts;
-        this.applyCuts(cuts);
-
-        iterations++;
-        if (this.feasible === false) {
-            continue;
-        }
-
-        var evaluation = this.evaluation;
-        if (evaluation > bestEvaluation) {
-            // This branch does not contain the optimal solution
-            continue;
-        }
-
-        // To deal with the optional objectives
-        if (evaluation === bestEvaluation){
-            var isCurrentEvaluationWorse = true;
-            for (var o = 0; o < this.optionalObjectives.length; o += 1){
-                if (this.optionalObjectives[o].reducedCosts[0] > bestOptionalObjectivesEvaluations[o]){
-                    break;
-                } else if (this.optionalObjectives[o].reducedCosts[0] < bestOptionalObjectivesEvaluations[o]) {
-                    isCurrentEvaluationWorse = false;
-                    break;
-                }
-            }
-
-            if (isCurrentEvaluationWorse){
-                continue;
-            }
-        }
-
-        // Is the model both integral and feasible?
-        if (this.isIntegral() === true) {
-            if (iterations === 1) {
-                return new MilpSolution(this.getSolution(), iterations);
-            }
-            // Store the solution as the bestSolution
-            bestBranch = branch;
-            bestEvaluation = evaluation;
-            for (var oCopy = 0; oCopy < this.optionalObjectives.length; oCopy += 1){
-                bestOptionalObjectivesEvaluations[oCopy] = this.optionalObjectives[oCopy].reducedCosts[0];
-            }
-        } else {
-            if (iterations === 1) {
-                // Saving the first iteration
-                // TODO: implement a better strategy for saving the tableau?
-                this.save();
-            }
-
-            // If the solution is
-            //  a. Feasible
-            //  b. Better than the current solution
-            //  c. but *NOT* integral
-
-            // So the solution isn't integral? How do we solve this.
-            // We create 2 new models, that are mirror images of the prior
-            // model, with 1 exception.
-
-            // Say we're trying to solve some stupid problem requiring you get
-            // animals for your daughter's kindergarten petting zoo party
-            // and you have to choose how many ducks, goats, and lambs to get.
-
-            // Say that the optimal solution to this problem if we didn't have
-            // to make it integral was {duck: 8, lambs: 3.5}
-            //
-            // To keep from traumatizing your daughter and the other children
-            // you're going to want to have whole animals
-
-            // What we would do is find the most fractional variable (lambs)
-            // and create new models from the old models, but with a new constraint
-            // on apples. The constraints on the low model would look like:
-            // constraints: {...
-            //   lamb: {max: 3}
-            //   ...
-            // }
-            //
-            // while the constraints on the high model would look like:
-            //
-            // constraints: {...
-            //   lamb: {min: 4}
-            //   ...
-            // }
-            // If neither of these models is feasible because of this constraint,
-            // the model is not integral at this point, and fails.
-
-            // Find out where we want to split the solution
-            var variable = this.getMostFractionalVar();
-
-            var varIndex = variable.index;
-
-            var cutsHigh = [];
-            var cutsLow = [];
-
-            var nCuts = cuts.length;
-            for (var c = 0; c < nCuts; c += 1) {
-                var cut = cuts[c];
-                if (cut.varIndex === varIndex) {
-                    if (cut.type === "min") {
-                        cutsLow.push(cut);
-                    } else {
-                        cutsHigh.push(cut);
-                    }
-                } else {
-                    cutsHigh.push(cut);
-                    cutsLow.push(cut);
-                }
-            }
-
-            var min = Math.ceil(variable.value);
-            var max = Math.floor(variable.value);
-
-            var cutHigh = new Cut("min", varIndex, min);
-            cutsHigh.push(cutHigh);
-
-            var cutLow = new Cut("max", varIndex, max);
-            cutsLow.push(cutLow);
-
-            branches.push(new Branch(evaluation, cutsHigh));
-            branches.push(new Branch(evaluation, cutsLow));
-
-            // Sorting branches
-            // Branches with the most promising lower bounds
-            // will be picked first
-            branches.sort(sortByEvaluation);
-        }
-    }
-
-    // Adding cut constraints for the optimal solution
-    if (bestBranch !== null) {
-        // The model is feasible
-        this.applyCuts(bestBranch.cuts);
-    }
-
-    // Solving a last time
-    return new MilpSolution(this.getSolution(), iterations);
-};
-
-},{"./Solution.js":5,"./Tableau/Tableau.js":6}],2:[function(require,module,exports){
-/*global describe*/
-/*global require*/
-/*global module*/
-/*global it*/
-/*global console*/
-/*global process*/
 
 var Tableau = require("./Tableau/Tableau.js");
-var MILP = require("./MILP.js");
+var branchAndCut = require("./Tableau/branchAndCut.js");
 var expressions = require("./expressions.js");
 var Constraint = expressions.Constraint;
 var Equality = expressions.Equality;
@@ -283,6 +41,10 @@ function Model(precision, name) {
 
     this.tableauInitialized = false;
     this.relaxationIndex = 1;
+
+    this.useMIRCuts = true;
+
+    this.checkForCycles = false;
 }
 module.exports = Model;
 
@@ -604,11 +366,19 @@ Model.prototype.restore = function () {
     return this.tableau.restore();
 };
 
+Model.prototype.activateMIRCuts = function (useMIRCuts) {
+    this.useMIRCuts = useMIRCuts;
+};
+
+Model.prototype.debug = function (debugCheckForCycles) {
+    this.checkForCycles = debugCheckForCycles;
+};
+
 Model.prototype.log = function (message) {
     return this.tableau.log(message);
 };
 
-},{"./MILP.js":1,"./Tableau/Tableau.js":6,"./expressions.js":16}],3:[function(require,module,exports){
+},{"./Tableau/Tableau.js":6,"./Tableau/branchAndCut.js":8,"./expressions.js":17}],2:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -807,7 +577,7 @@ module.exports = function(solver, model){
 
 };
 
-},{}],4:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -1092,7 +862,20 @@ module.exports = function (model) {
     }
 };
 
-},{}],5:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
+/*global module*/
+/*global require*/
+var Solution = require("./Solution.js");
+
+function MilpSolution(tableau, evaluation, feasible, bounded, branchAndCutIterations) {
+    Solution.call(this, tableau, evaluation, feasible, bounded);
+    this.iter = branchAndCutIterations;
+}
+module.exports = MilpSolution;
+MilpSolution.prototype = Object.create(Solution.prototype);
+MilpSolution.constructor = MilpSolution;
+
+},{"./Solution.js":5}],5:[function(require,module,exports){
 /*global module*/
 
 function Solution(tableau, evaluation, feasible, bounded) {
@@ -1136,7 +919,8 @@ Solution.prototype.generateSolutionSet = function () {
 /*global it*/
 /*global console*/
 /*global process*/
-var Solution = require("../Solution.js");
+var Solution = require("./Solution.js");
+var MilpSolution = require("./MilpSolution.js");
 
 /*************************************************************
  * Class: Tableau
@@ -1187,12 +971,14 @@ function Tableau(precision) {
 
     this.bounded = true;
     this.unboundedVarIndex = null;
+
+    this.branchAndCutIterations = 0;
 }
 module.exports = Tableau;
 
 Tableau.prototype.solve = function () {
     if (this.model.getNumberOfIntegerVariables() > 0) {
-        this.MILP();
+        this.branchAndCut();
     } else {
         this.simplex();
     }
@@ -1217,7 +1003,7 @@ OptionalObjective.prototype.copy = function () {
 Tableau.prototype.setOptionalObjective = function (priority, column, cost) {
     var objectiveForPriority = this.objectivesByPriority[priority];
     if (objectiveForPriority === undefined) {
-        var nColumns = Math.max(this.width, column) + 1;
+        var nColumns = Math.max(this.width, column + 1);
         objectiveForPriority = new OptionalObjective(priority, nColumns);
         this.objectivesByPriority[priority] = objectiveForPriority;
         this.optionalObjectives.push(objectiveForPriority);
@@ -1282,9 +1068,7 @@ Tableau.prototype._resetMatrix = function () {
         } else {
             this.setOptionalObjective(priority, v + 1, cost);
         }
-    }
 
-    for (v = 0; v < nVars; v += 1) {
         varIndex = variables[v].index;
         this.rowByVarIndex[varIndex] = -1;
         this.colByVarIndex[varIndex] = v + 1;
@@ -1380,10 +1164,14 @@ Tableau.prototype.getSolution = function () {
     var evaluation = (this.model.isMinimization === true) ?
         this.evaluation : -this.evaluation;
 
-    return new Solution(this, evaluation, this.feasible, this.bounded);
+    if (this.model.getNumberOfIntegerVariables() > 0) {
+        return new MilpSolution(this, evaluation, this.feasible, this.bounded, this.branchAndCutIterations);
+    } else {
+        return new Solution(this, evaluation, this.feasible, this.bounded);
+    }
 };
 
-},{"../Solution.js":5}],7:[function(require,module,exports){
+},{"./MilpSolution.js":4,"./Solution.js":5}],7:[function(require,module,exports){
 /*global require*/
 var Tableau = require("./Tableau.js");
 
@@ -1502,6 +1290,238 @@ Tableau.prototype.restore = function () {
 };
 
 },{"./Tableau.js":6}],8:[function(require,module,exports){
+/*global describe*/
+/*global require*/
+/*global module*/
+/*global it*/
+/*global console*/
+/*global process*/
+var Tableau = require("./Tableau.js");
+
+//-------------------------------------------------------------------
+//-------------------------------------------------------------------
+function Cut(type, varIndex, value) {
+    this.type = type;
+    this.varIndex = varIndex;
+    this.value = value;
+}
+
+//-------------------------------------------------------------------
+//-------------------------------------------------------------------
+function Branch(relaxedEvaluation, cuts) {
+    this.relaxedEvaluation = relaxedEvaluation;
+    this.cuts = cuts;
+}
+
+//-------------------------------------------------------------------
+// Branch sorting strategies
+//-------------------------------------------------------------------
+function sortByEvaluation(a, b) {
+    return b.relaxedEvaluation - a.relaxedEvaluation;
+}
+
+
+//-------------------------------------------------------------------
+// Applying cuts on a tableau and resolving
+//-------------------------------------------------------------------
+Tableau.prototype.applyCuts = function (branchingCuts){
+    // Restoring initial solution
+    this.restore();
+
+    this.addCutConstraints(branchingCuts);
+    this.simplex();
+    // Adding MIR cuts
+    if (this.model.useMIRCuts){
+        var fractionalVolumeImproved = true;
+        while(fractionalVolumeImproved){
+            var fractionalVolumeBefore = this.computeFractionalVolume(true);
+            this.applyMIRCuts();
+            this.simplex();
+
+            var fractionalVolumeAfter = this.computeFractionalVolume(true);
+
+            // If the new fractional volume is bigger than 90% of the previous one
+            // we assume there is no improvement from the MIR cuts
+            if(fractionalVolumeAfter >= 0.9 * fractionalVolumeBefore){
+                fractionalVolumeImproved = false;
+            }
+        }
+    }
+};
+
+//-------------------------------------------------------------------
+// Function: MILP
+// Detail: Main function, my attempt at a mixed integer linear programming
+//         solver
+//-------------------------------------------------------------------
+Tableau.prototype.branchAndCut = function () {
+    var branches = [];
+    var iterations = 0;
+
+    // This is the default result
+    // If nothing is both *integral* and *feasible*
+    var bestEvaluation = Infinity;
+    var bestBranch = null;
+    var bestOptionalObjectivesEvaluations = [];
+    for (var oInit = 0; oInit < this.optionalObjectives.length; oInit += 1){
+        bestOptionalObjectivesEvaluations.push(Infinity);
+    }
+
+    // And here...we...go!
+
+    // 1.) Load a model into the queue
+    var branch = new Branch(-Infinity, []);
+    branches.push(branch);
+
+    // If all branches have been exhausted terminate the loop
+    while (branches.length > 0) {
+        // Get a model from the queue
+        branch = branches.pop();
+        if (branch.relaxedEvaluation > bestEvaluation) {
+            continue;
+        }
+
+        // Solving from initial relaxed solution
+        // with additional cut constraints
+
+        // Adding cut constraints
+        var cuts = branch.cuts;
+        this.applyCuts(cuts);
+
+        iterations++;
+        if (this.feasible === false) {
+            continue;
+        }
+
+        var evaluation = this.evaluation;
+        if (evaluation > bestEvaluation) {
+            // This branch does not contain the optimal solution
+            continue;
+        }
+
+        // To deal with the optional objectives
+        if (evaluation === bestEvaluation){
+            var isCurrentEvaluationWorse = true;
+            for (var o = 0; o < this.optionalObjectives.length; o += 1){
+                if (this.optionalObjectives[o].reducedCosts[0] > bestOptionalObjectivesEvaluations[o]){
+                    break;
+                } else if (this.optionalObjectives[o].reducedCosts[0] < bestOptionalObjectivesEvaluations[o]) {
+                    isCurrentEvaluationWorse = false;
+                    break;
+                }
+            }
+
+            if (isCurrentEvaluationWorse){
+                continue;
+            }
+        }
+
+        // Is the model both integral and feasible?
+        if (this.isIntegral() === true) {
+            if (iterations === 1) {
+                this.branchAndCutIterations = iterations;
+                return;
+            }
+            // Store the solution as the bestSolution
+            bestBranch = branch;
+            bestEvaluation = evaluation;
+            for (var oCopy = 0; oCopy < this.optionalObjectives.length; oCopy += 1){
+                bestOptionalObjectivesEvaluations[oCopy] = this.optionalObjectives[oCopy].reducedCosts[0];
+            }
+        } else {
+            if (iterations === 1) {
+                // Saving the first iteration
+                // TODO: implement a better strategy for saving the tableau?
+                this.save();
+            }
+
+            // If the solution is
+            //  a. Feasible
+            //  b. Better than the current solution
+            //  c. but *NOT* integral
+
+            // So the solution isn't integral? How do we solve this.
+            // We create 2 new models, that are mirror images of the prior
+            // model, with 1 exception.
+
+            // Say we're trying to solve some stupid problem requiring you get
+            // animals for your daughter's kindergarten petting zoo party
+            // and you have to choose how many ducks, goats, and lambs to get.
+
+            // Say that the optimal solution to this problem if we didn't have
+            // to make it integral was {duck: 8, lambs: 3.5}
+            //
+            // To keep from traumatizing your daughter and the other children
+            // you're going to want to have whole animals
+
+            // What we would do is find the most fractional variable (lambs)
+            // and create new models from the old models, but with a new constraint
+            // on apples. The constraints on the low model would look like:
+            // constraints: {...
+            //   lamb: {max: 3}
+            //   ...
+            // }
+            //
+            // while the constraints on the high model would look like:
+            //
+            // constraints: {...
+            //   lamb: {min: 4}
+            //   ...
+            // }
+            // If neither of these models is feasible because of this constraint,
+            // the model is not integral at this point, and fails.
+
+            // Find out where we want to split the solution
+            var variable = this.getMostFractionalVar();
+
+            var varIndex = variable.index;
+
+            var cutsHigh = [];
+            var cutsLow = [];
+
+            var nCuts = cuts.length;
+            for (var c = 0; c < nCuts; c += 1) {
+                var cut = cuts[c];
+                if (cut.varIndex === varIndex) {
+                    if (cut.type === "min") {
+                        cutsLow.push(cut);
+                    } else {
+                        cutsHigh.push(cut);
+                    }
+                } else {
+                    cutsHigh.push(cut);
+                    cutsLow.push(cut);
+                }
+            }
+
+            var min = Math.ceil(variable.value);
+            var max = Math.floor(variable.value);
+
+            var cutHigh = new Cut("min", varIndex, min);
+            cutsHigh.push(cutHigh);
+
+            var cutLow = new Cut("max", varIndex, max);
+            cutsLow.push(cutLow);
+
+            branches.push(new Branch(evaluation, cutsHigh));
+            branches.push(new Branch(evaluation, cutsLow));
+
+            // Sorting branches
+            // Branches with the most promising lower bounds
+            // will be picked first
+            branches.sort(sortByEvaluation);
+        }
+    }
+
+    // Adding cut constraints for the optimal solution
+    if (bestBranch !== null) {
+        // The model is feasible
+        this.applyCuts(bestBranch.cuts);
+    }
+    this.branchAndCutIterations = iterations;
+};
+
+},{"./Tableau.js":6}],9:[function(require,module,exports){
 /*global require*/
 var Tableau = require("./Tableau.js");
 
@@ -1572,7 +1592,7 @@ Tableau.prototype.getFractionalVarWithLowestCost = function () {
     return new VariableData(selectedVarIndex, selectedVarValue);
 };
 
-},{"./Tableau.js":6}],9:[function(require,module,exports){
+},{"./Tableau.js":6}],10:[function(require,module,exports){
 /*global require*/
 var Tableau = require("./Tableau.js");
 var SlackVariable = require("../expressions.js").SlackVariable;
@@ -1765,7 +1785,7 @@ Tableau.prototype.applyMIRCuts = function () {
     }
 };
 
-},{"../expressions.js":16,"./Tableau.js":6}],10:[function(require,module,exports){
+},{"../expressions.js":17,"./Tableau.js":6}],11:[function(require,module,exports){
 /*global require*/
 /*global console*/
 var Tableau = require("./Tableau.js");
@@ -2071,7 +2091,7 @@ Tableau.prototype.removeVariable = function (variable) {
     this.width -= 1;
 };
 
-},{"./Tableau.js":6}],11:[function(require,module,exports){
+},{"./Tableau.js":6}],12:[function(require,module,exports){
 /*global require*/
 /*global module*/
 require("./simplex.js");
@@ -2084,7 +2104,7 @@ require("./integerProperties.js");
 
 module.exports = require("./Tableau.js");
 
-},{"./Tableau.js":6,"./backup.js":7,"./branchingStrategies.js":8,"./cuttingStrategies.js":9,"./dynamicModification.js":10,"./integerProperties.js":12,"./log.js":13,"./simplex.js":14}],12:[function(require,module,exports){
+},{"./Tableau.js":6,"./backup.js":7,"./branchingStrategies.js":9,"./cuttingStrategies.js":10,"./dynamicModification.js":11,"./integerProperties.js":13,"./log.js":14,"./simplex.js":15}],13:[function(require,module,exports){
 /*global require*/
 var Tableau = require("./Tableau.js");
 
@@ -2173,7 +2193,7 @@ Tableau.prototype.computeFractionalVolume = function(ignoreIntegerValues) {
     return volume;
 };
 
-},{"./Tableau.js":6}],13:[function(require,module,exports){
+},{"./Tableau.js":6}],14:[function(require,module,exports){
 /*global require*/
 /*global console*/
 var Tableau = require("./Tableau.js");
@@ -2345,7 +2365,7 @@ Tableau.prototype.log = function (message, force) {
     return this;
 };
 
-},{"./Tableau.js":6}],14:[function(require,module,exports){
+},{"./Tableau.js":6}],15:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -2384,6 +2404,9 @@ Tableau.prototype.simplex = function () {
 //
 //-------------------------------------------------------------------
 Tableau.prototype.phase1 = function () {
+    var debugCheckForCycles = this.model.checkForCycles;
+    var varIndexesCycle = [];
+
     var matrix = this.matrix;
     var rhsColumn = this.rhsColumn;
     var lastColumn = this.width - 1;
@@ -2443,17 +2466,32 @@ Tableau.prototype.phase1 = function () {
             return iterations;
         }
 
+        if(debugCheckForCycles){
+            varIndexesCycle.push([this.varIndexByRow[leavingRowIndex], this.varIndexByCol[enteringColumn]]);
+
+            var cycleData = this.checkForCycles(varIndexesCycle);
+            if(cycleData.length > 0){
+                console.log("Cycle in phase 1");
+                console.log("Start :", cycleData[0]);
+                console.log("Length :", cycleData[1]);
+                throw new Error();
+            }
+        }
+
         this.pivot(leavingRowIndex, enteringColumn);
         iterations += 1;
     }
 };
 
 //-------------------------------------------------------------------
-// Description: Apply simplex to obtain optimal soltuion
+// Description: Apply simplex to obtain optimal solution
 //              used as phase2 of the simplex
 //
 //-------------------------------------------------------------------
 Tableau.prototype.phase2 = function () {
+    var debugCheckForCycles = this.model.checkForCycles;
+    var varIndexesCycle = [];
+
     var matrix = this.matrix;
     var rhsColumn = this.rhsColumn;
     var lastColumn = this.width - 1;
@@ -2508,10 +2546,12 @@ Tableau.prototype.phase2 = function () {
                 var optionalCostsColumns2 = [];
                 var reducedCosts = this.optionalObjectives[o].reducedCosts;
 
-                enteringValue = this.precision;
+                // enteringValue = this.precision;
+                enteringValue = 0;
 
-                for (var i = 0; i <= optionalCostsColumns.length; i++) {
+                for (var i = 0; i < optionalCostsColumns.length; i++) {
                     c = optionalCostsColumns[i];
+
                     reducedCost = reducedCosts[c];
                     unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
 
@@ -2539,6 +2579,7 @@ Tableau.prototype.phase2 = function () {
                 o += 1;
             }
         }
+
 
         // If no entering column could be found we're done with phase 2.
         if (enteringColumn === 0) {
@@ -2568,7 +2609,7 @@ Tableau.prototype.phase2 = function () {
             }
 
             var quotient = isReducedCostNegative ? -rhsValue / colValue : rhsValue / colValue;
-            if (quotient > 0 && minQuotient > quotient) {
+            if (quotient > precision && minQuotient > quotient) {
                 minQuotient = quotient;
                 leavingRow = r;
             }
@@ -2580,6 +2621,18 @@ Tableau.prototype.phase2 = function () {
             this.bounded = false;
             this.unboundedVarIndex = this.varIndexByCol[enteringColumn];
             return iterations;
+        }
+
+        if(debugCheckForCycles){
+            varIndexesCycle.push([this.varIndexByRow[leavingRow], this.varIndexByCol[enteringColumn]]);
+
+            var cycleData = this.checkForCycles(varIndexesCycle);
+            if(cycleData.length > 0){
+                console.log("Cycle in phase 2");
+                console.log("Start :", cycleData[0]);
+                console.log("Length :", cycleData[1]);
+                throw new Error();
+            }
         }
 
         this.pivot(leavingRow, enteringColumn, true);
@@ -2677,7 +2730,36 @@ Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex) {
     }
 };
 
-},{"./Tableau.js":6}],15:[function(require,module,exports){
+
+
+Tableau.prototype.checkForCycles = function (varIndexes) {
+    for (var e1 = 0; e1 < varIndexes.length - 1; e1++) {
+        for (var e2 = e1 + 1; e2 < varIndexes.length; e2++) {
+            var elt1 = varIndexes[e1];
+            var elt2 = varIndexes[e2];
+            if (elt1[0] === elt2[0] && elt1[1] === elt2[1]) {
+                if (e2 - e1 > varIndexes.length - e2) {
+                    break;
+                }
+                var cycleFound = true;
+                for (var i = 1; i < e2 - e1; i++) {
+                    var tmp1 = varIndexes[e1+i];
+                    var tmp2 = varIndexes[e2+i];
+                    if(tmp1[0] !== tmp2[0] || tmp1[1] !== tmp2[1]) {
+                        cycleFound = false;
+                        break;
+                    }
+                }
+                if (cycleFound) {
+                    return [e1, e2 - e1];
+                }
+            }
+        }
+    }
+    return [];
+};
+
+},{"./Tableau.js":6}],16:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -2756,7 +2838,7 @@ exports.CleanObjectiveAttributes = function(model){
     }
 };
 
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -2792,8 +2874,12 @@ function Term(variable, coefficient) {
 }
 
 function createRelaxationVariable(model, weight, priority) {
-    weight = weight || 0;
-    priority = priority || 0;
+    if (priority === 0 || priority === "required") {
+        return null;
+    }
+
+    weight = weight || 1;
+    priority = priority || 1;
 
     if (model.isMinimization === false) {
         weight = -weight;
@@ -2892,11 +2978,16 @@ Constraint.prototype.relax = function (weight, priority) {
     this._relax(this.relaxation);
 };
 
-Constraint.prototype._relax = function (error) {
+Constraint.prototype._relax = function (relaxationVariable) {
+    if (relaxationVariable === null) {
+        // Relaxation variable not created, priority was probably "required"
+        return;
+    }
+
     if (this.isUpperBound) {
-        this.setVariableCoefficient(-1, error);
+        this.setVariableCoefficient(-1, relaxationVariable);
     } else {
-        this.setVariableCoefficient(1, error);
+        this.setVariableCoefficient(1, relaxationVariable);
     }
 };
 
@@ -2946,7 +3037,7 @@ module.exports = {
     Term: Term
 };
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -2966,7 +3057,7 @@ module.exports = {
 
 var Tableau = require("./Tableau/index.js");
 var Model = require("./Model");
-var MILP = require("./MILP");
+var branchAndCut = require("./Tableau/branchAndCut");
 var expressions = require("./expressions.js");
 var validation = require("./Validation");
 var Constraint = expressions.Constraint;
@@ -2980,7 +3071,7 @@ var Solver = function () {
     "use strict";
 
     this.Model = Model;
-    this.MILP = MILP;
+    this.branchAndCut = branchAndCut;
     this.Constraint = Constraint;
     this.Variable = Variable;
     this.Numeral = Numeral;
@@ -3127,4 +3218,4 @@ var Solver = function () {
 
 /* jshint ignore:end */
 
-},{"./MILP":1,"./Model":2,"./Polyopt":3,"./Reformat":4,"./Tableau/index.js":11,"./Validation":15,"./expressions.js":16}]},{},[17]);
+},{"./Model":1,"./Polyopt":2,"./Reformat":3,"./Tableau/branchAndCut":8,"./Tableau/index.js":12,"./Validation":16,"./expressions.js":17}]},{},[18]);

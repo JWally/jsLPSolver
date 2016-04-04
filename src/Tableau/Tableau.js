@@ -4,7 +4,8 @@
 /*global it*/
 /*global console*/
 /*global process*/
-var Solution = require("../Solution.js");
+var Solution = require("./Solution.js");
+var MilpSolution = require("./MilpSolution.js");
 
 /*************************************************************
  * Class: Tableau
@@ -55,12 +56,14 @@ function Tableau(precision) {
 
     this.bounded = true;
     this.unboundedVarIndex = null;
+
+    this.branchAndCutIterations = 0;
 }
 module.exports = Tableau;
 
 Tableau.prototype.solve = function () {
     if (this.model.getNumberOfIntegerVariables() > 0) {
-        this.MILP();
+        this.branchAndCut();
     } else {
         this.simplex();
     }
@@ -85,7 +88,7 @@ OptionalObjective.prototype.copy = function () {
 Tableau.prototype.setOptionalObjective = function (priority, column, cost) {
     var objectiveForPriority = this.objectivesByPriority[priority];
     if (objectiveForPriority === undefined) {
-        var nColumns = Math.max(this.width, column) + 1;
+        var nColumns = Math.max(this.width, column + 1);
         objectiveForPriority = new OptionalObjective(priority, nColumns);
         this.objectivesByPriority[priority] = objectiveForPriority;
         this.optionalObjectives.push(objectiveForPriority);
@@ -150,9 +153,7 @@ Tableau.prototype._resetMatrix = function () {
         } else {
             this.setOptionalObjective(priority, v + 1, cost);
         }
-    }
 
-    for (v = 0; v < nVars; v += 1) {
         varIndex = variables[v].index;
         this.rowByVarIndex[varIndex] = -1;
         this.colByVarIndex[varIndex] = v + 1;
@@ -248,5 +249,9 @@ Tableau.prototype.getSolution = function () {
     var evaluation = (this.model.isMinimization === true) ?
         this.evaluation : -this.evaluation;
 
-    return new Solution(this, evaluation, this.feasible, this.bounded);
+    if (this.model.getNumberOfIntegerVariables() > 0) {
+        return new MilpSolution(this, evaluation, this.feasible, this.bounded, this.branchAndCutIterations);
+    } else {
+        return new Solution(this, evaluation, this.feasible, this.bounded);
+    }
 };

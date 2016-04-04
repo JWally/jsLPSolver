@@ -17,8 +17,8 @@ describe("Testing Model Relaxation", function () {
 		//-------------------------------------------
 		var model1 = new Model(1e-8, "model 1").maximize();
 
-		var x1 = model1.addVariable(3, "x1");
-		var x2 = model1.addVariable(5, "x2");
+		var x1 = model1.addVariable(3, "x1", false, false, 1);
+		var x2 = model1.addVariable(5, "x2", false, false, 1);
 
 		var cst11 = model1.equal(8).addTerm(1, x1).addTerm(1, x2);
 		var cst12 = model1.equal(18).addTerm(3, x1).addTerm(2, x2);
@@ -39,17 +39,17 @@ describe("Testing Model Relaxation", function () {
 		var weight12 = 2;
 		var weight13 = 5;
 		var weight14 = 2;
-		cst11.relax(weight11);
-		cst12.relax(weight12);
-		cst13.relax(weight13);
-		cst14.relax(weight14);
+		cst11.relax(weight11, 1);
+		cst12.relax(weight12, 1);
+		cst13.relax(weight13, 1);
+		cst14.relax(weight14, 1);
 
 		//-------------------------------------------
 		// SOLVING RELAXED MODEL
 		//-------------------------------------------
 		var solution2 = model1.solve();
 		assert.deepEqual(solution2.feasible, true);
-		assert.deepEqual(solution2.evaluation, 24.8);
+		assert.deepEqual(solution2.evaluation, 0);
 		assert.deepEqual(x1.value, 1.6);
 		assert.deepEqual(x2.value, 6);
 		assert.deepEqual(cst11.relaxation.value, 0.4);

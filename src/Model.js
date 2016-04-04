@@ -6,7 +6,7 @@
 /*global process*/
 
 var Tableau = require("./Tableau/Tableau.js");
-var MILP = require("./MILP.js");
+var branchAndCut = require("./Tableau/branchAndCut.js");
 var expressions = require("./expressions.js");
 var Constraint = expressions.Constraint;
 var Equality = expressions.Equality;
@@ -39,6 +39,10 @@ function Model(precision, name) {
 
     this.tableauInitialized = false;
     this.relaxationIndex = 1;
+
+    this.useMIRCuts = true;
+
+    this.checkForCycles = false;
 }
 module.exports = Model;
 
@@ -358,6 +362,14 @@ Model.prototype.save = function () {
 
 Model.prototype.restore = function () {
     return this.tableau.restore();
+};
+
+Model.prototype.activateMIRCuts = function (useMIRCuts) {
+    this.useMIRCuts = useMIRCuts;
+};
+
+Model.prototype.debug = function (debugCheckForCycles) {
+    this.checkForCycles = debugCheckForCycles;
 };
 
 Model.prototype.log = function (message) {

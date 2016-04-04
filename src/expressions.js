@@ -33,8 +33,12 @@ function Term(variable, coefficient) {
 }
 
 function createRelaxationVariable(model, weight, priority) {
-    weight = weight || 0;
-    priority = priority || 0;
+    if (priority === 0 || priority === "required") {
+        return null;
+    }
+
+    weight = weight || 1;
+    priority = priority || 1;
 
     if (model.isMinimization === false) {
         weight = -weight;
@@ -133,11 +137,16 @@ Constraint.prototype.relax = function (weight, priority) {
     this._relax(this.relaxation);
 };
 
-Constraint.prototype._relax = function (error) {
+Constraint.prototype._relax = function (relaxationVariable) {
+    if (relaxationVariable === null) {
+        // Relaxation variable not created, priority was probably "required"
+        return;
+    }
+
     if (this.isUpperBound) {
-        this.setVariableCoefficient(-1, error);
+        this.setVariableCoefficient(-1, relaxationVariable);
     } else {
-        this.setVariableCoefficient(1, error);
+        this.setVariableCoefficient(1, relaxationVariable);
     }
 };
 
