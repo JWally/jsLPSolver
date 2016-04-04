@@ -144,13 +144,13 @@ Tableau.prototype.phase2 = function () {
         }
 
         var enteringColumn = 0;
-        var enteringValue = this.precision;
+        var enteringValue = precision;
         var isReducedCostNegative = false;
         for (var c = 1; c <= lastColumn; c++) {
             reducedCost = costRow[c];
             unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
 
-            if (nOptionalObjectives > 0 && -this.precision < reducedCost && reducedCost < this.precision) {
+            if (nOptionalObjectives > 0 && -precision < reducedCost && reducedCost < precision) {
                 optionalCostsColumns.push(c);
                 continue;
             }
@@ -178,8 +178,7 @@ Tableau.prototype.phase2 = function () {
                 var optionalCostsColumns2 = [];
                 var reducedCosts = this.optionalObjectives[o].reducedCosts;
 
-                // enteringValue = this.precision;
-                enteringValue = 0;
+                enteringValue = precision;
 
                 for (var i = 0; i < optionalCostsColumns.length; i++) {
                     c = optionalCostsColumns[i];
@@ -187,7 +186,7 @@ Tableau.prototype.phase2 = function () {
                     reducedCost = reducedCosts[c];
                     unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
 
-                    if (-this.precision < reducedCost && reducedCost < this.precision) {
+                    if (-precision < reducedCost && reducedCost < precision) {
                         optionalCostsColumns2.push(c);
                         continue;
                     }
