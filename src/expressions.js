@@ -182,7 +182,9 @@ Equality.prototype.setRightHandSide = function (rhs) {
 
 Equality.prototype.relax = function (weight, priority) {
     this.relaxation = createRelaxationVariable(this.model, weight, priority);
+    this.upperBound.relaxation = this.relaxation;
     this.upperBound._relax(this.relaxation);
+    this.lowerBound.relaxation = this.relaxation;
     this.lowerBound._relax(this.relaxation);
 };
 
