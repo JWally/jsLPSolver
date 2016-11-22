@@ -16,14 +16,14 @@
   "main": "./src/solver",
   "devDependencies": {
     "benchmark": "*",
+    "mocha": "3.1.2",
     "grunt": "*",
     "grunt-browserify": "^4.0.1",
     "grunt-contrib-jshint": "~0.9",
     "grunt-contrib-uglify": "*",
     "grunt-jsbeautifier": "*",
     "grunt-mocha-test": "*",
-    "walk": "*",
-    "fs": "*"
+    "walk": "*"
   },
   "keywords": [
     "Linear",
