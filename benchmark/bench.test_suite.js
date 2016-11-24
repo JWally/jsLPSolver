@@ -5,9 +5,35 @@
 /*global process*/
 
 
-var problems = require("../test/problems.json"),
-    fs = require("fs"),
-    solver = require("../src/solver");
+
+var walk = require("walk");
+var fs = require("fs");
+var solver = require("../src/solver");
+
+var problems = [];
+
+// Parsing test problems
+var walker = walk.walkSync("../test/problems", {
+    followLinks: false,
+    listeners: {
+        file: function (root, fileStats) {
+            // Add this file to the list of files
+            var fileName = fileStats.name;
+            console.log("fileName", fileName);
+
+            // Ignore files that start with a "."
+            if (fileName[0] === ".") {
+                return;
+            }
+
+            var fileRoot = root.substr("test/problems".length + 1);
+            var fullFilePath = "./" + root + "/" + fileName;
+            var jsonContent = JSON.parse(fs.readFileSync(fullFilePath));
+            problems.push(jsonContent);
+        }
+    }
+});
+
 
 
 console.log("------------------------");
