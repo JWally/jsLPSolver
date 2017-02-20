@@ -20,8 +20,9 @@ var Term = expressions.Term;
  * Class: Model
  * Description: Holds the model of a linear optimisation problem
  **************************************************************/
-function Model(precision, name) {
-    this.tableau = new Tableau(precision);
+function Model(optcr, precision, name) {
+
+    this.tableau = new Tableau(optcr, precision);
 
     this.name = name;
 
@@ -932,8 +933,14 @@ var MilpSolution = require("./MilpSolution.js");
  *                   do we want to define an integer, given
  *                   that 20.000000000000001 is not an integer.
  *                   (defaults to 1e-8)
+ *        optcr:     The solver will stop the solution process 
+ *                   when the proportional difference between 
+ *                   the solution found and the best theoretical 
+ *                   objective function is guaranteed to be 
+ *                   smaller than optcr. 
+ *                   (defaults to 0.1)
  **************************************************************/
-function Tableau(precision) {
+function Tableau(optcr, precision) {
     this.model = null;
 
     this.matrix = null;
@@ -949,12 +956,15 @@ function Tableau(precision) {
     // Solution attributes
     this.feasible = true; // until proven guilty
     this.evaluation = 0;
+    this.simplexIters = 0;
 
     this.varIndexByRow = null;
     this.varIndexByCol = null;
 
     this.rowByVarIndex = null;
     this.colByVarIndex = null;
+
+    this.optcr = optcr || 0.1;
 
     this.precision = precision || 1e-8;
 
@@ -977,10 +987,9 @@ function Tableau(precision) {
 module.exports = Tableau;
 
 Tableau.prototype.solve = function () {
+    this.simplex();
     if (this.model.getNumberOfIntegerVariables() > 0) {
         this.branchAndCut();
-    } else {
-        this.simplex();
     }
     this.updateVariableValues();
     return this.getSolution();
@@ -1154,8 +1163,13 @@ Tableau.prototype.setEvaluation = function () {
     // Rounding objective value
     var roundingCoeff = Math.round(1 / this.precision);
     var evaluation = this.matrix[this.costRowIndex][this.rhsColumn];
-    this.evaluation =
+    var roundedEvaluation =
         Math.round(evaluation * roundingCoeff) / roundingCoeff;
+
+    this.evaluation = roundedEvaluation;
+    if (this.simplexIters === 0) {
+        this.relaxedSolution = roundedEvaluation;
+    }
 };
 
 //-------------------------------------------------------------------
@@ -1357,7 +1371,9 @@ Tableau.prototype.applyCuts = function (branchingCuts){
 Tableau.prototype.branchAndCut = function () {
     var branches = [];
     var iterations = 0;
-
+    var optcr = this.optcr;
+    var relaxedSolution = this.relaxedSolution * (1 - (optcr/100));
+    
     // This is the default result
     // If nothing is both *integral* and *feasible*
     var bestEvaluation = Infinity;
@@ -1374,9 +1390,10 @@ Tableau.prototype.branchAndCut = function () {
     branches.push(branch);
 
     // If all branches have been exhausted terminate the loop
-    while (branches.length > 0) {
+    while (branches.length > 0 && bestEvaluation === Infinity || bestEvaluation > relaxedSolution) {
         // Get a model from the queue
         branch = branches.pop();
+
         if (branch.relaxedEvaluation > bestEvaluation) {
             continue;
         }
@@ -1394,6 +1411,7 @@ Tableau.prototype.branchAndCut = function () {
         }
 
         var evaluation = this.evaluation;
+
         if (evaluation > bestEvaluation) {
             // This branch does not contain the optimal solution
             continue;
@@ -2583,6 +2601,7 @@ Tableau.prototype.phase2 = function () {
         // If no entering column could be found we're done with phase 2.
         if (enteringColumn === 0) {
             this.setEvaluation();
+            this.simplexIters += 1;
             return iterations;
         }
 
@@ -3022,9 +3041,7 @@ Equality.prototype.setRightHandSide = function (rhs) {
 
 Equality.prototype.relax = function (weight, priority) {
     this.relaxation = createRelaxationVariable(this.model, weight, priority);
-    this.upperBound.relaxation = this.relaxation;
     this.upperBound._relax(this.relaxation);
-    this.lowerBound.relaxation = this.relaxation;
     this.lowerBound._relax(this.relaxation);
 };
 
@@ -3095,7 +3112,7 @@ var Solver = function () {
      *                  it will run the model through all validation
      *                  functions in the *Validate* module
      **************************************************************/
-    this.Solve = function (model, precision, full, validate) {
+    this.Solve = function (model, optcr, precision, full, validate) {
         // Run our validations on the model
         // if the model doesn't have a validate
         // attribute set to false
@@ -3111,7 +3128,7 @@ var Solver = function () {
         }
 
         if (model instanceof Model === false) {
-            model = new Model(precision).loadJson(model);
+            model = new Model(optcr, precision).loadJson(model);
         }
 
         var solution = model.solve();
