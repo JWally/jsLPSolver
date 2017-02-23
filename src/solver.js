@@ -20,9 +20,9 @@ var Term = expressions.Term;
  * Class: Model
  * Description: Holds the model of a linear optimisation problem
  **************************************************************/
-function Model(optcr, precision, name) {
+function Model(tolerance, precision, name) {
 
-    this.tableau = new Tableau(optcr, precision);
+    this.tableau = new Tableau(tolerance, precision);
 
     this.name = name;
 
@@ -933,14 +933,14 @@ var MilpSolution = require("./MilpSolution.js");
  *                   do we want to define an integer, given
  *                   that 20.000000000000001 is not an integer.
  *                   (defaults to 1e-8)
- *        optcr:     The solver will stop the solution process 
+ *        tolerance:     The solver will stop the solution process 
  *                   when the proportional difference between 
  *                   the solution found and the best theoretical 
  *                   objective function is guaranteed to be 
- *                   smaller than optcr. 
+ *                   smaller than tolerance. 
  *                   (defaults to 0.1)
  **************************************************************/
-function Tableau(optcr, precision) {
+function Tableau(tolerance, precision) {
     this.model = null;
 
     this.matrix = null;
@@ -964,7 +964,7 @@ function Tableau(optcr, precision) {
     this.rowByVarIndex = null;
     this.colByVarIndex = null;
 
-    this.optcr = optcr || 0.1;
+    this.tolerance = tolerance || 0;
 
     this.precision = precision || 1e-8;
 
@@ -1371,8 +1371,8 @@ Tableau.prototype.applyCuts = function (branchingCuts){
 Tableau.prototype.branchAndCut = function () {
     var branches = [];
     var iterations = 0;
-    var optcr = this.optcr;
-    var relaxedSolution = this.relaxedSolution * (1 - (optcr/100));
+    var tolerance = this.tolerance;
+    var acceptableThreshold = this.relaxedSolution * (1 - (tolerance/100));
     
     // This is the default result
     // If nothing is both *integral* and *feasible*
@@ -1390,7 +1390,7 @@ Tableau.prototype.branchAndCut = function () {
     branches.push(branch);
 
     // If all branches have been exhausted terminate the loop
-    while (branches.length > 0 && bestEvaluation === Infinity || bestEvaluation > relaxedSolution) {
+    while (branches.length > 0 && bestEvaluation === Infinity || bestEvaluation > acceptableThreshold) {
         // Get a model from the queue
         branch = branches.pop();
 
@@ -3112,7 +3112,7 @@ var Solver = function () {
      *                  it will run the model through all validation
      *                  functions in the *Validate* module
      **************************************************************/
-    this.Solve = function (model, optcr, precision, full, validate) {
+    this.Solve = function (model, tolerance, precision, full, validate) {
         // Run our validations on the model
         // if the model doesn't have a validate
         // attribute set to false
@@ -3128,7 +3128,7 @@ var Solver = function () {
         }
 
         if (model instanceof Model === false) {
-            model = new Model(optcr, precision).loadJson(model);
+            model = new Model(tolerance, precision).loadJson(model);
         }
 
         var solution = model.solve();
