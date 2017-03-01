@@ -13597,7 +13597,7 @@ var model = {
 }
 
 
-var results = solver.solveNEOS(model, 0, $("#status")).then(function (result) {
+var results = solver.solveNEOS(model, 0, $("#status"), 'email@test.edu').then(function (result) {
 		NEOSresults(result);
     }, function(error) {
     	NEOSresults(error)
