@@ -337,7 +337,7 @@ __How to use it__
 As the ```solver.solveNEOS``` method makes an AJAX call to the NEOS servers, we have to wait for the results. The function is therefore (partially) promise based an can be used as follows:
 
 ```javascript
-var results = solver.solveNEOS(model, optcr, status, email).then(function(result) {
+var results = solver.solveNEOS(model, optcr, status, email).then(function(response) {
     console.log("Success!", response);
 }, function(error) {
     console.error("Failed!", error);
