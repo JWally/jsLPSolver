@@ -2,6 +2,7 @@
     "name": "Fruchtfolge",
     "optimize": "Deckungsbeitrag",
     "opType": "max",
+    "tolerance": 0.5,
     "constraints": {
         "feld0": {
             "max": 1

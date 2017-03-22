@@ -65,6 +65,8 @@ Tableau.prototype.applyCuts = function (branchingCuts){
 Tableau.prototype.branchAndCut = function () {
     var branches = [];
     var iterations = 0;
+    var tolerance = this.model.tolerance;
+    var acceptableThreshold = this.relaxedSolution * (1 - (tolerance/100));
 
     // This is the default result
     // If nothing is both *integral* and *feasible*

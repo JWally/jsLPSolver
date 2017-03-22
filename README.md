@@ -133,6 +133,22 @@ Below are the results from my home made suite of variable sized LP(s)
   monster_II: { constraints: 842, variables: 924, ints: 112, time: 0.649073406 } }
 ```
 
+What if my Mixed-Integer Problem takes too long to Solve?
+----------------------
+
+For large scale integer problems the solving process can take increasingly long. However, oftentimes the solution to these problems does not have to be the absolute best possible solution, but rather a solution relatively close to the optimal one. 
+In these cases, a variable called ```tolerance``` can be specified in the model object. The value assigned to the ```tolerance``` variable states that the solver should stop the solution process when the proportional difference between the solution found and the best theoretical objective value is guaranteed to be smaller than the given termination tolerance.
+
+```javascript
+   model = {
+        "optimize": "profit",
+        "opType": "max",
+        "tolerance": 0.5,
+        ...
+        }
+```
+
+
 Alternative Model Formats
 -----------
 

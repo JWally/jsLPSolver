@@ -20,9 +20,9 @@ var Term = expressions.Term;
  * Class: Model
  * Description: Holds the model of a linear optimisation problem
  **************************************************************/
-function Model(tolerance, precision, name) {
+function Model(precision, name) {
 
-    this.tableau = new Tableau(tolerance, precision);
+    this.tableau = new Tableau(precision);
 
     this.name = name;
 
@@ -293,6 +293,8 @@ Model.prototype.loadJson = function (jsonModel) {
 
     var variableIds = Object.keys(variables);
     var nVariables = variableIds.length;
+
+    this.tolerance = jsonModel.tolerance || 0;
 
     var integerVarIds = jsonModel.ints || {};
     var binaryVarIds = jsonModel.binaries || {};
@@ -933,14 +935,8 @@ var MilpSolution = require("./MilpSolution.js");
  *                   do we want to define an integer, given
  *                   that 20.000000000000001 is not an integer.
  *                   (defaults to 1e-8)
- *        tolerance:     The solver will stop the solution process 
- *                   when the proportional difference between 
- *                   the solution found and the best theoretical 
- *                   objective function is guaranteed to be 
- *                   smaller than tolerance. 
- *                   (defaults to 0.1)
  **************************************************************/
-function Tableau(tolerance, precision) {
+function Tableau(precision) {
     this.model = null;
 
     this.matrix = null;
@@ -963,8 +959,6 @@ function Tableau(tolerance, precision) {
 
     this.rowByVarIndex = null;
     this.colByVarIndex = null;
-
-    this.tolerance = tolerance || 0;
 
     this.precision = precision || 1e-8;
 
@@ -1371,7 +1365,7 @@ Tableau.prototype.applyCuts = function (branchingCuts){
 Tableau.prototype.branchAndCut = function () {
     var branches = [];
     var iterations = 0;
-    var tolerance = this.tolerance;
+    var tolerance = this.model.tolerance;
     var acceptableThreshold = this.relaxedSolution * (1 - (tolerance/100));
     
     // This is the default result
@@ -1388,12 +1382,10 @@ Tableau.prototype.branchAndCut = function () {
     // 1.) Load a model into the queue
     var branch = new Branch(-Infinity, []);
     branches.push(branch);
-
     // If all branches have been exhausted terminate the loop
-    while (branches.length > 0 && bestEvaluation === Infinity || bestEvaluation > acceptableThreshold) {
+    while (branches.length > 0 && (bestEvaluation === Infinity || bestEvaluation > acceptableThreshold)) {
         // Get a model from the queue
         branch = branches.pop();
-
         if (branch.relaxedEvaluation > bestEvaluation) {
             continue;
         }
@@ -3112,7 +3104,7 @@ var Solver = function () {
      *                  it will run the model through all validation
      *                  functions in the *Validate* module
      **************************************************************/
-    this.Solve = function (model, tolerance, precision, full, validate) {
+    this.Solve = function (model, precision, full, validate) {
         // Run our validations on the model
         // if the model doesn't have a validate
         // attribute set to false
@@ -3128,7 +3120,7 @@ var Solver = function () {
         }
 
         if (model instanceof Model === false) {
-            model = new Model(tolerance, precision).loadJson(model);
+            model = new Model(precision).loadJson(model);
         }
 
         var solution = model.solve();
