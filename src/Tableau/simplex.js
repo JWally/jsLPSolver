@@ -215,6 +215,7 @@ Tableau.prototype.phase2 = function () {
         // If no entering column could be found we're done with phase 2.
         if (enteringColumn === 0) {
             this.setEvaluation();
+            this.simplexIters += 1;
             return iterations;
         }
 

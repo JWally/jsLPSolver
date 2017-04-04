@@ -1366,7 +1366,7 @@ Tableau.prototype.branchAndCut = function () {
     var branches = [];
     var iterations = 0;
     var tolerance = this.model.tolerance;
-    var acceptableThreshold = this.relaxedSolution * (1 - (tolerance/100));
+    var toleranceFlag = true;
     
     // This is the default result
     // If nothing is both *integral* and *feasible*
@@ -1383,7 +1383,15 @@ Tableau.prototype.branchAndCut = function () {
     var branch = new Branch(-Infinity, []);
     branches.push(branch);
     // If all branches have been exhausted terminate the loop
-    while (branches.length > 0 && (bestEvaluation === Infinity || bestEvaluation > acceptableThreshold)) {
+    while (branches.length > 0 && toleranceFlag === true) {
+        var acceptableThreshold = this.relaxedSolution * (1 - (tolerance/100));
+        // Abort while loop if termination tolerance is both specified and condition is met
+        if (tolerance > 0) {
+            if (bestEvaluation < acceptableThreshold) {
+                toleranceFlag = false;
+            }
+        }
+
         // Get a model from the queue
         branch = branches.pop();
         if (branch.relaxedEvaluation > bestEvaluation) {
