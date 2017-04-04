@@ -245,7 +245,7 @@ Tableau.prototype.setEvaluation = function () {
 
     this.evaluation = roundedEvaluation;
     if (this.simplexIters === 0) {
-        this.relaxedSolution = roundedEvaluation;
+        this.bestPossibleEval = roundedEvaluation;
     }
 };
 

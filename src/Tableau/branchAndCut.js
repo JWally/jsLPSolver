@@ -84,7 +84,7 @@ Tableau.prototype.branchAndCut = function () {
     branches.push(branch);
     // If all branches have been exhausted terminate the loop
     while (branches.length > 0 && toleranceFlag === true) {
-        var acceptableThreshold = this.relaxedSolution * (1 - (tolerance/100));
+        var acceptableThreshold = this.bestPossibleEval * (1 - (tolerance/100));
         // Abort while loop if termination tolerance is both specified and condition is met
         if (tolerance > 0) {
             if (bestEvaluation < acceptableThreshold) {
