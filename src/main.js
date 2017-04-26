@@ -158,12 +158,4 @@ var Solver = function () {
     };
 };
 
-// Determine the environment we're in.
-// if we're in node, offer a friendly exports
-// otherwise, Solver's going global
-/* jshint ignore:start */
-
 module.exports = new Solver();
-
-
-/* jshint ignore:end */

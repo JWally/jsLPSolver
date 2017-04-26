@@ -3199,24 +3199,6 @@ var Solver = function () {
     };
 };
 
-// Determine the environment we're in.
-// if we're in node, offer a friendly exports
-// otherwise, Solver's going global
-/* jshint ignore:start */
-
-(function(){
-    // If define exists; use it
-    if (typeof define === "function") {
-        define([], function () {
-            return new Solver();
-        });
-    } else if(typeof window === "object"){
-        window.solver = new Solver();
-    } else {
-        module.exports =  new Solver();
-    }
-})()
-
-/* jshint ignore:end */
+module.exports = new Solver();
 
 },{"./Model":1,"./Polyopt":2,"./Reformat":3,"./Tableau/branchAndCut":8,"./Tableau/index.js":12,"./Validation":16,"./expressions.js":17}]},{},[18]);
