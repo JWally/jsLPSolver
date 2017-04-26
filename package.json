@@ -14,7 +14,7 @@
     "type": "git",
     "url": "https://github.com/JWally/jsLPSolver"
   },
-  "main": "./src/solver",
+  "main": "./src/main",
   "devDependencies": {
     "benchmark": "*",
     "mocha": "3.1.2",
