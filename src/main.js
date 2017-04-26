@@ -163,17 +163,7 @@ var Solver = function () {
 // otherwise, Solver's going global
 /* jshint ignore:start */
 
-(function(){
-    // If define exists; use it
-    if (typeof define === "function") {
-        define([], function () {
-            return new Solver();
-        });
-    } else if(typeof window === "object"){
-        window.solver = new Solver();
-    } else {
-        module.exports =  new Solver();
-    }
-})()
+module.exports = new Solver();
+
 
 /* jshint ignore:end */
