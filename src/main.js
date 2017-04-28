@@ -158,4 +158,8 @@ var Solver = function () {
     };
 };
 
+if (typeof window === "object") {
+    window.solver = new Solver();
+}
+
 module.exports = new Solver();

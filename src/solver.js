@@ -3199,6 +3199,10 @@ var Solver = function () {
     };
 };
 
+if (typeof window === "object") {
+    window.solver = new Solver();
+}
+
 module.exports = new Solver();
 
 },{"./Model":1,"./Polyopt":2,"./Reformat":3,"./Tableau/branchAndCut":8,"./Tableau/index.js":12,"./Validation":16,"./expressions.js":17}]},{},[18]);
