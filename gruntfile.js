@@ -10,7 +10,8 @@ module.exports = function(grunt){
                 "indent": 4,
                 "noempty": true,
                 "quotmark": "double",
-                "undef": true
+                "undef": true,
+                "globals": {"define": true, "window" :true}
             }
         },
         "mochaTest": {
