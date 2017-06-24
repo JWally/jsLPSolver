@@ -1375,6 +1375,7 @@ Tableau.prototype.branchAndCut = function () {
 
     // If all branches have been exhausted terminate the loop
     while (branches.length > 0) {
+
         // Get a model from the queue
         branch = branches.pop();
         if (branch.relaxedEvaluation > bestEvaluation) {
@@ -1727,7 +1728,7 @@ Tableau.prototype._addUpperBoundMIRCut = function(rowIndex) {
     }
 
 	var b = matrix[rowIndex][this.rhsColumn];
-	var f = b - Math.floor(b);
+	var f = b - Math.ceil(b);
 
 	if (f < this.precision || 1 - this.precision < f) {
 		return false;
@@ -1773,14 +1774,8 @@ Tableau.prototype._addUpperBoundMIRCut = function(rowIndex) {
 };
 
 Tableau.prototype.applyMIRCuts = function () {
-
     var nRows = this.height;
     for (var cst = 0; cst < nRows; cst += 1) {
-        this._addUpperBoundMIRCut(cst);
-    }
-
-    // nRows = tableau.height;
-    for (cst = 0; cst < nRows; cst += 1) {
         this._addLowerBoundMIRCut(cst);
     }
 };
@@ -2414,6 +2409,7 @@ Tableau.prototype.phase1 = function () {
 
     var unrestricted;
     var iterations = 0;
+
     while (true) {
         // Selecting leaving variable (feasibility condition):
         // Basic variable with most negative value
@@ -2503,6 +2499,7 @@ Tableau.prototype.phase2 = function () {
 
     var iterations = 0;
     var reducedCost, unrestricted;
+
     while (true) {
         var costRow = matrix[this.costRowIndex];
 
@@ -3199,13 +3196,16 @@ var Solver = function () {
     };
 };
 
+var define = define || undefined;
+var window = window || undefined;
+
 // If the project is loading through require.js, use `define` and exit
 if (typeof define === "function") {
     define([], function () {
         return new Solver();
     });
 // If the project doesn't see define, but sees window, put solver on window
-} else if(typeof window === "object"){
+} else if (typeof window === "object"){
     window.solver = new Solver();
 }
 // Ensure that its available in node.js env

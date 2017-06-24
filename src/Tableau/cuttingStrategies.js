@@ -132,7 +132,7 @@ Tableau.prototype._addUpperBoundMIRCut = function(rowIndex) {
     }
 
 	var b = matrix[rowIndex][this.rhsColumn];
-	var f = b - Math.floor(b);
+	var f = b - Math.ceil(b);
 
 	if (f < this.precision || 1 - this.precision < f) {
 		return false;
@@ -178,14 +178,8 @@ Tableau.prototype._addUpperBoundMIRCut = function(rowIndex) {
 };
 
 Tableau.prototype.applyMIRCuts = function () {
-
     var nRows = this.height;
     for (var cst = 0; cst < nRows; cst += 1) {
-        this._addUpperBoundMIRCut(cst);
-    }
-
-    // nRows = tableau.height;
-    for (cst = 0; cst < nRows; cst += 1) {
         this._addLowerBoundMIRCut(cst);
     }
 };

@@ -158,13 +158,16 @@ var Solver = function () {
     };
 };
 
+var define = define || undefined;
+var window = window || undefined;
+
 // If the project is loading through require.js, use `define` and exit
 if (typeof define === "function") {
     define([], function () {
         return new Solver();
     });
 // If the project doesn't see define, but sees window, put solver on window
-} else if(typeof window === "object"){
+} else if (typeof window === "object"){
     window.solver = new Solver();
 }
 // Ensure that its available in node.js env

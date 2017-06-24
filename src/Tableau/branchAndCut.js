@@ -83,6 +83,7 @@ Tableau.prototype.branchAndCut = function () {
 
     // If all branches have been exhausted terminate the loop
     while (branches.length > 0) {
+
         // Get a model from the queue
         branch = branches.pop();
         if (branch.relaxedEvaluation > bestEvaluation) {
