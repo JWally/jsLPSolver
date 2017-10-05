@@ -3,7 +3,8 @@ jsLPSolver
 [A linear programming solver for the rest of us!](https://youtu.be/LbfMmCf5-ds?t=51)
 
 
-##What Can I do with it?
+## What Can I do with it?
+
 You can solve problems that fit the following fact pattern like this one
 from [this](http://math.stackexchange.com/questions/59429/berlin-airlift-linear-optimization-problem) site.
 
