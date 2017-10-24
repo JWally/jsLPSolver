@@ -154,10 +154,10 @@ The tableau "style-guide" I used to parse LPs came from [LP_Solve](http://lpsolv
   fs.readFile("./your/model/file", "utf8", function(e,d){
       // Convert the File Data to a JSON Model
       model = solver.ReformatLP(d);
+      
+      // Solve the LP
+      console.log(solver.Solve(model));
   });
-
-  // Solve the LP
-  console.log(solver.Solve(model));
 ```
 
 * Get LP From Arrays *
