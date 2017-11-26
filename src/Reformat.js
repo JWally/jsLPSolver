@@ -28,12 +28,14 @@ function to_JSON(input){
         //"is_int": /^\W{0,}int/i,
         //new version to avoid comments
         "is_int": /^(?!\/\*)\W{0,}int/i,
+        "is_bin": /^(?!\/\*)\W{0,}bin/i,
         "is_constraint": /(\>|\<){0,}\=/i,
         "is_unrestricted": /^\S{0,}unrestricted/i,
         "parse_lhs":  /(\-|\+){0,1}\s{0,1}\d{0,}\.{0,}\d{0,}\s{0,}[A-Za-z]\S{0,}/gi,
         "parse_rhs": /(\-|\+){0,1}\d{1,}\.{0,}\d{0,}\W{0,}\;{0,1}$/i,
         "parse_dir": /(\>|\<){0,}\=/gi,
         "parse_int": /[^\s|^\,]+/gi,
+        "parse_bin": /[^\s|^\,]+/gi,
         "get_num": /(\-|\+){0,1}(\W|^)\d+\.{0,1}\d{0,}/g, // Why accepting character \W before the first digit?
         "get_word": /[A-Za-z].*/
         /* jshint ignore:end */
@@ -127,6 +129,18 @@ function to_JSON(input){
             ary.forEach(function(d){
                 d = d.replace(";","");
                 model.ints[d] = 1;
+            });
+        ////////////////////////////////////
+        } else if(rxo.is_bin.test(tmp)){
+            // Get the array of bins
+            ary = tmp.match(rxo.parse_bin).slice(1);
+
+            // Since we have an binary, our model should too
+            model.binaries = model.binaries || {};
+
+            ary.forEach(function(d){
+                d = d.replace(";","");
+                model.binaries[d] = 1;
             });
         ////////////////////////////////////
         } else if(rxo.is_constraint.test(tmp)){
