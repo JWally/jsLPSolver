@@ -46,6 +46,7 @@ Tableau.prototype.phase1 = function () {
 
     var unrestricted;
     var iterations = 0;
+
     while (true) {
         // Selecting leaving variable (feasibility condition):
         // Basic variable with most negative value
@@ -135,6 +136,7 @@ Tableau.prototype.phase2 = function () {
 
     var iterations = 0;
     var reducedCost, unrestricted;
+
     while (true) {
         var costRow = matrix[this.costRowIndex];
 
