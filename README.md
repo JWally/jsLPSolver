@@ -63,6 +63,15 @@ which should yield the following:
 ```
 {feasible: true, brit: 24, yank: 20, result: 1080000}
 ```
+
+__Reading the Results__
+
+`feasible`: Whether the solver was able to fulfill all the constraints.
+
+`result`: The value of your optimization variable.
+
+`brit`, `yank`,...: The values of the variables. Note, that variables with the value `0` are not explicitly contained in the result.
+
 What If I Want Only Integers
 --------------------
 
