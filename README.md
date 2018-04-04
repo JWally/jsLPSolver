@@ -77,8 +77,8 @@ Say you live in the real world and partial results aren't realistic, too messy, 
 > gross profit of $1,200. A dresser uses 20sf of wood, 10 hours of work to put
 > together, requires 50 square feet to store and has a gross profit of $1,600.
 >
-> How much of each do you product to maximize profit, given that partial furniture
-> isn't allowed in this dumb word problem?
+> How much of each do you produce to maximize profit, given that partial furniture
+> aren't allowed in this dumb world problem?
 
 ```javascript
 var solver = require("./src/solver"),
@@ -91,10 +91,10 @@ var solver = require("./src/solver"),
             "storage": {"max": 400}
         },
         "variables": {
-            "table": {"wood": 30,"labor": 5,"profit": 1200,"table": 1, "storage": 30},
-            "dresser": {"wood": 20,"labor": 10,"profit": 1600,"dresser": 1, "storage": 50}
+            "table": {"wood": 30, "labor": 5, "profit": 1200, "table": 1, "storage": 30},
+            "dresser": {"wood": 20, "labor": 10, "profit": 1600, "dresser": 1, "storage": 50}
         },
-        "ints": {"table": 1,"dresser": 1}
+        "ints": {"table": 1, "dresser": 1}
     }
     
 console.log(solver.Solve(model));
@@ -197,10 +197,10 @@ You can also exports JSON models to an [LP_Solve](http://lpsolve.sourceforge.net
             "storage": {"max": 400}
         },
         "variables": {
-            "table": {"wood": 30,"labor": 5,"profit": 1200,"table": 1, "storage": 30},
-            "dresser": {"wood": 20,"labor": 10,"profit": 1600,"dresser": 1, "storage": 50}
+            "table": {"wood": 30, "labor": 5, "profit": 1200, "table": 1, "storage": 30},
+            "dresser": {"wood": 20, "labor": 10, "profit": 1600, "dresser": 1, "storage": 50}
         },
-        "ints": {"table": 1,"dresser": 1}
+        "ints": {"table": 1, "dresser": 1}
     };
     
     // convert the model to a string
