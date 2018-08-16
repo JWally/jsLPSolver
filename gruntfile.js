@@ -17,11 +17,11 @@ module.exports = function(grunt){
         "mochaTest": {
             "test": {
                 "options": {
-                    "reporter": "json",
+                    // "reporter": "json",
                     "quite": "true",
                     "captureFile": "test_results.txt"
                 },
-                "src": ["test/*.js"]
+                "src": ["test/solver.problems.js"]
             }
         },
         "browserify": {
