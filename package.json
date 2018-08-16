@@ -17,10 +17,10 @@
   "main": "./src/main",
   "devDependencies": {
     "benchmark": "*",
-    "mocha": "3.1.2",
+    "mocha": "*",
     "grunt": "*",
-    "grunt-browserify": "^4.0.1",
-    "grunt-contrib-jshint": "~0.9",
+    "grunt-browserify": "*",
+    "grunt-contrib-jshint": "*",
     "grunt-contrib-uglify": "*",
     "grunt-jsbeautifier": "*",
     "grunt-mocha-test": "*",
@@ -38,5 +38,5 @@
     "Mixed Integer Optimization",
     "Mixed Integer Programming"
   ],
-  "license": "UNLICENSE"
+  "license": "Unlicense"
 }
