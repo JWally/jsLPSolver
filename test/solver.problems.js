@@ -2,6 +2,7 @@
 /*global require*/
 /*global it*/
 /*global console*/
+/*global process*/
 
 var assert = require("assert");
 var walk = require("walk");
@@ -9,30 +10,30 @@ var fs = require("fs");
 
 var problems = [];
 
+var path_of = process.argv[2];
+
 // Parsing test problems
-var walker = walk.walkSync("test/problems", {
+var walker = walk.walkSync("test/" +  path_of + "/", {
     followLinks: false,
     listeners: {
         file: function (root, fileStats) {
             // Add this file to the list of files
-            var fileName = fileStats.name;
+        var fileName = fileStats.name;
             console.log("fileName", fileName);
 
-            // Ignore files that start with a "."
-            if (fileName[0] === ".") {
-                return;
-            }
+        // Only Pull in JSON files
+        if (!/\.json$/.test(fileName)) {
+            return;
+        }
 
-            var fileRoot = root.substr("test/problems".length + 1);
-            var fullFilePath = "./" + root + "/" + fileName;
+        var fileRoot = root.substr(("test/" +  path_of + "/").length + 1);
+        var fullFilePath = "./" + root + "/" + fileName;
             var jsonContent = JSON.parse(fs.readFileSync(fullFilePath));
             problems.push(jsonContent);
         }
     }
 });
 
-// Kick off the second "Monster" problem
-//problems.splice(-1,1);
 
 function assertSolution(model, solutionA, solutionB) {
 

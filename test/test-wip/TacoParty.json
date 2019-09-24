@@ -1,0 +1,43 @@
+{
+    "name": "¡Taco Party!",
+    "optimize": "cost",
+    "opType": "min",
+    "constraints": {
+        "people_served": {
+          "min": 25 
+        }
+    },
+    "variables": {
+        "nachos": {
+          "nachos": 1,
+          "people_served": 21,
+          "cost": 75
+        },
+        "tacos": {
+          "tacos": 1,
+          "people_served": 26,
+          "cost": 90
+        },
+        "burritos": {
+          "burritos": 1,
+          "people_served": 31,
+          "cost": 105
+        },
+        "fajitas": {
+          "fajitas": 1,
+          "people_served": 36,
+          "cost": 120
+        }
+    },
+    "ints": {
+        "nachos": 1,
+        "tacos": 1,
+        "burritos": 1,
+        "fajitas": 1
+    },
+    "expects": {
+        "feasible": true,
+        "tacos": 1,
+        "result": 90
+    }
+}

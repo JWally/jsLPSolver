@@ -1,3 +1,14 @@
+// --------------------------------
+// PLEASE TRY RUNNING EVERYTHING THROUGH
+// HERE, NO?
+//
+// 1.) TO TEST: grunt test
+// 2.) TO TEST SPEED: grunt speed
+// 3.) TO BUILD EVERYTHING: grunt prod
+//
+// kthxbye!
+//
+
 module.exports = function(grunt){
     grunt.initConfig({
         "pkg": "package.json",
@@ -17,9 +28,8 @@ module.exports = function(grunt){
         "mochaTest": {
             "test": {
                 "options": {
-                    // "reporter": "json",
-                    "quite": "true",
-                    "captureFile": "test_results.txt"
+                    "reporter": "spec",
+                    "quite": "true"
                 },
                 "src": ["test/solver.problems.js"]
             }
@@ -41,8 +51,14 @@ module.exports = function(grunt){
     grunt.loadNpmTasks("grunt-mocha-test");
     grunt.loadNpmTasks("grunt-browserify");
     grunt.registerTask("default", ["jshint"]);
-    grunt.registerTask("test", ["jshint","mochaTest"]);
-    grunt.registerTask("speed", function(){require("./benchmark/bench.test_suite");});
-    grunt.registerTask("prod", ["jshint","mochaTest","browserify"]);
+    
+    // The args can be picked up off of process.argv[2] in
+    // the file Mocha is hitting...
+    //
+    grunt.registerTask("test-sanity", ["jshint","mochaTest"]);
+    grunt.registerTask("test-speed", ["jshint","mochaTest"]);
+    grunt.registerTask("test-wip", ["jshint","mochaTest"]);
+    
+    grunt.registerTask("prod", ["jshint","browserify"]);
 
 }
