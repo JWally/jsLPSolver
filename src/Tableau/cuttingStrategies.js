@@ -144,6 +144,7 @@ Tableau.prototype._addUpperBoundMIRCut = function(rowIndex) {
 	this.height += 1;
 
 	// Creating slack variable
+    
 	this.nVars += 1;
 	var slackVarIndex = this.getNewElementIndex();
 	this.varIndexByRow[r] = slackVarIndex;
@@ -152,6 +153,7 @@ Tableau.prototype._addUpperBoundMIRCut = function(rowIndex) {
 	this.variablesPerIndex[slackVarIndex] = new SlackVariable("s"+slackVarIndex, slackVarIndex);
 
 	matrix[r][this.rhsColumn] = -f;
+
 
 	for(var colIndex = 1; colIndex < this.varIndexByCol.length; colIndex += 1) {
 		var variable = this.variablesPerIndex[this.varIndexByCol[colIndex]];
@@ -177,15 +179,24 @@ Tableau.prototype._addUpperBoundMIRCut = function(rowIndex) {
 	return true;
 };
 
+
+//
+// THIS MAKES SOME MILP PROBLEMS PROVIDE INCORRECT
+// ANSWERS...
+//
+// QUICK FIX: MAKE THE FUNCTION EMPTY...
+//
 Tableau.prototype.applyMIRCuts = function () {
+    
+    // var nRows = this.height;
+    // for (var cst = 0; cst < nRows; cst += 1) {
+    //    this._addUpperBoundMIRCut(cst);
+    // }
 
-    var nRows = this.height;
-    for (var cst = 0; cst < nRows; cst += 1) {
-        this._addUpperBoundMIRCut(cst);
-    }
 
-    // nRows = tableau.height;
-    for (cst = 0; cst < nRows; cst += 1) {
-        this._addLowerBoundMIRCut(cst);
-    }
+    // // nRows = tableau.height;
+    // for (cst = 0; cst < nRows; cst += 1) {
+    //    this._addLowerBoundMIRCut(cst);
+    // }
+    
 };
