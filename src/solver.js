@@ -1375,6 +1375,7 @@ Tableau.prototype.branchAndCut = function () {
 
     // If all branches have been exhausted terminate the loop
     while (branches.length > 0) {
+
         // Get a model from the queue
         branch = branches.pop();
         if (branch.relaxedEvaluation > bestEvaluation) {
@@ -1711,76 +1712,9 @@ Tableau.prototype._addLowerBoundMIRCut = function(rowIndex) {
 	return true;
 };
 
-Tableau.prototype._addUpperBoundMIRCut = function(rowIndex) {
-
-	if (rowIndex === this.costRowIndex) {
-		//console.log("! IN MIR CUTS : The index of the row corresponds to the cost row. !");
-		return false;
-	}
-
-	var model = this.model;
-	var matrix = this.matrix;
-
-	var intVar = this.variablesPerIndex[this.varIndexByRow[rowIndex]];
-	if (!intVar.isInteger) {
-		return false;
-    }
-
-	var b = matrix[rowIndex][this.rhsColumn];
-	var f = b - Math.floor(b);
-
-	if (f < this.precision || 1 - this.precision < f) {
-		return false;
-    }
-
-	//Adding a row
-	var r = this.height;
-	matrix[r] = matrix[r - 1].slice();
-	this.height += 1;
-
-	// Creating slack variable
-	this.nVars += 1;
-	var slackVarIndex = this.getNewElementIndex();
-	this.varIndexByRow[r] = slackVarIndex;
-	this.rowByVarIndex[slackVarIndex] = r;
-	this.colByVarIndex[slackVarIndex] = -1;
-	this.variablesPerIndex[slackVarIndex] = new SlackVariable("s"+slackVarIndex, slackVarIndex);
-
-	matrix[r][this.rhsColumn] = -f;
-
-	for(var colIndex = 1; colIndex < this.varIndexByCol.length; colIndex += 1) {
-		var variable = this.variablesPerIndex[this.varIndexByCol[colIndex]];
-
-		var aj = matrix[rowIndex][colIndex];
-		var fj = aj - Math.floor(aj);
-
-		if(variable.isInteger) {
-			if(fj <= f) {
-				matrix[r][colIndex] = -fj;
-            } else {
-				matrix[r][colIndex] = -(1 - fj) * f / fj;
-            }
-		} else {
-			if (aj >= 0) {
-				matrix[r][colIndex] = -aj;
-            } else {
-				matrix[r][colIndex] = aj * f / (1 - f);
-            }
-		}
-	}
-
-	return true;
-};
-
 Tableau.prototype.applyMIRCuts = function () {
-
     var nRows = this.height;
     for (var cst = 0; cst < nRows; cst += 1) {
-        this._addUpperBoundMIRCut(cst);
-    }
-
-    // nRows = tableau.height;
-    for (cst = 0; cst < nRows; cst += 1) {
         this._addLowerBoundMIRCut(cst);
     }
 };
@@ -2414,6 +2348,7 @@ Tableau.prototype.phase1 = function () {
 
     var unrestricted;
     var iterations = 0;
+
     while (true) {
         // Selecting leaving variable (feasibility condition):
         // Basic variable with most negative value
@@ -2503,6 +2438,7 @@ Tableau.prototype.phase2 = function () {
 
     var iterations = 0;
     var reducedCost, unrestricted;
+
     while (true) {
         var costRow = matrix[this.costRowIndex];
 
@@ -3199,13 +3135,16 @@ var Solver = function () {
     };
 };
 
+var define = define || undefined;
+var window = window || undefined;
+
 // If the project is loading through require.js, use `define` and exit
 if (typeof define === "function") {
     define([], function () {
         return new Solver();
     });
 // If the project doesn't see define, but sees window, put solver on window
-} else if(typeof window === "object"){
+} else if (typeof window === "object"){
     window.solver = new Solver();
 }
 // Ensure that its available in node.js env

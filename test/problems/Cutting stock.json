@@ -1,0 +1,39 @@
+{
+    "name": "Cutting stock",
+    "optimize": "cost",
+    "opType": "min",
+    "constraints": {
+        "length": {
+            "min": 25
+        }
+    },
+    "variables": {
+        "21": {
+            "length": 21,
+            "cost": 75
+        },
+        "26": {
+            "length": 26,
+            "cost": 90
+        },
+        "31": {
+            "length": 31,
+            "cost": 105
+        },
+        "36": {
+            "length": 36,
+            "cost": 120
+        }
+    },
+    "ints": {
+        "21": 1,
+        "26": 1,
+        "31": 1,
+        "36": 1
+    },
+    "expects": {
+        "feasible": true,
+        "26": 1,
+        "result": 90
+    }
+}
