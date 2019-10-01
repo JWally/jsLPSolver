@@ -1,5 +1,5 @@
 (function(){if (typeof exports === "object") {module.exports =  require("./main");}})();
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -608,12 +608,14 @@ function to_JSON(input){
         //"is_int": /^\W{0,}int/i,
         //new version to avoid comments
         "is_int": /^(?!\/\*)\W{0,}int/i,
+        "is_bin": /^(?!\/\*)\W{0,}bin/i,
         "is_constraint": /(\>|\<){0,}\=/i,
         "is_unrestricted": /^\S{0,}unrestricted/i,
         "parse_lhs":  /(\-|\+){0,1}\s{0,1}\d{0,}\.{0,}\d{0,}\s{0,}[A-Za-z]\S{0,}/gi,
         "parse_rhs": /(\-|\+){0,1}\d{1,}\.{0,}\d{0,}\W{0,}\;{0,1}$/i,
         "parse_dir": /(\>|\<){0,}\=/gi,
         "parse_int": /[^\s|^\,]+/gi,
+        "parse_bin": /[^\s|^\,]+/gi,
         "get_num": /(\-|\+){0,1}(\W|^)\d+\.{0,1}\d{0,}/g, // Why accepting character \W before the first digit?
         "get_word": /[A-Za-z].*/
         /* jshint ignore:end */
@@ -707,6 +709,18 @@ function to_JSON(input){
             ary.forEach(function(d){
                 d = d.replace(";","");
                 model.ints[d] = 1;
+            });
+        ////////////////////////////////////
+        } else if(rxo.is_bin.test(tmp)){
+            // Get the array of bins
+            ary = tmp.match(rxo.parse_bin).slice(1);
+
+            // Since we have an binary, our model should too
+            model.binaries = model.binaries || {};
+
+            ary.forEach(function(d){
+                d = d.replace(";","");
+                model.binaries[d] = 1;
             });
         ////////////////////////////////////
         } else if(rxo.is_constraint.test(tmp)){
@@ -1712,11 +1726,89 @@ Tableau.prototype._addLowerBoundMIRCut = function(rowIndex) {
 	return true;
 };
 
-Tableau.prototype.applyMIRCuts = function () {
-    var nRows = this.height;
-    for (var cst = 0; cst < nRows; cst += 1) {
-        this._addLowerBoundMIRCut(cst);
+Tableau.prototype._addUpperBoundMIRCut = function(rowIndex) {
+
+	if (rowIndex === this.costRowIndex) {
+		//console.log("! IN MIR CUTS : The index of the row corresponds to the cost row. !");
+		return false;
+	}
+
+	var model = this.model;
+	var matrix = this.matrix;
+
+	var intVar = this.variablesPerIndex[this.varIndexByRow[rowIndex]];
+	if (!intVar.isInteger) {
+		return false;
     }
+
+	var b = matrix[rowIndex][this.rhsColumn];
+	var f = b - Math.floor(b);
+
+	if (f < this.precision || 1 - this.precision < f) {
+		return false;
+    }
+
+	//Adding a row
+	var r = this.height;
+	matrix[r] = matrix[r - 1].slice();
+	this.height += 1;
+
+	// Creating slack variable
+    
+	this.nVars += 1;
+	var slackVarIndex = this.getNewElementIndex();
+	this.varIndexByRow[r] = slackVarIndex;
+	this.rowByVarIndex[slackVarIndex] = r;
+	this.colByVarIndex[slackVarIndex] = -1;
+	this.variablesPerIndex[slackVarIndex] = new SlackVariable("s"+slackVarIndex, slackVarIndex);
+
+	matrix[r][this.rhsColumn] = -f;
+
+
+	for(var colIndex = 1; colIndex < this.varIndexByCol.length; colIndex += 1) {
+		var variable = this.variablesPerIndex[this.varIndexByCol[colIndex]];
+
+		var aj = matrix[rowIndex][colIndex];
+		var fj = aj - Math.floor(aj);
+
+		if(variable.isInteger) {
+			if(fj <= f) {
+				matrix[r][colIndex] = -fj;
+            } else {
+				matrix[r][colIndex] = -(1 - fj) * f / fj;
+            }
+		} else {
+			if (aj >= 0) {
+				matrix[r][colIndex] = -aj;
+            } else {
+				matrix[r][colIndex] = aj * f / (1 - f);
+            }
+		}
+	}
+
+	return true;
+};
+
+
+//
+// THIS MAKES SOME MILP PROBLEMS PROVIDE INCORRECT
+// ANSWERS...
+//
+// QUICK FIX: MAKE THE FUNCTION EMPTY...
+//
+Tableau.prototype.applyMIRCuts = function () {
+    
+    // var nRows = this.height;
+    // for (var cst = 0; cst < nRows; cst += 1) {
+    //    this._addUpperBoundMIRCut(cst);
+    // }
+
+
+    // // nRows = tableau.height;
+    // for (cst = 0; cst < nRows; cst += 1) {
+    //    this._addLowerBoundMIRCut(cst);
+    // }
+    
 };
 
 },{"../expressions.js":17,"./Tableau.js":6}],11:[function(require,module,exports){
