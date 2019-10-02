@@ -163,8 +163,8 @@ var Solver = function () {
     };
 };
 
-var define = define || undefined;
-var window = window || undefined;
+// var define = define || undefined;
+// var window = window || undefined;
 
 // If the project is loading through require.js, use `define` and exit
 if (typeof define === "function") {
