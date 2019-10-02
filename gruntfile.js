@@ -38,7 +38,8 @@ module.exports = function(grunt){
         "browserify": {
             "dist": {
                 "files": {
-                    "src/solver.js": ["./src/main.js"]
+                    "src/solver.js": ["./src/main.js"],
+                    "prod/solver.js": ["./src/main.js"]
                 },
                 "options": {
                     "banner": "(function(){if (typeof exports === \"object\") {module.exports =  require(\"./main\");}})();"

@@ -1,7 +1,7 @@
 {
   "name": "javascript-lp-solver",
   "description": "Easy to use, JSON oriented Linear Programming and Mixed Int. Programming Solver",
-  "version": "0.4.12",
+  "version": "0.4.13",
   "private": false,
   "authors": [
     "Justin W. Wolcott <justin.w.wolcott@gmail.com>"
