@@ -34,6 +34,7 @@ function Tableau(precision) {
     // Solution attributes
     this.feasible = true; // until proven guilty
     this.evaluation = 0;
+    this.simplexIters = 0;
 
     this.varIndexByRow = null;
     this.varIndexByCol = null;
@@ -239,8 +240,13 @@ Tableau.prototype.setEvaluation = function () {
     // Rounding objective value
     var roundingCoeff = Math.round(1 / this.precision);
     var evaluation = this.matrix[this.costRowIndex][this.rhsColumn];
-    this.evaluation =
+    var roundedEvaluation =
         Math.round(evaluation * roundingCoeff) / roundingCoeff;
+
+    this.evaluation = roundedEvaluation;
+    if (this.simplexIters === 0) {
+        this.bestPossibleEval = roundedEvaluation;
+    }
 };
 
 //-------------------------------------------------------------------

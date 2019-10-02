@@ -291,6 +291,8 @@ Model.prototype.loadJson = function (jsonModel) {
     var variableIds = Object.keys(variables);
     var nVariables = variableIds.length;
 
+    this.tolerance = jsonModel.tolerance || 0;
+
     var integerVarIds = jsonModel.ints || {};
     var binaryVarIds = jsonModel.binaries || {};
     var unrestrictedVarIds = jsonModel.unrestricted || {};
