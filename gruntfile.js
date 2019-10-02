@@ -2,8 +2,9 @@
 // PLEASE TRY RUNNING EVERYTHING THROUGH
 // HERE, NO?
 //
-// 1.) TO TEST: grunt test
-// 2.) TO TEST SPEED: grunt speed
+// 1.) TO TEST: grunt test-sanity
+// 2.) TO TEST SPEED: grunt test-speed
+// 3.) TO TEST AD-HOC / WIP: grunt test-wip
 // 3.) TO BUILD EVERYTHING: grunt prod
 //
 // kthxbye!
@@ -28,8 +29,8 @@ module.exports = function(grunt){
         "mochaTest": {
             "test": {
                 "options": {
-                    "reporter": "spec",
-                    "quite": "true"
+                    "reporter": "json",
+                    "quite": "false"
                 },
                 "src": ["test/solver.problems.js"]
             }
