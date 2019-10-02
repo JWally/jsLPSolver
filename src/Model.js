@@ -292,6 +292,10 @@ Model.prototype.loadJson = function (jsonModel) {
     var nVariables = variableIds.length;
 
     this.tolerance = jsonModel.tolerance || 0;
+    
+    if(jsonModel.timeout){
+        this.timeout = jsonModel.timeout;
+    }
 
     var integerVarIds = jsonModel.ints || {};
     var binaryVarIds = jsonModel.binaries || {};
