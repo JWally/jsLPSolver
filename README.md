@@ -3,7 +3,8 @@ jsLPSolver
 [A linear programming solver for the rest of us!](https://youtu.be/LbfMmCf5-ds?t=51)
 
 
-## What Can I do with it?
+What Can I do with it?
+-----------------------
 
 You can solve problems that fit the following fact pattern like this one
 from [this](http://math.stackexchange.com/questions/59429/berlin-airlift-linear-optimization-problem) site.
@@ -102,15 +103,45 @@ console.log(solver.Solve(model));
 ```
 
 
+What if my Mixed-Integer Problem takes too long to Solve?
+----------------------
+
+For large scale integer problems the solving process can take increasingly long. However, oftentimes the solution to these problems does not have to be the absolute best possible solution, but rather a solution relatively close to the optimal one. 
+In these cases, a variable called ```tolerance``` can be specified in the model object. The value assigned to the ```tolerance``` variable states that the solver should stop the solution process when the proportional difference between the solution found and the best theoretical objective value is guaranteed to be smaller than the given termination tolerance.
+
+```javascript
+   model = {
+        "optimize": "profit",
+        "opType": "max",
+        "tolerance": 0.5,
+        ...
+        }
+```
+
+Additionally, a ```timeout``` variable can be added to the JSON model that will return the best solution after {{user-defined}} milliseconds.
+
+```javascript
+   model = {
+        "optimize": "profit",
+        "opType": "max",
+        "timeout": 9000,
+        ...
+        }
+```
+
+
 How Fast is it?
 ----------------------
 Below are the results from my home made suite of variable sized LP(s)
 
 ```javascript
-{ Relaxed: { variables: 2, time: 0.004899597 },
-  Unrestricted: { constraints: 1, variables: 2, time: 0.001273972 },
+{ 
+  'Monster Problem': { constraints: 576, variables: 552, time: 0.017 },
+  'monster_II': { constraints: 842, variables: 924, ints: 112, time: 0.323 },
+  'Relaxed': { variables: 2, time: 0.004899597 },
+  'Unrestricted': { constraints: 1, variables: 2, time: 0.001273972 },
   'Chevalier 1': { constraints: 5, variables: 2, time: 0.000112002 },
-  Artificial: { constraints: 2, variables: 2, time: 0.000101994 },
+  'Artificial': { constraints: 2, variables: 2, time: 0.000101994 },
   'Wiki 1': { variables: 3, time: 0.000358714 },
   'Degenerate Min': { constraints: 5, variables: 2, time: 0.000097377 },
   'Degenerate Max': { constraints: 5, variables: 2, time: 0.000085829 },
@@ -130,23 +161,7 @@ Below are the results from my home made suite of variable sized LP(s)
   'Integer Clothing Shop Problem': { constraints: 2, variables: 2, ints: 2, time: 0.000382191 },
   'Integer Clothing Shop Problem II': { constraints: 2, variables: 4, ints: 4, time: 0.000113927 },
   'Shift Work Problem': { constraints: 6, variables: 6, time: 0.000127012 },
-  'Monster Problem': { constraints: 576, variables: 552, time: 0.054285454 },
-  monster_II: { constraints: 842, variables: 924, ints: 112, time: 0.649073406 } }
-```
-
-What if my Mixed-Integer Problem takes too long to Solve?
-----------------------
-
-For large scale integer problems the solving process can take increasingly long. However, oftentimes the solution to these problems does not have to be the absolute best possible solution, but rather a solution relatively close to the optimal one. 
-In these cases, a variable called ```tolerance``` can be specified in the model object. The value assigned to the ```tolerance``` variable states that the solver should stop the solution process when the proportional difference between the solution found and the best theoretical objective value is guaranteed to be smaller than the given termination tolerance.
-
-```javascript
-   model = {
-        "optimize": "profit",
-        "opType": "max",
-        "tolerance": 0.5,
-        ...
-        }
+}
 ```
 
 
