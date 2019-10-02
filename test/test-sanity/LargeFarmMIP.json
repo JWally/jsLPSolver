@@ -1,5 +1,6 @@
 {
     "name": "LargeFarmMIP",
+    "description": "demo of tolerance option",
     "optimize": "Deckungsbeitrag",
     "opType": "max",
     "tolerance": 0.5,
@@ -1116,7 +1117,7 @@
     },
     "expects": {
         "feasible": true,
-        "result": 681896.005,
+        "result": 681907.643,
         "bounded": true,
         "feld02": 0,
         "feld172": 1,
