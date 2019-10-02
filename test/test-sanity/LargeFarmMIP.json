@@ -4,6 +4,7 @@
     "optimize": "Deckungsbeitrag",
     "opType": "max",
     "tolerance": 0.5,
+    "timeout": 3000,
     "constraints": {
         "feld0": {
             "max": 1

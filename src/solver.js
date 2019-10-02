@@ -21,7 +21,6 @@ var Term = expressions.Term;
  * Description: Holds the model of a linear optimisation problem
  **************************************************************/
 function Model(precision, name) {
-
     this.tableau = new Tableau(precision);
 
     this.name = name;
@@ -295,6 +294,10 @@ Model.prototype.loadJson = function (jsonModel) {
     var nVariables = variableIds.length;
 
     this.tolerance = jsonModel.tolerance || 0;
+    
+    if(jsonModel.timeout){
+        this.timeout = jsonModel.timeout;
+    }
 
     var integerVarIds = jsonModel.ints || {};
     var binaryVarIds = jsonModel.binaries || {};
@@ -894,6 +897,7 @@ MilpSolution.constructor = MilpSolution;
 
 },{"./Solution.js":5}],5:[function(require,module,exports){
 /*global module*/
+/*global console*/
 
 function Solution(tableau, evaluation, feasible, bounded) {
     this.feasible = feasible;
@@ -995,9 +999,10 @@ function Tableau(precision) {
 module.exports = Tableau;
 
 Tableau.prototype.solve = function () {
-    this.simplex();
     if (this.model.getNumberOfIntegerVariables() > 0) {
         this.branchAndCut();
+    } else {
+        this.simplex();
     }
     this.updateVariableValues();
     return this.getSolution();
@@ -1381,7 +1386,23 @@ Tableau.prototype.branchAndCut = function () {
     var iterations = 0;
     var tolerance = this.model.tolerance;
     var toleranceFlag = true;
+    var terminalTime = 1e99;
     
+    //
+    // Set Start Time on model...
+    // Let's build out a way to *gracefully* quit
+    // after {{time}} milliseconds
+    //
+    
+    // 1.) Check to see if there's a timeout on the model
+    //
+    if(this.model.timeout){
+        // 2.) Hooray! There is!
+        //     Calculate the final date
+        //
+        terminalTime = Date.now() + this.model.timeout;
+    }
+
     // This is the default result
     // If nothing is both *integral* and *feasible*
     var bestEvaluation = Infinity;
@@ -1397,7 +1418,8 @@ Tableau.prototype.branchAndCut = function () {
     var branch = new Branch(-Infinity, []);
     branches.push(branch);
     // If all branches have been exhausted terminate the loop
-    while (branches.length > 0 && toleranceFlag === true) {
+    while (branches.length > 0 && toleranceFlag === true && Date.now() < terminalTime) {
+        
         var acceptableThreshold = this.bestPossibleEval * (1 - (tolerance/100));
         // Abort while loop if termination tolerance is both specified and condition is met
         if (tolerance > 0) {
@@ -1405,7 +1427,7 @@ Tableau.prototype.branchAndCut = function () {
                 toleranceFlag = false;
             }
         }
-
+        
         // Get a model from the queue
         branch = branches.pop();
         if (branch.relaxedEvaluation > bestEvaluation) {
@@ -1425,7 +1447,6 @@ Tableau.prototype.branchAndCut = function () {
         }
 
         var evaluation = this.evaluation;
-
         if (evaluation > bestEvaluation) {
             // This branch does not contain the optimal solution
             continue;
@@ -1450,6 +1471,13 @@ Tableau.prototype.branchAndCut = function () {
 
         // Is the model both integral and feasible?
         if (this.isIntegral() === true) {
+            
+            //
+            // Store the fact that we are integral
+            //
+            this.__isIntegral = true;
+            
+            
             if (iterations === 1) {
                 this.branchAndCutIterations = iterations;
                 return;
@@ -3068,7 +3096,9 @@ Equality.prototype.setRightHandSide = function (rhs) {
 
 Equality.prototype.relax = function (weight, priority) {
     this.relaxation = createRelaxationVariable(this.model, weight, priority);
+    this.upperBound.relaxation = this.relaxation;
     this.upperBound._relax(this.relaxation);
+    this.lowerBound.relaxation = this.relaxation;
     this.lowerBound._relax(this.relaxation);
 };
 
@@ -3089,6 +3119,7 @@ module.exports = {
 /*global it*/
 /*global console*/
 /*global process*/
+/*global setTimeout*/
 
 
 //-------------------------------------------------------------------
@@ -3180,6 +3211,10 @@ var Solver = function () {
             store.result = solution.evaluation;
 
             store.bounded = solution.bounded;
+            
+            if(solution._tableau.__isIntegral){
+                store.isIntegral = true;
+            }
 
             // 3.) Load all of the variable values
             Object.keys(solution.solutionSet)
