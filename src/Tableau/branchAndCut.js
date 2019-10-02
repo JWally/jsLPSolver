@@ -67,7 +67,23 @@ Tableau.prototype.branchAndCut = function () {
     var iterations = 0;
     var tolerance = this.model.tolerance;
     var toleranceFlag = true;
+    var terminalTime = 1e99;
     
+    //
+    // Set Start Time on model...
+    // Let's build out a way to *gracefully* quit
+    // after {{time}} milliseconds
+    //
+    
+    // 1.) Check to see if there's a timeout on the model
+    //
+    if(this.model.timeout){
+        // 2.) Hooray! There is!
+        //     Calculate the final date
+        //
+        terminalTime = Date.now() + this.model.timeout;
+    }
+
     // This is the default result
     // If nothing is both *integral* and *feasible*
     var bestEvaluation = Infinity;
@@ -83,7 +99,8 @@ Tableau.prototype.branchAndCut = function () {
     var branch = new Branch(-Infinity, []);
     branches.push(branch);
     // If all branches have been exhausted terminate the loop
-    while (branches.length > 0 && toleranceFlag === true) {
+    while (branches.length > 0 && toleranceFlag === true && Date.now() < terminalTime) {
+        
         var acceptableThreshold = this.bestPossibleEval * (1 - (tolerance/100));
         // Abort while loop if termination tolerance is both specified and condition is met
         if (tolerance > 0) {
@@ -135,6 +152,13 @@ Tableau.prototype.branchAndCut = function () {
 
         // Is the model both integral and feasible?
         if (this.isIntegral() === true) {
+            
+            //
+            // Store the fact that we are integral
+            //
+            this.__isIntegral = true;
+            
+            
             if (iterations === 1) {
                 this.branchAndCutIterations = iterations;
                 return;
