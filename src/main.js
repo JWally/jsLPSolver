@@ -4,6 +4,7 @@
 /*global it*/
 /*global console*/
 /*global process*/
+/*global setTimeout*/
 
 
 //-------------------------------------------------------------------
@@ -95,6 +96,10 @@ var Solver = function () {
             store.result = solution.evaluation;
 
             store.bounded = solution.bounded;
+            
+            if(solution._tableau.__isIntegral){
+                store.isIntegral = true;
+            }
 
             // 3.) Load all of the variable values
             Object.keys(solution.solutionSet)
