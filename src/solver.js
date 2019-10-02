@@ -21,6 +21,7 @@ var Term = expressions.Term;
  * Description: Holds the model of a linear optimisation problem
  **************************************************************/
 function Model(precision, name) {
+
     this.tableau = new Tableau(precision);
 
     this.name = name;
@@ -292,6 +293,8 @@ Model.prototype.loadJson = function (jsonModel) {
 
     var variableIds = Object.keys(variables);
     var nVariables = variableIds.length;
+
+    this.tolerance = jsonModel.tolerance || 0;
 
     var integerVarIds = jsonModel.ints || {};
     var binaryVarIds = jsonModel.binaries || {};
@@ -963,6 +966,7 @@ function Tableau(precision) {
     // Solution attributes
     this.feasible = true; // until proven guilty
     this.evaluation = 0;
+    this.simplexIters = 0;
 
     this.varIndexByRow = null;
     this.varIndexByCol = null;
@@ -991,10 +995,9 @@ function Tableau(precision) {
 module.exports = Tableau;
 
 Tableau.prototype.solve = function () {
+    this.simplex();
     if (this.model.getNumberOfIntegerVariables() > 0) {
         this.branchAndCut();
-    } else {
-        this.simplex();
     }
     this.updateVariableValues();
     return this.getSolution();
@@ -1168,8 +1171,13 @@ Tableau.prototype.setEvaluation = function () {
     // Rounding objective value
     var roundingCoeff = Math.round(1 / this.precision);
     var evaluation = this.matrix[this.costRowIndex][this.rhsColumn];
-    this.evaluation =
+    var roundedEvaluation =
         Math.round(evaluation * roundingCoeff) / roundingCoeff;
+
+    this.evaluation = roundedEvaluation;
+    if (this.simplexIters === 0) {
+        this.bestPossibleEval = roundedEvaluation;
+    }
 };
 
 //-------------------------------------------------------------------
@@ -1371,7 +1379,9 @@ Tableau.prototype.applyCuts = function (branchingCuts){
 Tableau.prototype.branchAndCut = function () {
     var branches = [];
     var iterations = 0;
-
+    var tolerance = this.model.tolerance;
+    var toleranceFlag = true;
+    
     // This is the default result
     // If nothing is both *integral* and *feasible*
     var bestEvaluation = Infinity;
@@ -1386,9 +1396,15 @@ Tableau.prototype.branchAndCut = function () {
     // 1.) Load a model into the queue
     var branch = new Branch(-Infinity, []);
     branches.push(branch);
-
     // If all branches have been exhausted terminate the loop
-    while (branches.length > 0) {
+    while (branches.length > 0 && toleranceFlag === true) {
+        var acceptableThreshold = this.bestPossibleEval * (1 - (tolerance/100));
+        // Abort while loop if termination tolerance is both specified and condition is met
+        if (tolerance > 0) {
+            if (bestEvaluation < acceptableThreshold) {
+                toleranceFlag = false;
+            }
+        }
 
         // Get a model from the queue
         branch = branches.pop();
@@ -1409,6 +1425,7 @@ Tableau.prototype.branchAndCut = function () {
         }
 
         var evaluation = this.evaluation;
+
         if (evaluation > bestEvaluation) {
             // This branch does not contain the optimal solution
             continue;
@@ -2611,6 +2628,7 @@ Tableau.prototype.phase2 = function () {
         // If no entering column could be found we're done with phase 2.
         if (enteringColumn === 0) {
             this.setEvaluation();
+            this.simplexIters += 1;
             return iterations;
         }
 
@@ -3050,9 +3068,7 @@ Equality.prototype.setRightHandSide = function (rhs) {
 
 Equality.prototype.relax = function (weight, priority) {
     this.relaxation = createRelaxationVariable(this.model, weight, priority);
-    this.upperBound.relaxation = this.relaxation;
     this.upperBound._relax(this.relaxation);
-    this.lowerBound.relaxation = this.relaxation;
     this.lowerBound._relax(this.relaxation);
 };
 

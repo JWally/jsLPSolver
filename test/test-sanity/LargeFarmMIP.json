@@ -1,0 +1,1148 @@
+{
+    "name": "LargeFarmMIP",
+    "description": "demo of tolerance option",
+    "optimize": "Deckungsbeitrag",
+    "opType": "max",
+    "tolerance": 0.5,
+    "constraints": {
+        "feld0": {
+            "max": 1
+        },
+        "feld1": {
+            "max": 1
+        },
+        "feld2": {
+            "max": 1
+        },
+        "feld3": {
+            "max": 1
+        },
+        "feld4": {
+            "max": 1
+        },
+        "feld5": {
+            "max": 1
+        },
+        "feld6": {
+            "max": 1
+        },
+        "feld7": {
+            "max": 1
+        },
+        "feld8": {
+            "max": 1
+        },
+        "feld9": {
+            "max": 1
+        },
+        "feld10": {
+            "max": 1
+        },
+        "feld11": {
+            "max": 1
+        },
+        "feld12": {
+            "max": 1
+        },
+        "feld13": {
+            "max": 1
+        },
+        "feld14": {
+            "max": 1
+        },
+        "feld15": {
+            "max": 1
+        },
+        "feld16": {
+            "max": 1
+        },
+        "feld17": {
+            "max": 1
+        },
+        "feld18": {
+            "max": 1
+        },
+        "feld19": {
+            "max": 1
+        },
+        "Wintergerste": {
+            "max": 136.5
+        },
+        "Erbsen": {
+            "max": 136.5
+        },
+        "Kartoffeln": {
+            "max": 136.5
+        },
+        "Sommergerste": {
+            "max": 136.5
+        },
+        "Zwiebeln": {
+            "max": 136.5
+        },
+        "WintergersteErbsen": {
+            "max": 172.9
+        },
+        "WintergersteKartoffeln": {
+            "max": 172.9
+        },
+        "WintergersteSommergerste": {
+            "max": 172.9
+        },
+        "WintergersteZwiebeln": {
+            "max": 172.9
+        },
+        "ErbsenKartoffeln": {
+            "max": 172.9
+        },
+        "ErbsenSommergerste": {
+            "max": 172.9
+        },
+        "ErbsenZwiebeln": {
+            "max": 172.9
+        },
+        "KartoffelnSommergerste": {
+            "max": 172.9
+        },
+        "KartoffelnZwiebeln": {
+            "max": 172.9
+        },
+        "SommergersteZwiebeln": {
+            "max": 172.9
+        }
+    },
+    "variables": {
+        "feld00": {
+            "feld0": 1,
+            "WintergersteErbsen": 14.6,
+            "WintergersteKartoffeln": 14.6,
+            "WintergersteSommergerste": 14.6,
+            "WintergersteZwiebeln": 14.6,
+            "Wintergerste": 14.6,
+            "Deckungsbeitrag": 9981.101
+        },
+        "feld01": {
+            "feld0": 1,
+            "WintergersteErbsen": 14.6,
+            "ErbsenKartoffeln": 14.6,
+            "ErbsenSommergerste": 14.6,
+            "ErbsenZwiebeln": 14.6,
+            "Erbsen": 14.6,
+            "Deckungsbeitrag": 5774.250999999999
+        },
+        "feld02": {
+            "feld0": 1,
+            "WintergersteKartoffeln": 14.6,
+            "ErbsenKartoffeln": 14.6,
+            "KartoffelnSommergerste": 14.6,
+            "KartoffelnZwiebeln": 14.6,
+            "Kartoffeln": 14.6,
+            "Deckungsbeitrag": 57159.013
+        },
+        "feld03": {
+            "feld0": 1,
+            "WintergersteSommergerste": 14.6,
+            "ErbsenSommergerste": 14.6,
+            "KartoffelnSommergerste": 14.6,
+            "SommergersteZwiebeln": 14.6,
+            "Sommergerste": 14.6,
+            "Deckungsbeitrag": 7292.45
+        },
+        "feld04": {
+            "feld0": 1,
+            "WintergersteZwiebeln": 14.6,
+            "ErbsenZwiebeln": 14.6,
+            "KartoffelnZwiebeln": 14.6,
+            "SommergersteZwiebeln": 14.6,
+            "Zwiebeln": 14.6,
+            "Deckungsbeitrag": 57127.950999999994
+        },
+        "feld10": {
+            "feld1": 1,
+            "WintergersteErbsen": 15.5,
+            "WintergersteKartoffeln": 15.5,
+            "WintergersteSommergerste": 15.5,
+            "WintergersteZwiebeln": 15.5,
+            "Wintergerste": 15.5,
+            "Deckungsbeitrag": 10589.494
+        },
+        "feld11": {
+            "feld1": 1,
+            "WintergersteErbsen": 15.5,
+            "ErbsenKartoffeln": 15.5,
+            "ErbsenSommergerste": 15.5,
+            "ErbsenZwiebeln": 15.5,
+            "Erbsen": 15.5,
+            "Deckungsbeitrag": 6126.193
+        },
+        "feld12": {
+            "feld1": 1,
+            "WintergersteKartoffeln": 15.5,
+            "ErbsenKartoffeln": 15.5,
+            "KartoffelnSommergerste": 15.5,
+            "KartoffelnZwiebeln": 15.5,
+            "Kartoffeln": 15.5,
+            "Deckungsbeitrag": 60643.799000000006
+        },
+        "feld13": {
+            "feld1": 1,
+            "WintergersteSommergerste": 15.5,
+            "ErbsenSommergerste": 15.5,
+            "KartoffelnSommergerste": 15.5,
+            "SommergersteZwiebeln": 15.5,
+            "Sommergerste": 15.5,
+            "Deckungsbeitrag": 7736.85
+        },
+        "feld14": {
+            "feld1": 1,
+            "WintergersteZwiebeln": 15.5,
+            "ErbsenZwiebeln": 15.5,
+            "KartoffelnZwiebeln": 15.5,
+            "SommergersteZwiebeln": 15.5,
+            "Zwiebeln": 15.5,
+            "Deckungsbeitrag": 60608.563
+        },
+        "feld20": {
+            "feld2": 1,
+            "WintergersteErbsen": 15.7,
+            "WintergersteKartoffeln": 15.7,
+            "WintergersteSommergerste": 15.7,
+            "WintergersteZwiebeln": 15.7,
+            "Wintergerste": 15.7,
+            "Deckungsbeitrag": 10724.417
+        },
+        "feld21": {
+            "feld2": 1,
+            "WintergersteErbsen": 15.7,
+            "ErbsenKartoffeln": 15.7,
+            "ErbsenSommergerste": 15.7,
+            "ErbsenZwiebeln": 15.7,
+            "Erbsen": 15.7,
+            "Deckungsbeitrag": 6204.241999999999
+        },
+        "feld22": {
+            "feld2": 1,
+            "WintergersteKartoffeln": 15.7,
+            "ErbsenKartoffeln": 15.7,
+            "KartoffelnSommergerste": 15.7,
+            "KartoffelnZwiebeln": 15.7,
+            "Kartoffeln": 15.7,
+            "Deckungsbeitrag": 61416.64599999999
+        },
+        "feld23": {
+            "feld2": 1,
+            "WintergersteSommergerste": 15.7,
+            "ErbsenSommergerste": 15.7,
+            "KartoffelnSommergerste": 15.7,
+            "SommergersteZwiebeln": 15.7,
+            "Sommergerste": 15.7,
+            "Deckungsbeitrag": 7835.4
+        },
+        "feld24": {
+            "feld2": 1,
+            "WintergersteZwiebeln": 15.7,
+            "ErbsenZwiebeln": 15.7,
+            "KartoffelnZwiebeln": 15.7,
+            "SommergersteZwiebeln": 15.7,
+            "Zwiebeln": 15.7,
+            "Deckungsbeitrag": 61380.39199999999
+        },
+        "feld30": {
+            "feld3": 1,
+            "WintergersteErbsen": 11.7,
+            "WintergersteKartoffeln": 11.7,
+            "WintergersteSommergerste": 11.7,
+            "WintergersteZwiebeln": 11.7,
+            "Wintergerste": 11.7,
+            "Deckungsbeitrag": 8004.115
+        },
+        "feld31": {
+            "feld3": 1,
+            "WintergersteErbsen": 11.7,
+            "ErbsenKartoffeln": 11.7,
+            "ErbsenSommergerste": 11.7,
+            "ErbsenZwiebeln": 11.7,
+            "Erbsen": 11.7,
+            "Deckungsbeitrag": 4630.548
+        },
+        "feld32": {
+            "feld3": 1,
+            "WintergersteKartoffeln": 11.7,
+            "ErbsenKartoffeln": 11.7,
+            "KartoffelnSommergerste": 11.7,
+            "KartoffelnZwiebeln": 11.7,
+            "Kartoffeln": 11.7,
+            "Deckungsbeitrag": 45836.804
+        },
+        "feld33": {
+            "feld3": 1,
+            "WintergersteSommergerste": 11.7,
+            "ErbsenSommergerste": 11.7,
+            "KartoffelnSommergerste": 11.7,
+            "SommergersteZwiebeln": 11.7,
+            "Sommergerste": 11.7,
+            "Deckungsbeitrag": 5848.1
+        },
+        "feld34": {
+            "feld3": 1,
+            "WintergersteZwiebeln": 11.7,
+            "ErbsenZwiebeln": 11.7,
+            "KartoffelnZwiebeln": 11.7,
+            "SommergersteZwiebeln": 11.7,
+            "Zwiebeln": 11.7,
+            "Deckungsbeitrag": 45813.738
+        },
+        "feld40": {
+            "feld4": 1,
+            "WintergersteErbsen": 2.1,
+            "WintergersteKartoffeln": 2.1,
+            "WintergersteSommergerste": 2.1,
+            "WintergersteZwiebeln": 2.1,
+            "Wintergerste": 2.1,
+            "Deckungsbeitrag": 1425.1670000000001
+        },
+        "feld41": {
+            "feld4": 1,
+            "WintergersteErbsen": 2.1,
+            "ErbsenKartoffeln": 2.1,
+            "ErbsenSommergerste": 2.1,
+            "ErbsenZwiebeln": 2.1,
+            "Erbsen": 2.1,
+            "Deckungsbeitrag": 824.448
+        },
+        "feld42": {
+            "feld4": 1,
+            "WintergersteKartoffeln": 2.1,
+            "ErbsenKartoffeln": 2.1,
+            "KartoffelnSommergerste": 2.1,
+            "KartoffelnZwiebeln": 2.1,
+            "Kartoffeln": 2.1,
+            "Deckungsbeitrag": 8162.584000000001
+        },
+        "feld43": {
+            "feld4": 1,
+            "WintergersteSommergerste": 2.1,
+            "ErbsenSommergerste": 2.1,
+            "KartoffelnSommergerste": 2.1,
+            "SommergersteZwiebeln": 2.1,
+            "Sommergerste": 2.1,
+            "Deckungsbeitrag": 1041.1
+        },
+        "feld44": {
+            "feld4": 1,
+            "WintergersteZwiebeln": 2.1,
+            "ErbsenZwiebeln": 2.1,
+            "KartoffelnZwiebeln": 2.1,
+            "SommergersteZwiebeln": 2.1,
+            "Zwiebeln": 2.1,
+            "Deckungsbeitrag": 8154.678000000001
+        },
+        "feld50": {
+            "feld5": 1,
+            "WintergersteErbsen": 14.2,
+            "WintergersteKartoffeln": 14.2,
+            "WintergersteSommergerste": 14.2,
+            "WintergersteZwiebeln": 14.2,
+            "Wintergerste": 14.2,
+            "Deckungsbeitrag": 9709.379
+        },
+        "feld51": {
+            "feld5": 1,
+            "WintergersteErbsen": 14.2,
+            "ErbsenKartoffeln": 14.2,
+            "ErbsenSommergerste": 14.2,
+            "ErbsenZwiebeln": 14.2,
+            "Erbsen": 14.2,
+            "Deckungsbeitrag": 5617.061
+        },
+        "feld52": {
+            "feld5": 1,
+            "WintergersteKartoffeln": 14.2,
+            "ErbsenKartoffeln": 14.2,
+            "KartoffelnSommergerste": 14.2,
+            "KartoffelnZwiebeln": 14.2,
+            "Kartoffeln": 14.2,
+            "Deckungsbeitrag": 55602.763
+        },
+        "feld53": {
+            "feld5": 1,
+            "WintergersteSommergerste": 14.2,
+            "ErbsenSommergerste": 14.2,
+            "KartoffelnSommergerste": 14.2,
+            "SommergersteZwiebeln": 14.2,
+            "Sommergerste": 14.2,
+            "Deckungsbeitrag": 7093.95
+        },
+        "feld54": {
+            "feld5": 1,
+            "WintergersteZwiebeln": 14.2,
+            "ErbsenZwiebeln": 14.2,
+            "KartoffelnZwiebeln": 14.2,
+            "SommergersteZwiebeln": 14.2,
+            "Zwiebeln": 14.2,
+            "Deckungsbeitrag": 55573.12099999999
+        },
+        "feld60": {
+            "feld6": 1,
+            "WintergersteErbsen": 11.4,
+            "WintergersteKartoffeln": 11.4,
+            "WintergersteSommergerste": 11.4,
+            "WintergersteZwiebeln": 11.4,
+            "Wintergerste": 11.4,
+            "Deckungsbeitrag": 7787.761000000001
+        },
+        "feld61": {
+            "feld6": 1,
+            "WintergersteErbsen": 11.4,
+            "ErbsenKartoffeln": 11.4,
+            "ErbsenSommergerste": 11.4,
+            "ErbsenZwiebeln": 11.4,
+            "Erbsen": 11.4,
+            "Deckungsbeitrag": 4505.343
+        },
+        "feld62": {
+            "feld6": 1,
+            "WintergersteKartoffeln": 11.4,
+            "ErbsenKartoffeln": 11.4,
+            "KartoffelnSommergerste": 11.4,
+            "KartoffelnZwiebeln": 11.4,
+            "Kartoffeln": 11.4,
+            "Deckungsbeitrag": 44598.929
+        },
+        "feld63": {
+            "feld6": 1,
+            "WintergersteSommergerste": 11.4,
+            "ErbsenSommergerste": 11.4,
+            "KartoffelnSommergerste": 11.4,
+            "SommergersteZwiebeln": 11.4,
+            "Sommergerste": 11.4,
+            "Deckungsbeitrag": 5689.85
+        },
+        "feld64": {
+            "feld6": 1,
+            "WintergersteZwiebeln": 11.4,
+            "ErbsenZwiebeln": 11.4,
+            "KartoffelnZwiebeln": 11.4,
+            "SommergersteZwiebeln": 11.4,
+            "Zwiebeln": 11.4,
+            "Deckungsbeitrag": 44572.803
+        },
+        "feld70": {
+            "feld7": 1,
+            "WintergersteErbsen": 7.7,
+            "WintergersteKartoffeln": 7.7,
+            "WintergersteSommergerste": 7.7,
+            "WintergersteZwiebeln": 7.7,
+            "Wintergerste": 7.7,
+            "Deckungsbeitrag": 5257.884
+        },
+        "feld71": {
+            "feld7": 1,
+            "WintergersteErbsen": 7.7,
+            "ErbsenKartoffeln": 7.7,
+            "ErbsenSommergerste": 7.7,
+            "ErbsenZwiebeln": 7.7,
+            "Erbsen": 7.7,
+            "Deckungsbeitrag": 3041.761
+        },
+        "feld72": {
+            "feld7": 1,
+            "WintergersteKartoffeln": 7.7,
+            "ErbsenKartoffeln": 7.7,
+            "KartoffelnSommergerste": 7.7,
+            "KartoffelnZwiebeln": 7.7,
+            "Kartoffeln": 7.7,
+            "Deckungsbeitrag": 30111.063000000002
+        },
+        "feld73": {
+            "feld7": 1,
+            "WintergersteSommergerste": 7.7,
+            "ErbsenSommergerste": 7.7,
+            "KartoffelnSommergerste": 7.7,
+            "SommergersteZwiebeln": 7.7,
+            "Sommergerste": 7.7,
+            "Deckungsbeitrag": 3841.45
+        },
+        "feld74": {
+            "feld7": 1,
+            "WintergersteZwiebeln": 7.7,
+            "ErbsenZwiebeln": 7.7,
+            "KartoffelnZwiebeln": 7.7,
+            "SommergersteZwiebeln": 7.7,
+            "Zwiebeln": 7.7,
+            "Deckungsbeitrag": 30092.671000000002
+        },
+        "feld80": {
+            "feld8": 1,
+            "WintergersteErbsen": 2.2,
+            "WintergersteKartoffeln": 2.2,
+            "WintergersteSommergerste": 2.2,
+            "WintergersteZwiebeln": 2.2,
+            "Wintergerste": 2.2,
+            "Deckungsbeitrag": 1505.2580000000003
+        },
+        "feld81": {
+            "feld8": 1,
+            "WintergersteErbsen": 2.2,
+            "ErbsenKartoffeln": 2.2,
+            "ErbsenSommergerste": 2.2,
+            "ErbsenZwiebeln": 2.2,
+            "Erbsen": 2.2,
+            "Deckungsbeitrag": 870.8240000000001
+        },
+        "feld82": {
+            "feld8": 1,
+            "WintergersteKartoffeln": 2.2,
+            "ErbsenKartoffeln": 2.2,
+            "KartoffelnSommergerste": 2.2,
+            "KartoffelnZwiebeln": 2.2,
+            "Kartoffeln": 2.2,
+            "Deckungsbeitrag": 8620.072000000002
+        },
+        "feld83": {
+            "feld8": 1,
+            "WintergersteSommergerste": 2.2,
+            "ErbsenSommergerste": 2.2,
+            "KartoffelnSommergerste": 2.2,
+            "SommergersteZwiebeln": 2.2,
+            "Sommergerste": 2.2,
+            "Deckungsbeitrag": 1099.8
+        },
+        "feld84": {
+            "feld8": 1,
+            "WintergersteZwiebeln": 2.2,
+            "ErbsenZwiebeln": 2.2,
+            "KartoffelnZwiebeln": 2.2,
+            "SommergersteZwiebeln": 2.2,
+            "Zwiebeln": 2.2,
+            "Deckungsbeitrag": 8615.804000000002
+        },
+        "feld90": {
+            "feld9": 1,
+            "WintergersteErbsen": 9.0,
+            "WintergersteKartoffeln": 9.0,
+            "WintergersteSommergerste": 9.0,
+            "WintergersteZwiebeln": 9.0,
+            "Wintergerste": 9.0,
+            "Deckungsbeitrag": 6156.357
+        },
+        "feld91": {
+            "feld9": 1,
+            "WintergersteErbsen": 9.0,
+            "ErbsenKartoffeln": 9.0,
+            "ErbsenSommergerste": 9.0,
+            "ErbsenZwiebeln": 9.0,
+            "Erbsen": 9.0,
+            "Deckungsbeitrag": 3561.5789999999997
+        },
+        "feld92": {
+            "feld9": 1,
+            "WintergersteKartoffeln": 9.0,
+            "ErbsenKartoffeln": 9.0,
+            "KartoffelnSommergerste": 9.0,
+            "KartoffelnZwiebeln": 9.0,
+            "Kartoffeln": 9.0,
+            "Deckungsbeitrag": 35255.397
+        },
+        "feld93": {
+            "feld9": 1,
+            "WintergersteSommergerste": 9.0,
+            "ErbsenSommergerste": 9.0,
+            "KartoffelnSommergerste": 9.0,
+            "SommergersteZwiebeln": 9.0,
+            "Sommergerste": 9.0,
+            "Deckungsbeitrag": 4498.05
+        },
+        "feld94": {
+            "feld9": 1,
+            "WintergersteZwiebeln": 9.0,
+            "ErbsenZwiebeln": 9.0,
+            "KartoffelnZwiebeln": 9.0,
+            "SommergersteZwiebeln": 9.0,
+            "Zwiebeln": 9.0,
+            "Deckungsbeitrag": 35237.439
+        },
+        "feld100": {
+            "feld10": 1,
+            "WintergersteErbsen": 2.7,
+            "WintergersteKartoffeln": 2.7,
+            "WintergersteSommergerste": 2.7,
+            "WintergersteZwiebeln": 2.7,
+            "Wintergerste": 2.7,
+            "Deckungsbeitrag": 1847.6240000000003
+        },
+        "feld101": {
+            "feld10": 1,
+            "WintergersteErbsen": 2.7,
+            "ErbsenKartoffeln": 2.7,
+            "ErbsenSommergerste": 2.7,
+            "ErbsenZwiebeln": 2.7,
+            "Erbsen": 2.7,
+            "Deckungsbeitrag": 1068.891
+        },
+        "feld102": {
+            "feld10": 1,
+            "WintergersteKartoffeln": 2.7,
+            "ErbsenKartoffeln": 2.7,
+            "KartoffelnSommergerste": 2.7,
+            "KartoffelnZwiebeln": 2.7,
+            "Kartoffeln": 2.7,
+            "Deckungsbeitrag": 10580.653
+        },
+        "feld103": {
+            "feld10": 1,
+            "WintergersteSommergerste": 2.7,
+            "ErbsenSommergerste": 2.7,
+            "KartoffelnSommergerste": 2.7,
+            "SommergersteZwiebeln": 2.7,
+            "Sommergerste": 2.7,
+            "Deckungsbeitrag": 1349.95
+        },
+        "feld104": {
+            "feld10": 1,
+            "WintergersteZwiebeln": 2.7,
+            "ErbsenZwiebeln": 2.7,
+            "KartoffelnZwiebeln": 2.7,
+            "SommergersteZwiebeln": 2.7,
+            "Zwiebeln": 2.7,
+            "Deckungsbeitrag": 10575.501000000002
+        },
+        "feld110": {
+            "feld11": 1,
+            "WintergersteErbsen": 9.3,
+            "WintergersteKartoffeln": 9.3,
+            "WintergersteSommergerste": 9.3,
+            "WintergersteZwiebeln": 9.3,
+            "Wintergerste": 9.3,
+            "Deckungsbeitrag": 6350.4670000000015
+        },
+        "feld111": {
+            "feld11": 1,
+            "WintergersteErbsen": 9.3,
+            "ErbsenKartoffeln": 9.3,
+            "ErbsenSommergerste": 9.3,
+            "ErbsenZwiebeln": 9.3,
+            "Erbsen": 9.3,
+            "Deckungsbeitrag": 3673.836
+        },
+        "feld112": {
+            "feld11": 1,
+            "WintergersteKartoffeln": 9.3,
+            "ErbsenKartoffeln": 9.3,
+            "KartoffelnSommergerste": 9.3,
+            "KartoffelnZwiebeln": 9.3,
+            "Kartoffeln": 9.3,
+            "Deckungsbeitrag": 36368.10800000001
+        },
+        "feld113": {
+            "feld11": 1,
+            "WintergersteSommergerste": 9.3,
+            "ErbsenSommergerste": 9.3,
+            "KartoffelnSommergerste": 9.3,
+            "SommergersteZwiebeln": 9.3,
+            "Sommergerste": 9.3,
+            "Deckungsbeitrag": 4639.7
+        },
+        "feld114": {
+            "feld11": 1,
+            "WintergersteZwiebeln": 9.3,
+            "ErbsenZwiebeln": 9.3,
+            "KartoffelnZwiebeln": 9.3,
+            "SommergersteZwiebeln": 9.3,
+            "Zwiebeln": 9.3,
+            "Deckungsbeitrag": 36345.906
+        },
+        "feld120": {
+            "feld12": 1,
+            "WintergersteErbsen": 13.7,
+            "WintergersteKartoffeln": 13.7,
+            "WintergersteSommergerste": 13.7,
+            "WintergersteZwiebeln": 13.7,
+            "Wintergerste": 13.7,
+            "Deckungsbeitrag": 9357.901
+        },
+        "feld121": {
+            "feld12": 1,
+            "WintergersteErbsen": 13.7,
+            "ErbsenKartoffeln": 13.7,
+            "ErbsenSommergerste": 13.7,
+            "ErbsenZwiebeln": 13.7,
+            "Erbsen": 13.7,
+            "Deckungsbeitrag": 5413.689999999999
+        },
+        "feld122": {
+            "feld12": 1,
+            "WintergersteKartoffeln": 13.7,
+            "ErbsenKartoffeln": 13.7,
+            "KartoffelnSommergerste": 13.7,
+            "KartoffelnZwiebeln": 13.7,
+            "Kartoffeln": 13.7,
+            "Deckungsbeitrag": 53590.91
+        },
+        "feld123": {
+            "feld12": 1,
+            "WintergersteSommergerste": 13.7,
+            "ErbsenSommergerste": 13.7,
+            "KartoffelnSommergerste": 13.7,
+            "SommergersteZwiebeln": 13.7,
+            "Sommergerste": 13.7,
+            "Deckungsbeitrag": 6837
+        },
+        "feld124": {
+            "feld12": 1,
+            "WintergersteZwiebeln": 13.7,
+            "ErbsenZwiebeln": 13.7,
+            "KartoffelnZwiebeln": 13.7,
+            "SommergersteZwiebeln": 13.7,
+            "Zwiebeln": 13.7,
+            "Deckungsbeitrag": 53559.159999999996
+        },
+        "feld130": {
+            "feld13": 1,
+            "WintergersteErbsen": 5.6,
+            "WintergersteKartoffeln": 5.6,
+            "WintergersteSommergerste": 5.6,
+            "WintergersteZwiebeln": 5.6,
+            "Wintergerste": 5.6,
+            "Deckungsbeitrag": 3815.431
+        },
+        "feld131": {
+            "feld13": 1,
+            "WintergersteErbsen": 5.6,
+            "ErbsenKartoffeln": 5.6,
+            "ErbsenSommergerste": 5.6,
+            "ErbsenZwiebeln": 5.6,
+            "Erbsen": 5.6,
+            "Deckungsbeitrag": 2207.2509999999993
+        },
+        "feld132": {
+            "feld13": 1,
+            "WintergersteKartoffeln": 5.6,
+            "ErbsenKartoffeln": 5.6,
+            "KartoffelnSommergerste": 5.6,
+            "KartoffelnZwiebeln": 5.6,
+            "Kartoffeln": 5.6,
+            "Deckungsbeitrag": 21851.213
+        },
+        "feld133": {
+            "feld13": 1,
+            "WintergersteSommergerste": 5.6,
+            "ErbsenSommergerste": 5.6,
+            "KartoffelnSommergerste": 5.6,
+            "SommergersteZwiebeln": 5.6,
+            "Sommergerste": 5.6,
+            "Deckungsbeitrag": 2787.45
+        },
+        "feld134": {
+            "feld13": 1,
+            "WintergersteZwiebeln": 5.6,
+            "ErbsenZwiebeln": 5.6,
+            "KartoffelnZwiebeln": 5.6,
+            "SommergersteZwiebeln": 5.6,
+            "Zwiebeln": 5.6,
+            "Deckungsbeitrag": 21835.050999999996
+        },
+        "feld140": {
+            "feld14": 1,
+            "WintergersteErbsen": 6.1,
+            "WintergersteKartoffeln": 6.1,
+            "WintergersteSommergerste": 6.1,
+            "WintergersteZwiebeln": 6.1,
+            "Wintergerste": 6.1,
+            "Deckungsbeitrag": 4162.218999999999
+        },
+        "feld141": {
+            "feld14": 1,
+            "WintergersteErbsen": 6.1,
+            "ErbsenKartoffeln": 6.1,
+            "ErbsenSommergerste": 6.1,
+            "ErbsenZwiebeln": 6.1,
+            "Erbsen": 6.1,
+            "Deckungsbeitrag": 2407.892
+        },
+        "feld142": {
+            "feld14": 1,
+            "WintergersteKartoffeln": 6.1,
+            "ErbsenKartoffeln": 6.1,
+            "KartoffelnSommergerste": 6.1,
+            "KartoffelnZwiebeln": 6.1,
+            "Kartoffeln": 6.1,
+            "Deckungsbeitrag": 23836.676
+        },
+        "feld143": {
+            "feld14": 1,
+            "WintergersteSommergerste": 6.1,
+            "ErbsenSommergerste": 6.1,
+            "KartoffelnSommergerste": 6.1,
+            "SommergersteZwiebeln": 6.1,
+            "Sommergerste": 6.1,
+            "Deckungsbeitrag": 3040.9
+        },
+        "feld144": {
+            "feld14": 1,
+            "WintergersteZwiebeln": 6.1,
+            "ErbsenZwiebeln": 6.1,
+            "KartoffelnZwiebeln": 6.1,
+            "SommergersteZwiebeln": 6.1,
+            "Zwiebeln": 6.1,
+            "Deckungsbeitrag": 23821.082
+        },
+        "feld150": {
+            "feld15": 1,
+            "WintergersteErbsen": 6.6,
+            "WintergersteKartoffeln": 6.6,
+            "WintergersteSommergerste": 6.6,
+            "WintergersteZwiebeln": 6.6,
+            "Wintergerste": 6.6,
+            "Deckungsbeitrag": 4514.233
+        },
+        "feld151": {
+            "feld15": 1,
+            "WintergersteErbsen": 6.6,
+            "ErbsenKartoffeln": 6.6,
+            "ErbsenSommergerste": 6.6,
+            "ErbsenZwiebeln": 6.6,
+            "Erbsen": 6.6,
+            "Deckungsbeitrag": 2611.575
+        },
+        "feld152": {
+            "feld15": 1,
+            "WintergersteKartoffeln": 6.6,
+            "ErbsenKartoffeln": 6.6,
+            "KartoffelnSommergerste": 6.6,
+            "KartoffelnZwiebeln": 6.6,
+            "Kartoffeln": 6.6,
+            "Deckungsbeitrag": 25851.545
+        },
+        "feld153": {
+            "feld15": 1,
+            "WintergersteSommergerste": 6.6,
+            "ErbsenSommergerste": 6.6,
+            "KartoffelnSommergerste": 6.6,
+            "SommergersteZwiebeln": 6.6,
+            "Sommergerste": 6.6,
+            "Deckungsbeitrag": 3298.25
+        },
+        "feld154": {
+            "feld15": 1,
+            "WintergersteZwiebeln": 6.6,
+            "ErbsenZwiebeln": 6.6,
+            "KartoffelnZwiebeln": 6.6,
+            "SommergersteZwiebeln": 6.6,
+            "Zwiebeln": 6.6,
+            "Deckungsbeitrag": 25838.234999999997
+        },
+        "feld160": {
+            "feld16": 1,
+            "WintergersteErbsen": 15.0,
+            "WintergersteKartoffeln": 15.0,
+            "WintergersteSommergerste": 15.0,
+            "WintergersteZwiebeln": 15.0,
+            "Wintergerste": 15.0,
+            "Deckungsbeitrag": 10245.721000000001
+        },
+        "feld161": {
+            "feld16": 1,
+            "WintergersteErbsen": 15.0,
+            "ErbsenKartoffeln": 15.0,
+            "ErbsenSommergerste": 15.0,
+            "ErbsenZwiebeln": 15.0,
+            "Erbsen": 15.0,
+            "Deckungsbeitrag": 5927.307
+        },
+        "feld162": {
+            "feld16": 1,
+            "WintergersteKartoffeln": 15.0,
+            "ErbsenKartoffeln": 15.0,
+            "KartoffelnSommergerste": 15.0,
+            "KartoffelnZwiebeln": 15.0,
+            "Kartoffeln": 15.0,
+            "Deckungsbeitrag": 58675.301
+        },
+        "feld163": {
+            "feld16": 1,
+            "WintergersteSommergerste": 15.0,
+            "ErbsenSommergerste": 15.0,
+            "KartoffelnSommergerste": 15.0,
+            "SommergersteZwiebeln": 15.0,
+            "Sommergerste": 15.0,
+            "Deckungsbeitrag": 7485.65
+        },
+        "feld164": {
+            "feld16": 1,
+            "WintergersteZwiebeln": 15.0,
+            "ErbsenZwiebeln": 15.0,
+            "KartoffelnZwiebeln": 15.0,
+            "SommergersteZwiebeln": 15.0,
+            "Zwiebeln": 15.0,
+            "Deckungsbeitrag": 58640.487
+        },
+        "feld170": {
+            "feld17": 1,
+            "WintergersteErbsen": 7.6,
+            "WintergersteKartoffeln": 7.6,
+            "WintergersteSommergerste": 7.6,
+            "WintergersteZwiebeln": 7.6,
+            "Wintergerste": 7.6,
+            "Deckungsbeitrag": 5181.143
+        },
+        "feld171": {
+            "feld17": 1,
+            "WintergersteErbsen": 7.6,
+            "ErbsenKartoffeln": 7.6,
+            "ErbsenSommergerste": 7.6,
+            "ErbsenZwiebeln": 7.6,
+            "Erbsen": 7.6,
+            "Deckungsbeitrag": 2997.3349999999996
+        },
+        "feld172": {
+            "feld17": 1,
+            "WintergersteKartoffeln": 7.6,
+            "ErbsenKartoffeln": 7.6,
+            "KartoffelnSommergerste": 7.6,
+            "KartoffelnZwiebeln": 7.6,
+            "Kartoffeln": 7.6,
+            "Deckungsbeitrag": 29672.425
+        },
+        "feld173": {
+            "feld17": 1,
+            "WintergersteSommergerste": 7.6,
+            "ErbsenSommergerste": 7.6,
+            "KartoffelnSommergerste": 7.6,
+            "SommergersteZwiebeln": 7.6,
+            "Sommergerste": 7.6,
+            "Deckungsbeitrag": 3785.25
+        },
+        "feld174": {
+            "feld17": 1,
+            "WintergersteZwiebeln": 7.6,
+            "ErbsenZwiebeln": 7.6,
+            "KartoffelnZwiebeln": 7.6,
+            "SommergersteZwiebeln": 7.6,
+            "Zwiebeln": 7.6,
+            "Deckungsbeitrag": 29651.494999999995
+        },
+        "feld180": {
+            "feld18": 1,
+            "WintergersteErbsen": 8.0,
+            "WintergersteKartoffeln": 8.0,
+            "WintergersteSommergerste": 8.0,
+            "WintergersteZwiebeln": 8.0,
+            "Wintergerste": 8.0,
+            "Deckungsbeitrag": 5472.63
+        },
+        "feld181": {
+            "feld18": 1,
+            "WintergersteErbsen": 8.0,
+            "ErbsenKartoffeln": 8.0,
+            "ErbsenSommergerste": 8.0,
+            "ErbsenZwiebeln": 8.0,
+            "Erbsen": 8.0,
+            "Deckungsbeitrag": 3166.0299999999997
+        },
+        "feld182": {
+            "feld18": 1,
+            "WintergersteKartoffeln": 8.0,
+            "ErbsenKartoffeln": 8.0,
+            "KartoffelnSommergerste": 8.0,
+            "KartoffelnZwiebeln": 8.0,
+            "Kartoffeln": 8.0,
+            "Deckungsbeitrag": 31339.89
+        },
+        "feld183": {
+            "feld18": 1,
+            "WintergersteSommergerste": 8.0,
+            "ErbsenSommergerste": 8.0,
+            "KartoffelnSommergerste": 8.0,
+            "SommergersteZwiebeln": 8.0,
+            "Sommergerste": 8.0,
+            "Deckungsbeitrag": 3998.5
+        },
+        "feld184": {
+            "feld18": 1,
+            "WintergersteZwiebeln": 8.0,
+            "ErbsenZwiebeln": 8.0,
+            "KartoffelnZwiebeln": 8.0,
+            "SommergersteZwiebeln": 8.0,
+            "Zwiebeln": 8.0,
+            "Deckungsbeitrag": 31324.03
+        },
+        "feld190": {
+            "feld19": 1,
+            "WintergersteErbsen": 3.3,
+            "WintergersteKartoffeln": 3.3,
+            "WintergersteSommergerste": 3.3,
+            "WintergersteZwiebeln": 3.3,
+            "Wintergerste": 3.3,
+            "Deckungsbeitrag": 2239.462
+        },
+        "feld191": {
+            "feld19": 1,
+            "WintergersteErbsen": 3.3,
+            "ErbsenKartoffeln": 3.3,
+            "ErbsenSommergerste": 3.3,
+            "ErbsenZwiebeln": 3.3,
+            "Erbsen": 3.3,
+            "Deckungsbeitrag": 1295.5109999999997
+        },
+        "feld192": {
+            "feld19": 1,
+            "WintergersteKartoffeln": 3.3,
+            "ErbsenKartoffeln": 3.3,
+            "KartoffelnSommergerste": 3.3,
+            "KartoffelnZwiebeln": 3.3,
+            "Kartoffeln": 3.3,
+            "Deckungsbeitrag": 12826.432999999999
+        },
+        "feld193": {
+            "feld19": 1,
+            "WintergersteSommergerste": 3.3,
+            "ErbsenSommergerste": 3.3,
+            "KartoffelnSommergerste": 3.3,
+            "SommergersteZwiebeln": 3.3,
+            "Sommergerste": 3.3,
+            "Deckungsbeitrag": 1635.95
+        },
+        "feld194": {
+            "feld19": 1,
+            "WintergersteZwiebeln": 3.3,
+            "ErbsenZwiebeln": 3.3,
+            "KartoffelnZwiebeln": 3.3,
+            "SommergersteZwiebeln": 3.3,
+            "Zwiebeln": 3.3,
+            "Deckungsbeitrag": 12813.980999999998
+        }
+    },
+    "ints": {
+        "feld00": 1,
+        "feld01": 1,
+        "feld02": 1,
+        "feld03": 1,
+        "feld04": 1,
+        "feld10": 1,
+        "feld11": 1,
+        "feld12": 1,
+        "feld13": 1,
+        "feld14": 1,
+        "feld20": 1,
+        "feld21": 1,
+        "feld22": 1,
+        "feld23": 1,
+        "feld24": 1,
+        "feld30": 1,
+        "feld31": 1,
+        "feld32": 1,
+        "feld33": 1,
+        "feld34": 1,
+        "feld40": 1,
+        "feld41": 1,
+        "feld42": 1,
+        "feld43": 1,
+        "feld44": 1,
+        "feld50": 1,
+        "feld51": 1,
+        "feld52": 1,
+        "feld53": 1,
+        "feld54": 1,
+        "feld60": 1,
+        "feld61": 1,
+        "feld62": 1,
+        "feld63": 1,
+        "feld64": 1,
+        "feld70": 1,
+        "feld71": 1,
+        "feld72": 1,
+        "feld73": 1,
+        "feld74": 1,
+        "feld80": 1,
+        "feld81": 1,
+        "feld82": 1,
+        "feld83": 1,
+        "feld84": 1,
+        "feld90": 1,
+        "feld91": 1,
+        "feld92": 1,
+        "feld93": 1,
+        "feld94": 1,
+        "feld100": 1,
+        "feld101": 1,
+        "feld102": 1,
+        "feld103": 1,
+        "feld104": 1,
+        "feld110": 1,
+        "feld111": 1,
+        "feld112": 1,
+        "feld113": 1,
+        "feld114": 1,
+        "feld120": 1,
+        "feld121": 1,
+        "feld122": 1,
+        "feld123": 1,
+        "feld124": 1,
+        "feld130": 1,
+        "feld131": 1,
+        "feld132": 1,
+        "feld133": 1,
+        "feld134": 1,
+        "feld140": 1,
+        "feld141": 1,
+        "feld142": 1,
+        "feld143": 1,
+        "feld144": 1,
+        "feld150": 1,
+        "feld151": 1,
+        "feld152": 1,
+        "feld153": 1,
+        "feld154": 1,
+        "feld160": 1,
+        "feld161": 1,
+        "feld162": 1,
+        "feld163": 1,
+        "feld164": 1,
+        "feld170": 1,
+        "feld171": 1,
+        "feld172": 1,
+        "feld173": 1,
+        "feld174": 1,
+        "feld180": 1,
+        "feld181": 1,
+        "feld182": 1,
+        "feld183": 1,
+        "feld184": 1,
+        "feld190": 1,
+        "feld191": 1,
+        "feld192": 1,
+        "feld193": 1,
+        "feld194": 1
+    },
+    "expects": {
+        "feasible": true,
+        "result": 681907.643,
+        "bounded": true,
+        "feld02": 0,
+        "feld172": 1,
+        "feld12": 1,
+        "feld52": 1,
+        "feld62": 1,
+        "feld72": 1,
+        "feld112": 0,
+        "feld122": 0,
+        "feld132": 1,
+        "feld142": 1,
+        "feld92": 1,
+        "feld162": 1,
+        "feld152": 1,
+        "feld82": 1,
+        "feld184": 1,
+        "feld22": 1,
+        "feld42": 0,
+        "feld04": 1,
+        "feld102": 1,
+        "feld192": 1,
+        "feld182": 0,
+        "feld32": 1,
+        "feld124": 1,
+        "feld44": 1,
+        "feld110": 1
+    }
+}
