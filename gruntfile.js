@@ -29,7 +29,7 @@ module.exports = function(grunt){
         "mochaTest": {
             "test": {
                 "options": {
-                    "reporter": "json",
+                    "reporter": "spec",
                     "quite": "false"
                 },
                 "src": ["test/solver.problems.js"]
