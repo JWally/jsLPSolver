@@ -97,11 +97,18 @@ Tableau.prototype.branchAndCut = function () {
 
     // 1.) Load a model into the queue
     var branch = new Branch(-Infinity, []);
+    var acceptableThreshold;
+    
     branches.push(branch);
     // If all branches have been exhausted terminate the loop
     while (branches.length > 0 && toleranceFlag === true && Date.now() < terminalTime) {
         
-        var acceptableThreshold = this.bestPossibleEval * (1 - (tolerance/100));
+        if(this.model.isMinimization){
+            acceptableThreshold = this.bestPossibleEval * (1 + tolerance);
+        } else {
+            acceptableThreshold = this.bestPossibleEval * (1 - tolerance);
+        }
+        
         // Abort while loop if termination tolerance is both specified and condition is met
         if (tolerance > 0) {
             if (bestEvaluation < acceptableThreshold) {
