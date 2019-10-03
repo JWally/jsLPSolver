@@ -104,10 +104,14 @@ Tableau.prototype.phase1 = function () {
 
             var cycleData = this.checkForCycles(varIndexesCycle);
             if(cycleData.length > 0){
-                console.log("Cycle in phase 1");
-                console.log("Start :", cycleData[0]);
-                console.log("Length :", cycleData[1]);
-                throw new Error();
+
+                this.model.messages.push("Cycle in phase 1");
+                this.model.messages.push("Start :"+ cycleData[0]);
+                this.model.messages.push("Length :"+ cycleData[1]);
+
+                this.feasible = false;
+                return iterations;
+                
             }
         }
 
@@ -262,10 +266,13 @@ Tableau.prototype.phase2 = function () {
 
             var cycleData = this.checkForCycles(varIndexesCycle);
             if(cycleData.length > 0){
-                console.log("Cycle in phase 2");
-                console.log("Start :", cycleData[0]);
-                console.log("Length :", cycleData[1]);
-                throw new Error();
+
+                this.model.messages.push("Cycle in phase 2");
+                this.model.messages.push("Start :"+ cycleData[0]);
+                this.model.messages.push("Length :"+ cycleData[1]);
+
+                this.feasible = false;
+                return iterations;
             }
         }
 
