@@ -1,0 +1,162 @@
+{
+    "name": "ChenhuaWANG22_2 - ***WITH*** Cycle",
+    "optimize": "constraintA",
+    "opType": "min",
+    "options": {
+        "timeout": 1500,
+        "tolerance": 0.10,
+        "exitOnCycles": true
+    },
+    "constraints": {
+        "constraintA": { "max": -1.1999999999999993 },
+        "constraintB": { "max": 26 },
+        "constraintC": { "max": 14 },
+        "constraintD": { "max": 20 },
+        "constraintE": {
+            "min": 1234.8,
+            "max": 1509.2
+        },
+        "constraintF": {
+            "min": 1234.8,
+            "max": 1509.2
+        },
+        "constraintG": {
+            "min": 169.78500000000003,
+            "max": 200.65500000000003
+        },
+        "constraintH": {
+            "min": 37.730000000000004,
+            "max": 108.045
+        },
+        "constraintI": { "min": 13.2055 },
+        "constraintJ": {
+            "min": 33.537777777777784,
+            "max": 48.02
+        },
+        "constraintK": {
+            "min": 15.092,
+            "max": 49.391999999999996
+        },
+        "9294aa97-f5ed-5339-90d3-24d6d608c2e4": {
+            "min": 228.66666666666666,
+            "max": 686
+        },
+        "1f9b0482-dacc-5571-b172-358fee6992fb": {
+            "min": 114.33333333333333,
+            "max": 686
+        },
+        "50d09a60-e29b-59e2-9d1e-6681b1018cbf": {
+            "min": 114.33333333333333,
+            "max": 686
+        },
+        "ec71e9fa-4d06-5d32-915b-2de72a4cbc1b": {
+            "min": 228.66666666666666,
+            "max": 457.3333333333333
+        },
+        "5c9cc1f4-bc18-5f92-8378-284dc03986b1": {
+            "min": 34.3,
+            "max": 80.03333333333333
+        },
+        "bc23fc84-5dde-5ae3-97a1-ffe5af06f5b0": {
+            "min": 228.66666666666666,
+            "max": 571.6666666666666
+        }
+    },
+    "variables": {
+        "9294aa97-f5ed-5339-90d3-24d6d608c2e4": {
+            "9294aa97-f5ed-5339-90d3-24d6d608c2e4": 1,
+            "constraintA": 0.0017857142857142854,
+            "constraintB": 0,
+            "constraintC": 0,
+            "constraintD": 0,
+            "constraintE": 0.81,
+            "constraintF": 1,
+            "constraintG": 0.181,
+            "constraintH": 0.022000000000000002,
+            "constraintI": 0,
+            "constraintJ": 0.002,
+            "constraintK": 0.01
+        },
+        "1f9b0482-dacc-5571-b172-358fee6992fb": {
+            "1f9b0482-dacc-5571-b172-358fee6992fb": 1,
+            "constraintA": 0.0032774945375091042,
+            "constraintB": 0.0024277737314882253,
+            "constraintC": 0,
+            "constraintD": 0,
+            "constraintE": 1.2348579752367081,
+            "constraintF": 1,
+            "constraintG": 0.23233940276766202,
+            "constraintH": 0.033625637290604526,
+            "constraintI": 0,
+            "constraintJ": 0.021042971595047342,
+            "constraintK": 0.00828259286234523
+        },
+        "50d09a60-e29b-59e2-9d1e-6681b1018cbf": {
+            "50d09a60-e29b-59e2-9d1e-6681b1018cbf": 1,
+            "constraintA": 0.0011009174311926604,
+            "constraintB": 0.0013761467889908258,
+            "constraintC": 0.0013761467889908258,
+            "constraintD": 0,
+            "constraintE": 2.246,
+            "constraintF": 1,
+            "constraintG": 0.2425724770642202,
+            "constraintH": 0.07101467889908257,
+            "constraintI": 0,
+            "constraintJ": 0.12378165137614679,
+            "constraintK": 0.03012844036697248
+        },
+        "ec71e9fa-4d06-5d32-915b-2de72a4cbc1b": {
+            "ec71e9fa-4d06-5d32-915b-2de72a4cbc1b": 1,
+            "constraintA": 0,
+            "constraintB": 0,
+            "constraintC": 0,
+            "constraintD": 0,
+            "constraintE": 0.57,
+            "constraintF": 1,
+            "constraintG": 0.138,
+            "constraintH": 0.016999999999999998,
+            "constraintI": 0,
+            "constraintJ": 0.004,
+            "constraintK": 0.041
+        },
+        "5c9cc1f4-bc18-5f92-8378-284dc03986b1": {
+            "5c9cc1f4-bc18-5f92-8378-284dc03986b1": 1,
+            "constraintA": 0,
+            "constraintB": 0,
+            "constraintC": 0,
+            "constraintD": 0,
+            "constraintE": 6.46,
+            "constraintF": 1,
+            "constraintG": 0.19100000000000003,
+            "constraintH": 0.149,
+            "constraintI": 0,
+            "constraintJ": 0.5880000000000001,
+            "constraintK": 0.095
+        },
+        "bc23fc84-5dde-5ae3-97a1-ffe5af06f5b0": {
+            "bc23fc84-5dde-5ae3-97a1-ffe5af06f5b0": 1,
+            "constraintA": 0,
+            "constraintB": 0,
+            "constraintC": 0,
+            "constraintD": 0,
+            "constraintE": 0.54,
+            "constraintF": 1,
+            "constraintG": 0.034,
+            "constraintH": 0.03,
+            "constraintI": 0.03,
+            "constraintJ": 0.032,
+            "constraintK": 0
+        }
+    },
+    "expects": { 
+        "feasible": false,
+        "result": 0,
+        "bounded": true,
+        "ec71e9fa-4d06-5d32-915b-2de72a4cbc1b": 955.090136654,
+        "bc23fc84-5dde-5ae3-97a1-ffe5af06f5b0": 440.183333333,
+        "9294aa97-f5ed-5339-90d3-24d6d608c2e4": 228.666666667,
+        "1f9b0482-dacc-5571-b172-358fee6992fb": 114.333333333,
+        "50d09a60-e29b-59e2-9d1e-6681b1018cbf": 114.333333333,
+        "5c9cc1f4-bc18-5f92-8378-284dc03986b1": 22.275778164
+    }
+}
