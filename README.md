@@ -102,7 +102,6 @@ console.log(solver.Solve(model));
 // {feasible: true, result: 1440-0, table: 8, dresser: 3}
 ```
 
-
 What if my Mixed-Integer Problem takes too long to Solve?
 ----------------------
 
@@ -113,9 +112,11 @@ In these cases, a variable called ```tolerance``` can be specified in the model 
    model = {
         "optimize": "profit",
         "opType": "max",
-        "tolerance": 0.5,
-        ...
+        "options": {
+            "tolerance": 0.5
         }
+        ...
+    }
 ```
 
 Additionally, a ```timeout``` variable can be added to the JSON model that will return the best solution after {{user-defined}} milliseconds.
@@ -124,11 +125,18 @@ Additionally, a ```timeout``` variable can be added to the JSON model that will 
    model = {
         "optimize": "profit",
         "opType": "max",
-        "timeout": 9000,
-        ...
+        "options": {
+            "tolerance": 0.5
         }
+        ...
+    }
 ```
 
+
+Model Components and Options: What goes where, and what's it do?
+------------------------
+
+* To Do: This...
 
 How Fast is it?
 ----------------------
