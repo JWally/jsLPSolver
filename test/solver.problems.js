@@ -8,30 +8,20 @@ var assert = require("assert");
 var walk = require("walk");
 var fs = require("fs");
 
-var problems = [];
+// var problems = [];
 
 var path_of = process.argv[2];
 
-// Parsing test problems
-var walker = walk.walkSync("test/" +  path_of + "/", {
-    followLinks: false,
-    listeners: {
-        file: function (root, fileStats) {
-            // Add this file to the list of files
-        var fileName = fileStats.name;
-            console.log("fileName", fileName);
 
-        // Only Pull in JSON files
-        if (!/\.json$/.test(fileName)) {
-            return;
-        }
 
-        var fileRoot = root.substr(("test/" +  path_of + "/").length + 1);
-        var fullFilePath = "./" + root + "/" + fileName;
-            var jsonContent = JSON.parse(fs.readFileSync(fullFilePath));
-            problems.push(jsonContent);
-        }
-    }
+var ary = fs.readdirSync("test/" + path_of + "/")
+            .filter(function(file){return /\.json$/.test(file);});
+
+
+var problems = ary.map(function(x){
+    var tmp = fs.readFileSync("test/" + path_of + "/" + x, "utf8");
+    console.log("opening - ",x);
+    return JSON.parse(tmp);
 });
 
 
