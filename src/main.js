@@ -103,8 +103,15 @@ var Solver = function () {
 
             // 3.) Load all of the variable values
             Object.keys(solution.solutionSet)
-                .map(function (d) {
-                    store[d] = solution.solutionSet[d];
+                .forEach(function (d) {
+                    //
+                    // When returning data in standard format,
+                    // Remove all 0's
+                    //
+                    if(solution.solutionSet[d] !== 0){
+                        store[d] = solution.solutionSet[d];
+                    }
+                    
                 });
 
             return store;
