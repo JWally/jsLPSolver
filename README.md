@@ -105,6 +105,42 @@ console.log(solver.Solve(model));
 GETTING STARTED:
 ================
 
+(Below are generic instructions that assume you already have the library downloaded / exposed)
+
+The Model
+-------------------
+The whole premise behind this library is that you don't have to model Linear Programs as tableaus, but can instead just build out (in my opinion) simple JSON objects that describe the problem you're trying to solve. How would one describe said problem? Look no further friend!
+
+
+### "variables"
+I'm sure theres's a better / more accurate way to phrase it, but a variable is simply an input that you're working with in your problem. It has attributes that you can use later to constrain. The final result *should* tell you how much of each variable to use to not only satisfy your LP, but optimize it.
+
+For example, say you have an LP with 2 variables with the following attributes:
+
+* variable_1
+  * attribute_a : 1
+  * attribute_b : 0.5
+  * attribute_zzz : 0
+* variable_2
+  * attribute_a : 1
+  * attribute_b : 0
+  * attribute_zzz : 12
+
+You would set it up like this: 
+
+
+```json
+{
+    "variables": {
+        "variable_1": {"attribute_a": 1, "attribute_b": 0.5},
+        "variable_2": {"attribute_a": 1, "attribute_zzz": 12}
+    }
+}
+
+```
+
+(notice that variable 1 doesn't need `attribute_zzz` because its 0, and variable 2 doesn't need `attribute_b` because its 0)
+
 
 What if my Mixed-Integer Problem takes too long to Solve?
 ----------------------
