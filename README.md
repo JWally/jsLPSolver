@@ -102,6 +102,10 @@ console.log(solver.Solve(model));
 // {feasible: true, result: 1440-0, table: 8, dresser: 3}
 ```
 
+GETTING STARTED:
+================
+
+
 What if my Mixed-Integer Problem takes too long to Solve?
 ----------------------
 
@@ -131,12 +135,6 @@ Additionally, a ```timeout``` variable can be added to the JSON model that will 
         ...
     }
 ```
-
-
-Model Components and Options: What goes where, and what's it do?
-------------------------
-
-* To Do: This...
 
 How Fast is it?
 ----------------------
