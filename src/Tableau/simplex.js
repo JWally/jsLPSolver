@@ -315,10 +315,12 @@ Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex) {
     var pivotRow = matrix[pivotRowIndex];
     var nNonZeroColumns = 0;
     for (var c = 0; c <= lastColumn; c++) {
-        if (pivotRow[c] !== 0) {
+        if (!(pivotRow[c] >= -1e-8 && pivotRow[c] <= 1e-8)) {
             pivotRow[c] /= quotient;
             nonZeroColumns[nNonZeroColumns] = c;
             nNonZeroColumns += 1;
+        } else {
+            pivotRow[c] = 0;
         }
     }
     pivotRow[pivotColumnIndex] = 1 / quotient;
@@ -329,27 +331,42 @@ Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex) {
     // row by ... yuck... just look below; better explanation later
     var coefficient, i, v0;
     var precision = this.precision;
+    
+    
+    // console.time("step-2");
     for (var r = 0; r <= lastRow; r++) {
         var row = matrix[r];
         if (r !== pivotRowIndex) {
+            
+            // Catch the coefficient that we're going to end up dividing everything by
             coefficient = row[pivotColumnIndex];
+            
             // No point Burning Cycles if
             // Zero to the thing
-            if (coefficient !== 0) {
+            if (!(coefficient >= -1e-8 && coefficient <= 1e-8)) {
                 for (i = 0; i < nNonZeroColumns; i++) {
                     c = nonZeroColumns[i];
                     // No point in doing math if you're just adding
                     // Zero to the thing
                     v0 = pivotRow[c];
-                    if (v0 !== 0) {
+                    if (!(v0 >= -1e-8 && v0 <= 1e-8)) {
                         row[c] = row[c] - coefficient * v0;
+                    } else {
+                        if(v0 !== 0){
+                            pivotRow[c] = 0;
+                        }
                     }
                 }
 
                 row[pivotColumnIndex] = -coefficient / quotient;
+            } else {
+                if(coefficient !== 0){
+                    row[pivotColumnIndex] = 0;
+                }
             }
         }
     }
+    // console.timeEnd("step-2");
 
     var nOptionalObjectives = this.optionalObjectives.length;
     if (nOptionalObjectives > 0) {
