@@ -28,7 +28,7 @@ Solution.prototype.generateSolutionSet = function () {
 
         var varValue = matrix[r][rhsColumn];
         solutionSet[variable.id] =
-            Math.round(varValue * roundingCoeff) / roundingCoeff;
+            Math.round((Number.EPSILON + varValue) * roundingCoeff) / roundingCoeff;
     }
 
     return solutionSet;

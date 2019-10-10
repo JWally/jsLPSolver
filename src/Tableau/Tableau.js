@@ -110,6 +110,8 @@ Tableau.prototype.initialize = function (width, height, variables, unrestrictedV
     this.width = width;
     this.height = height;
 
+
+// console.time("tableau_build");
     // BUILD AN EMPTY ARRAY OF THAT WIDTH
     var tmpRow = new Array(width);
     for (var i = 0; i < width; i++) {
@@ -121,6 +123,17 @@ Tableau.prototype.initialize = function (width, height, variables, unrestrictedV
     for (var j = 0; j < height; j++) {
         this.matrix[j] = tmpRow.slice();
     }
+
+//
+// TODO: Benchmark This
+//this.matrix = new Array(height).fill(0).map(() => new Array(width).fill(0));
+
+// console.timeEnd("tableau_build");
+// console.log("height",height);
+// console.log("width",width);
+// console.log("------");
+// console.log("");
+
 
     this.varIndexByRow = new Array(this.height);
     this.varIndexByCol = new Array(this.width);
@@ -241,7 +254,7 @@ Tableau.prototype.setEvaluation = function () {
     var roundingCoeff = Math.round(1 / this.precision);
     var evaluation = this.matrix[this.costRowIndex][this.rhsColumn];
     var roundedEvaluation =
-        Math.round(evaluation * roundingCoeff) / roundingCoeff;
+        Math.round((Number.EPSILON + evaluation) * roundingCoeff) / roundingCoeff;
 
     this.evaluation = roundedEvaluation;
     if (this.simplexIters === 0) {

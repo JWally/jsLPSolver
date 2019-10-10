@@ -67,7 +67,7 @@ Tableau.prototype.updateVariableValues = function () {
         } else {
             // Variable is basic
             var varValue = this.matrix[r][this.rhsColumn];
-            variable.value = Math.round(varValue * roundingCoeff) / roundingCoeff;
+            variable.value = Math.round((varValue + Number.EPSILON) * roundingCoeff) / roundingCoeff;
         }
     }
 };
