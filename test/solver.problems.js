@@ -5,7 +5,6 @@
 /*global process*/
 
 var assert = require("assert");
-var walk = require("walk");
 var fs = require("fs");
 
 // var problems = [];
