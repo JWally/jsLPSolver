@@ -48,15 +48,24 @@ Tableau.prototype.phase1 = function () {
     var iterations = 0;
 
     while (true) {
+        // ******************************************
+        // ** PHASE 1 - STEP  1 : FIND PIVOT ROW **
+        //
         // Selecting leaving variable (feasibility condition):
         // Basic variable with most negative value
+        //
+        // ******************************************
         var leavingRowIndex = 0;
         var rhsValue = -this.precision;
         for (var r = 1; r <= lastRow; r++) {
             unrestricted = this.unrestrictedVars[this.varIndexByRow[r]] === true;
-            if (unrestricted) {
-                continue;
-            }
+            
+            //
+            // *Don't think this does anything...
+            //
+            //if (unrestricted) {
+            //    continue;
+            //}
 
             var value = matrix[r][rhsColumn];
             if (value < rhsValue) {
@@ -72,6 +81,12 @@ Tableau.prototype.phase1 = function () {
             return iterations;
         }
 
+
+        // ******************************************
+        // ** PHASE 1 - STEP  2 : FIND PIVOT COLUMN **
+        //
+        //
+        // ******************************************
         // Selecting entering variable
         var enteringColumn = 0;
         var maxQuotient = -Infinity;
@@ -79,9 +94,13 @@ Tableau.prototype.phase1 = function () {
         var leavingRow = matrix[leavingRowIndex];
         for (var c = 1; c <= lastColumn; c++) {
             var coefficient = leavingRow[c];
-            if (-this.precision < coefficient && coefficient < this.precision) {
-                continue;
-            }
+            //
+            // *Don't think this does anything...
+            //
+            //if (-this.precision < coefficient && coefficient < this.precision) {
+            //    continue;
+            //}
+            //
 
             unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
             if (unrestricted || coefficient < -this.precision) {
@@ -285,6 +304,8 @@ Tableau.prototype.phase2 = function () {
 // on the pivot row
 // Shared by all tableaux for smaller overhead and lower memory usage
 var nonZeroColumns = [];
+
+
 //-------------------------------------------------------------------
 // Description: Execute pivot operations over a 2d array,
 //          on a given row, and column
@@ -315,7 +336,7 @@ Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex) {
     var pivotRow = matrix[pivotRowIndex];
     var nNonZeroColumns = 0;
     for (var c = 0; c <= lastColumn; c++) {
-        if (!(pivotRow[c] >= -1e-8 && pivotRow[c] <= 1e-8)) {
+        if (!(pivotRow[c] >= -1e-16 && pivotRow[c] <= 1e-16)) {
             pivotRow[c] /= quotient;
             nonZeroColumns[nNonZeroColumns] = c;
             nNonZeroColumns += 1;
@@ -332,24 +353,42 @@ Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex) {
     var coefficient, i, v0;
     var precision = this.precision;
     
-    
+    // //////////////////////////////////////
+    //
+    // This is step 2 of the pivot function.
+    // It is, by far, the most expensive piece of
+    // this whole process where the code can be optimized (faster code)
+    // without changing the whole algorithm (fewer cycles)
+    //
+    // 1.) For every row but the pivot row
+    // 2.) Update each column to 
+    //    a.) itself
+    //        less
+    //    b.) active-row's pivot column
+    //        times
+    //    c.) whatever-the-hell this is: nonZeroColumns[i]
+    // 
+    // //////////////////////////////////////
     // console.time("step-2");
     for (var r = 0; r <= lastRow; r++) {
-        var row = matrix[r];
         if (r !== pivotRowIndex) {
-            
+
+            // Set reference to the row we're working on
+            //
+            var row = matrix[r];
+
             // Catch the coefficient that we're going to end up dividing everything by
             coefficient = row[pivotColumnIndex];
             
             // No point Burning Cycles if
             // Zero to the thing
-            if (!(coefficient >= -1e-8 && coefficient <= 1e-8)) {
+            if (!(coefficient >= -1e-16 && coefficient <= 1e-16)) {
                 for (i = 0; i < nNonZeroColumns; i++) {
                     c = nonZeroColumns[i];
                     // No point in doing math if you're just adding
                     // Zero to the thing
                     v0 = pivotRow[c];
-                    if (!(v0 >= -1e-8 && v0 <= 1e-8)) {
+                    if (!(v0 >= -1e-16 && v0 <= 1e-16)) {
                         row[c] = row[c] - coefficient * v0;
                     } else {
                         if(v0 !== 0){
