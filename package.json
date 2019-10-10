@@ -17,14 +17,13 @@
   "main": "./src/main",
   "devDependencies": {
     "benchmark": "*",
-    "mocha": "*",
     "grunt": "*",
     "grunt-browserify": "*",
     "grunt-contrib-jshint": "*",
     "grunt-contrib-uglify": "*",
     "grunt-jsbeautifier": "*",
     "grunt-mocha-test": "*",
-    "walk": "*"
+    "mocha": "*"
   },
   "keywords": [
     "Linear",
