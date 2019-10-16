@@ -14,7 +14,7 @@ module.exports = function(grunt){
     grunt.initConfig({
         "pkg": "package.json",
         "jshint": {
-            "files": ["src/**/*.js","test/**/*.js","!src/solver.js"],
+            "files": ["src/**/*.js","test/**/*.js","!src/solver.js","!test/misc/*.*","!test/test-wip/*.*"],
             "options": {
                 "curly": true,
                 "eqeqeq": true,
