@@ -1,5 +1,5 @@
 {
-    "name": "Introductory example",
+    "name": "Cycling Introductory example",
     "optimize": "profit",
     "opType": "max",
     "constraints": {
@@ -34,6 +34,7 @@
     },
     "expects": {
         "feasible": true,
-        "bounded": false
+        "bounded": false,
+        "result": "Infinity"
     }
 }
