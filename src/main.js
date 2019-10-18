@@ -25,6 +25,7 @@ var Constraint = expressions.Constraint;
 var Variable = expressions.Variable;
 var Numeral = expressions.Numeral;
 var Term = expressions.Term;
+var External = require("./External/main.js");
 
 // Place everything under the Solver Name Space
 var Solver = function () {
@@ -38,8 +39,9 @@ var Solver = function () {
     this.Numeral = Numeral;
     this.Term = Term;
     this.Tableau = Tableau;
-
     this.lastSolvedModel = null;
+
+    this.External = External;
 
     /*************************************************************
      * Method: Solve
@@ -56,9 +58,11 @@ var Solver = function () {
      *                  functions in the *Validate* module
      **************************************************************/
     this.Solve = function (model, precision, full, validate) {
+        //
         // Run our validations on the model
         // if the model doesn't have a validate
         // attribute set to false
+        //
         if(validate){
             for(var test in validation){
                 model = validation[test](model);
@@ -70,51 +74,93 @@ var Solver = function () {
             throw new Error("Solver requires a model to operate on");
         }
 
-        if (model instanceof Model === false) {
-            model = new Model(precision).loadJson(model);
+        //
+        // If the objective function contains multiple objectives,
+        // pass it to the multi-solver thing...
+        //
+        if(typeof model.optimize === "object"){
+            if(Object.keys(model.optimize > 1)){
+                return require("./Polyopt")(this, model);
+            }
         }
 
-        var solution = model.solve();
-        this.lastSolvedModel = model;
-        solution.solutionSet = solution.generateSolutionSet();
+        //
+        // Try our hand at handling external solvers...
+        // 
+        //
+        if(model.external){
 
-        // If the user asks for a full breakdown
-        // of the tableau (e.g. full === true)
-        // this will return it
-        if (full) {
-            return solution;
-        } else {
-            // Otherwise; give the user the bare
-            // minimum of info necessary to carry on
-
-            var store = {};
-
-            // 1.) Add in feasibility to store;
-            store.feasible = solution.feasible;
-
-            // 2.) Add in the objective value
-            store.result = solution.evaluation;
-
-            store.bounded = solution.bounded;
+            var solvers = Object.keys(External);
+            solvers = JSON.stringify(solvers);
             
-            if(solution._tableau.__isIntegral){
-                store.isIntegral = true;
+            //
+            // The model needs to have a "solver" attribute if nothing else
+            // for us to pass data into
+            //
+            if(!model.external.solver){
+                throw new Error("The model you provided has an 'external' object that doesn't have a solver attribute. Use one of the following:" + solvers);
+            }
+            
+            //
+            // If the solver they request doesn't exist; provide them
+            // with a list of possible options:
+            //
+            if(!External[model.external.solver]){
+                throw new Error("No support (yet) for " + model.external.solver + ". Please use one of these instead:" + solvers);
+            }
+            
+            return External[model.external.solver].solve(model);
+        } else {
+
+
+
+            if (model instanceof Model === false) {
+                model = new Model(precision).loadJson(model);
             }
 
-            // 3.) Load all of the variable values
-            Object.keys(solution.solutionSet)
-                .forEach(function (d) {
-                    //
-                    // When returning data in standard format,
-                    // Remove all 0's
-                    //
-                    if(solution.solutionSet[d] !== 0){
-                        store[d] = solution.solutionSet[d];
-                    }
-                    
-                });
+            var solution = model.solve();
+            this.lastSolvedModel = model;
+            solution.solutionSet = solution.generateSolutionSet();
 
-            return store;
+            // If the user asks for a full breakdown
+            // of the tableau (e.g. full === true)
+            // this will return it
+            if (full) {
+                return solution;
+            } else {
+                // Otherwise; give the user the bare
+                // minimum of info necessary to carry on
+
+                var store = {};
+
+                // 1.) Add in feasibility to store;
+                store.feasible = solution.feasible;
+
+                // 2.) Add in the objective value
+                store.result = solution.evaluation;
+
+                store.bounded = solution.bounded;
+                
+                if(solution._tableau.__isIntegral){
+                    store.isIntegral = true;
+                }
+
+                // 3.) Load all of the variable values
+                Object.keys(solution.solutionSet)
+                    .forEach(function (d) {
+                        //
+                        // When returning data in standard format,
+                        // Remove all 0's
+                        //
+                        if(solution.solutionSet[d] !== 0){
+                            store[d] = solution.solutionSet[d];
+                        }
+                        
+                    });
+
+                return store;
+            }
+
         }
 
     };
@@ -127,7 +173,7 @@ var Solver = function () {
      *          real solving library...in this case
      *          lp_solver
      **************************************************************/
-    this.ReformatLP = require("./Reformat");
+    this.ReformatLP = require("./External/lpsolve/Reformat.js");
 
 
      /*************************************************************
