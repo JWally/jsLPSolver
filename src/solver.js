@@ -1,5 +1,484 @@
 (function(){if (typeof exports === "object") {module.exports =  require("./main");}})();
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+
+},{}],2:[function(require,module,exports){
+/*global describe*/
+/*global require*/
+/*global module*/
+/*global it*/
+/*global console*/
+/*global process*/
+/*jshint -W083 */
+
+ /*************************************************************
+ * Method: to_JSON
+ * Scope: Public:
+ * Agruments: input: Whatever the user gives us
+ * Purpose: Convert an unfriendly formatted LP
+ *          into something that our library can
+ *          work with
+ **************************************************************/
+function to_JSON(input){
+    var rxo = {
+        /* jshint ignore:start */
+        "is_blank": /^\W{0,}$/,
+        "is_objective": /(max|min)(imize){0,}\:/i,
+        "is_int": /^(?!\/\*)\W{0,}int/i,
+        "is_bin": /^(?!\/\*)\W{0,}bin/i,
+        "is_constraint": /(\>|\<){0,}\=/i,
+        "is_unrestricted": /^\S{0,}unrestricted/i,
+        "parse_lhs":  /(\-|\+){0,1}\s{0,1}\d{0,}\.{0,}\d{0,}\s{0,}[A-Za-z]\S{0,}/gi,
+        "parse_rhs": /(\-|\+){0,1}\d{1,}\.{0,}\d{0,}\W{0,}\;{0,1}$/i,
+        "parse_dir": /(\>|\<){0,}\=/gi,
+        "parse_int": /[^\s|^\,]+/gi,
+        "parse_bin": /[^\s|^\,]+/gi,
+        "get_num": /(\-|\+){0,1}(\W|^)\d+\.{0,1}\d{0,}/g,
+        "get_word": /[A-Za-z].*/
+        /* jshint ignore:end */
+    },
+    model = {
+        "opType": "",
+        "optimize": "_obj",
+        "constraints": {},
+        "variables": {}
+    },
+    constraints = {
+        ">=": "min",
+        "<=": "max",
+        "=": "equal"
+    },
+    tmp = "", tst = 0, ary = null, hldr = "", hldr2 = "",
+    constraint = "", rhs = 0;
+
+    // Handle input if its coming
+    // to us as a hard string
+    // instead of as an array of
+    // strings
+    if(typeof input === "string"){
+        input = input.split("\n");
+    }
+
+    // Start iterating over the rows
+    // to see what all we have
+    for(var i = 0; i < input.length; i++){
+
+        constraint = "__" + i;
+
+        // Get the string we're working with
+        tmp = input[i];
+
+        // Set the test = 0
+        tst = 0;
+
+        // Reset the array
+        ary = null;
+
+        // Test to see if we're the objective
+        if(rxo.is_objective.test(tmp)){
+            // Set up in model the opType
+            model.opType = tmp.match(/(max|min)/gi)[0];
+
+            // Pull apart lhs
+            ary = tmp.match(rxo.parse_lhs).map(function(d){
+                return d.replace(/\s+/,"");
+            }).slice(1);
+
+
+
+            // *** STEP 1 *** ///
+            // Get the variables out
+            ary.forEach(function(d){
+
+                // Get the number if its there
+                hldr = d.match(rxo.get_num);
+
+                // If it isn't a number, it might
+                // be a standalone variable
+                if(hldr === null){
+                    if(d.substr(0,1) === "-"){
+                        hldr = -1;
+                    } else {
+                        hldr = 1;
+                    }
+                } else {
+                    hldr = hldr[0];
+                }
+
+                hldr = parseFloat(hldr);
+
+                // Get the variable type
+                hldr2 = d.match(rxo.get_word)[0].replace(/\;$/,"");
+
+                // Make sure the variable is in the model
+                model.variables[hldr2] = model.variables[hldr2] || {};
+                model.variables[hldr2]._obj = hldr;
+
+            });
+        ////////////////////////////////////
+        }else if(rxo.is_int.test(tmp)){
+            // Get the array of ints
+            ary = tmp.match(rxo.parse_int).slice(1);
+
+            // Since we have an int, our model should too
+            model.ints = model.ints || {};
+
+            ary.forEach(function(d){
+                d = d.replace(";","");
+                model.ints[d] = 1;
+            });
+        ////////////////////////////////////
+        } else if(rxo.is_bin.test(tmp)){
+            // Get the array of bins
+            ary = tmp.match(rxo.parse_bin).slice(1);
+
+            // Since we have an binary, our model should too
+            model.binaries = model.binaries || {};
+
+            ary.forEach(function(d){
+                d = d.replace(";","");
+                model.binaries[d] = 1;
+            });
+        ////////////////////////////////////
+        } else if(rxo.is_constraint.test(tmp)){
+            var separatorIndex = tmp.indexOf(":");
+            var constraintExpression = (separatorIndex === -1) ? tmp : tmp.slice(separatorIndex + 1);
+
+            // Pull apart lhs
+            ary = constraintExpression.match(rxo.parse_lhs).map(function(d){
+                return d.replace(/\s+/,"");
+            });
+
+            // *** STEP 1 *** ///
+            // Get the variables out
+            ary.forEach(function(d){
+                // Get the number if its there
+                hldr = d.match(rxo.get_num);
+
+                if(hldr === null){
+                    if(d.substr(0,1) === "-"){
+                        hldr = -1;
+                    } else {
+                        hldr = 1;
+                    }
+                } else {
+                    hldr = hldr[0];
+                }
+
+                hldr = parseFloat(hldr);
+
+
+                // Get the variable name
+                hldr2 = d.match(rxo.get_word)[0];
+
+                // Make sure the variable is in the model
+                model.variables[hldr2] = model.variables[hldr2] || {};
+                model.variables[hldr2][constraint] = hldr;
+
+            });
+
+            // *** STEP 2 *** ///
+            // Get the RHS out
+            rhs = parseFloat(tmp.match(rxo.parse_rhs)[0]);
+
+            // *** STEP 3 *** ///
+            // Get the Constrainer out
+            tmp = constraints[tmp.match(rxo.parse_dir)[0]];
+            model.constraints[constraint] = model.constraints[constraint] || {};
+            model.constraints[constraint][tmp] = rhs;
+        ////////////////////////////////////
+        } else if(rxo.is_unrestricted.test(tmp)){
+            // Get the array of unrestricted
+            ary = tmp.match(rxo.parse_int).slice(1);
+
+            // Since we have an int, our model should too
+            model.unrestricted = model.unrestricted || {};
+
+            ary.forEach(function(d){
+                d = d.replace(";","");
+                model.unrestricted[d] = 1;
+            });
+        }
+    }
+    return model;
+}
+
+
+ /*************************************************************
+ * Method: from_JSON
+ * Scope: Public:
+ * Agruments: model: The model we want solver to operate on
+ * Purpose: Convert a friendly JSON model into a model for a
+ *          real solving library...in this case
+ *          lp_solver
+ **************************************************************/
+function from_JSON(model){
+    // Make sure we at least have a model
+    if (!model) {
+        throw new Error("Solver requires a model to operate on");
+    }
+
+    var output = "",
+        ary = [],
+        norm = 1,
+        lookup = {
+            "max": "<=",
+            "min": ">=",
+            "equal": "="
+        },
+        rxClean = new RegExp("[^A-Za-z0-9_\[\{\}\/\.\&\#\$\%\~\'\@\^]", "gi");
+
+    // Build the objective statement
+    
+    if(model.opType){
+        
+        output += model.opType + ":";
+
+        // Iterate over the variables
+        for(var x in model.variables){
+            // Give each variable a self of 1 unless
+            // it exists already
+            model.variables[x][x] = model.variables[x][x] ? model.variables[x][x] : 1;
+
+            // Does our objective exist here?
+            if(model.variables[x][model.optimize]){
+                output += " " + model.variables[x][model.optimize] + " " + x.replace(rxClean,"_");
+            }
+        }
+    } else {
+        output += "max:";
+    }
+    
+
+
+    // Add some closure to our line thing
+    output += ";\n\n";
+
+    // And now... to iterate over the constraints
+    for(var xx in model.constraints){
+        for(var y in model.constraints[xx]){
+            if(typeof lookup[y] !== "undefined"){
+                
+                for(var z in model.variables){
+
+                    // Does our Constraint exist here?
+                    if(typeof model.variables[z][xx] !== "undefined"){
+                        output += " " + model.variables[z][xx] + " " + z.replace(rxClean,"_");
+                    }
+                }
+                // Add the constraint type and value...
+
+                output += " " + lookup[y] + " " + model.constraints[xx][y];
+                output += ";\n";
+                
+            }
+        }
+    }
+
+    // Are there any ints?
+    if(model.ints){
+        output += "\n\n";
+        for(var xxx in model.ints){
+            output += "int " + xxx.replace(rxClean,"_") + ";\n";
+        }
+    }
+
+    // Are there any unrestricted?
+    if(model.unrestricted){
+        output += "\n\n";
+        for(var xxxx in model.unrestricted){
+            output += "unrestricted " + xxxx.replace(rxClean,"_") + ";\n";
+        }
+    }
+
+    // And kick the string back
+    return output;
+
+}
+
+
+module.exports = function (model) {
+    // If the user is giving us an array
+    // or a string, convert it to a JSON Model
+    // otherwise, spit it out as a string
+    if(model.length){
+        return to_JSON(model);
+    } else {
+        return from_JSON(model);
+    }
+};
+
+},{}],3:[function(require,module,exports){
+/*global describe*/
+/*global require*/
+/*global it*/
+/*global console*/
+/*global process*/
+/*global exports*/
+/*global Promise*/
+
+
+// LP SOLVE CLI REFERENCE:
+// http://lpsolve.sourceforge.net/5.5/lp_solve.htm
+//
+//
+var fs = require("fs");
+// var reformat = require("./Reformat.js");
+
+exports.reformat = require("./Reformat.js");
+
+exports.solve = function(model){
+    
+    return new Promise(function(res, rej){
+
+        //
+        // Convert JSON model to lp_solve format
+        //
+        var data = require("./Reformat.js")(model);
+        
+        
+        if(!model.external){
+            rej("Data for this function must be contained in the 'external' attribute. Not seeing anything there.");
+        }
+        
+        // 
+        // In the args, they *SHALL* have provided an executable
+        // path to the solver they're piping the data into
+        //
+        if(!model.external.binPath){
+            rej("No Executable | Binary path provided in arguments as 'binPath'");
+        }
+        
+        //
+        // They also need to provide an arg_array
+        //
+        if(!model.external.args){
+            rej("No arguments array for cli | bash provided on 'args' attribute");
+        }
+        
+        //
+        // They also need a tempName so we know where to store
+        // the temp file we're creating...
+        //
+        if(!model.external.tempName){
+            rej("No 'tempName' given. This is necessary to produce a staging file for the solver to operate on");
+        }
+        
+        
+        
+        //
+        // To my knowledge, in Windows, you cannot directly pipe text into
+        // an exe...
+        //
+        // Thus, our process looks like this...
+        //
+        // 1.) Convert a model to something an external solver can use
+        // 2.) Save the results from step 1 as a temp-text file
+        // 3.) Pump the results into an exe | whatever-linux-uses
+        // 4.) 
+        // 
+        //
+        
+        fs.writeFile(model.external.tempName, data, function(fe, fd){
+            if(fe){
+                rej(fe);
+            } else {
+                //
+                // So it looks like we wrote to a file and closed it.
+                // Neat.
+                //
+                // Now we need to execute our CLI...
+                var exec = require("child_process").execFile;
+                
+                //
+                // Put the temp file name in the args array...
+                //
+                model.external.args.push(model.external.tempName);
+                
+                exec(model.external.binPath, model.external.args, function(e,data){
+                    if(e){
+                        if(e.code === "1"){
+                            rej({"feasible": false, "error": "Timeout" , "code": e.code});
+                        } else if(e.code === "2"){
+                            rej({"feasible": false, "error": "Infeasible" , "code": e.code});
+                        } else if(e.code === "3"){
+                            rej({"feasible": false, "error": "Unbound" , "code": e.code});
+                        } else {
+                            rej(e);
+                        }
+
+                    } else {
+                        
+                        //
+                        // Clean Up
+                        // And Reformatting...
+                        //
+                        data = data.replace("\\r\\n","\r\n");
+
+
+                        data = data.split("\r\n");
+                        data = data.filter(function(x){
+                            
+                            var rx;
+                            
+                            //
+                            // Test 1
+                            rx = new RegExp(" 0$","gi");
+                            if(rx.test(x) === true){
+                                return false;
+                            }
+
+                            //
+                            // Test 2
+                            rx = new RegExp("\\d$","gi");
+                            if(rx.test(x) === false){
+                                return false;
+                            }
+                            
+
+                            return true;
+                        })
+                        .map(function(x){
+                            return x.split(/\:{0,1} +(?=\d)/);
+                        })
+                        .reduce(function(o,k,i){
+                            o[k[0]] = k[1];
+                            return o;
+                        },{});
+                        
+                        // And finally...return it.
+                        res(data);
+                    }
+                });
+            }
+        });
+    });
+};
+
+/*
+model.external = {
+    "binPath": "C:/lpsolve/lp_solve.exe",
+    "tempName": "C:/temp/out.txt",
+    "args": [
+        "-S2"
+    ]
+    
+}
+
+*/
+},{"./Reformat.js":2,"child_process":1,"fs":1}],4:[function(require,module,exports){
+/*global describe*/
+/*global require*/
+/*global it*/
+/*global console*/
+/*global process*/
+/*global exports*/
+/*global Promise*/
+/*global module*/
+
+module.exports = {
+    "lpsolve": require("./lpsolve/main.js")
+};
+},{"./lpsolve/main.js":3}],5:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -455,7 +934,7 @@ Model.prototype.log = function (message) {
     return this.tableau.log(message);
 };
 
-},{"./Tableau/Tableau.js":6,"./Tableau/branchAndCut.js":8,"./expressions.js":17}],2:[function(require,module,exports){
+},{"./Tableau/Tableau.js":9,"./Tableau/branchAndCut.js":11,"./expressions.js":20}],6:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -654,306 +1133,7 @@ module.exports = function(solver, model){
 
 };
 
-},{}],3:[function(require,module,exports){
-/*global describe*/
-/*global require*/
-/*global module*/
-/*global it*/
-/*global console*/
-/*global process*/
-/*jshint -W083 */
-
-
-
-
-
-
- /*************************************************************
- * Method: to_JSON
- * Scope: Public:
- * Agruments: input: Whatever the user gives us
- * Purpose: Convert an unfriendly formatted LP
- *          into something that our library can
- *          work with
- **************************************************************/
-function to_JSON(input){
-    var rxo = {
-        /* jshint ignore:start */
-        "is_blank": /^\W{0,}$/,
-        "is_objective": /(max|min)(imize){0,}\:/i,
-        //previous version
-        //"is_int": /^\W{0,}int/i,
-        //new version to avoid comments
-        "is_int": /^(?!\/\*)\W{0,}int/i,
-        "is_bin": /^(?!\/\*)\W{0,}bin/i,
-        "is_constraint": /(\>|\<){0,}\=/i,
-        "is_unrestricted": /^\S{0,}unrestricted/i,
-        "parse_lhs":  /(\-|\+){0,1}\s{0,1}\d{0,}\.{0,}\d{0,}\s{0,}[A-Za-z]\S{0,}/gi,
-        "parse_rhs": /(\-|\+){0,1}\d{1,}\.{0,}\d{0,}\W{0,}\;{0,1}$/i,
-        "parse_dir": /(\>|\<){0,}\=/gi,
-        "parse_int": /[^\s|^\,]+/gi,
-        "parse_bin": /[^\s|^\,]+/gi,
-        "get_num": /(\-|\+){0,1}(\W|^)\d+\.{0,1}\d{0,}/g, // Why accepting character \W before the first digit?
-        "get_word": /[A-Za-z].*/
-        /* jshint ignore:end */
-    },
-    model = {
-        "opType": "",
-        "optimize": "_obj",
-        "constraints": {},
-        "variables": {}
-    },
-    constraints = {
-        ">=": "min",
-        "<=": "max",
-        "=": "equal"
-    },
-    tmp = "", tst = 0, ary = null, hldr = "", hldr2 = "",
-    constraint = "", rhs = 0;
-
-    // Handle input if its coming
-    // to us as a hard string
-    // instead of as an array of
-    // strings
-    if(typeof input === "string"){
-        input = input.split("\n");
-    }
-
-    // Start iterating over the rows
-    // to see what all we have
-    for(var i = 0; i < input.length; i++){
-
-        constraint = "__" + i;
-
-        // Get the string we're working with
-        tmp = input[i];
-
-        // Set the test = 0
-        tst = 0;
-
-        // Reset the array
-        ary = null;
-
-        // Test to see if we're the objective
-        if(rxo.is_objective.test(tmp)){
-            // Set up in model the opType
-            model.opType = tmp.match(/(max|min)/gi)[0];
-
-            // Pull apart lhs
-            ary = tmp.match(rxo.parse_lhs).map(function(d){
-                return d.replace(/\s+/,"");
-            }).slice(1);
-
-
-
-            // *** STEP 1 *** ///
-            // Get the variables out
-            ary.forEach(function(d){
-
-                // Get the number if its there
-                hldr = d.match(rxo.get_num);
-
-                // If it isn't a number, it might
-                // be a standalone variable
-                if(hldr === null){
-                    if(d.substr(0,1) === "-"){
-                        hldr = -1;
-                    } else {
-                        hldr = 1;
-                    }
-                } else {
-                    hldr = hldr[0];
-                }
-
-                hldr = parseFloat(hldr);
-
-                // Get the variable type
-                hldr2 = d.match(rxo.get_word)[0].replace(/\;$/,"");
-
-                // Make sure the variable is in the model
-                model.variables[hldr2] = model.variables[hldr2] || {};
-                model.variables[hldr2]._obj = hldr;
-
-            });
-        ////////////////////////////////////
-        }else if(rxo.is_int.test(tmp)){
-            // Get the array of ints
-            ary = tmp.match(rxo.parse_int).slice(1);
-
-            // Since we have an int, our model should too
-            model.ints = model.ints || {};
-
-            ary.forEach(function(d){
-                d = d.replace(";","");
-                model.ints[d] = 1;
-            });
-        ////////////////////////////////////
-        } else if(rxo.is_bin.test(tmp)){
-            // Get the array of bins
-            ary = tmp.match(rxo.parse_bin).slice(1);
-
-            // Since we have an binary, our model should too
-            model.binaries = model.binaries || {};
-
-            ary.forEach(function(d){
-                d = d.replace(";","");
-                model.binaries[d] = 1;
-            });
-        ////////////////////////////////////
-        } else if(rxo.is_constraint.test(tmp)){
-            var separatorIndex = tmp.indexOf(":");
-            var constraintExpression = (separatorIndex === -1) ? tmp : tmp.slice(separatorIndex + 1);
-
-            // Pull apart lhs
-            ary = constraintExpression.match(rxo.parse_lhs).map(function(d){
-                return d.replace(/\s+/,"");
-            });
-
-            // *** STEP 1 *** ///
-            // Get the variables out
-            ary.forEach(function(d){
-                // Get the number if its there
-                hldr = d.match(rxo.get_num);
-
-                if(hldr === null){
-                    if(d.substr(0,1) === "-"){
-                        hldr = -1;
-                    } else {
-                        hldr = 1;
-                    }
-                } else {
-                    hldr = hldr[0];
-                }
-
-                hldr = parseFloat(hldr);
-
-
-                // Get the variable name
-                hldr2 = d.match(rxo.get_word)[0];
-
-                // Make sure the variable is in the model
-                model.variables[hldr2] = model.variables[hldr2] || {};
-                model.variables[hldr2][constraint] = hldr;
-
-            });
-
-            // *** STEP 2 *** ///
-            // Get the RHS out
-            rhs = parseFloat(tmp.match(rxo.parse_rhs)[0]);
-
-            // *** STEP 3 *** ///
-            // Get the Constrainer out
-            tmp = constraints[tmp.match(rxo.parse_dir)[0]];
-            model.constraints[constraint] = model.constraints[constraint] || {};
-            model.constraints[constraint][tmp] = rhs;
-        ////////////////////////////////////
-        } else if(rxo.is_unrestricted.test(tmp)){
-            // Get the array of unrestricted
-            ary = tmp.match(rxo.parse_int).slice(1);
-
-            // Since we have an int, our model should too
-            model.unrestricted = model.unrestricted || {};
-
-            ary.forEach(function(d){
-                d = d.replace(";","");
-                model.unrestricted[d] = 1;
-            });
-        }
-    }
-    return model;
-}
-
-
- /*************************************************************
- * Method: from_JSON
- * Scope: Public:
- * Agruments: model: The model we want solver to operate on
- * Purpose: Convert a friendly JSON model into a model for a
- *          real solving library...in this case
- *          lp_solver
- **************************************************************/
-function from_JSON(model){
-    // Make sure we at least have a model
-    if (!model) {
-        throw new Error("Solver requires a model to operate on");
-    }
-
-    var output = "",
-        ary = [],
-        norm = 1,
-        lookup = {
-            "max": "<=",
-            "min": ">=",
-            "equal": "="
-        },
-        rxClean = new RegExp("[^A-Za-z0-9]+", "gi");
-
-    // Build the objective statement
-    output += model.opType + ":";
-
-    // Iterate over the variables
-    for(var x in model.variables){
-        // Give each variable a self of 1 unless
-        // it exists already
-        model.variables[x][x] = model.variables[x][x] ? model.variables[x][x] : 1;
-
-        // Does our objective exist here?
-        if(model.variables[x][model.optimize]){
-            output += " " + model.variables[x][model.optimize] + " " + x.replace(rxClean,"_");
-        }
-    }
-
-    // Add some closure to our line thing
-    output += ";\n";
-
-    // And now... to iterate over the constraints
-    for(x in model.constraints){
-        for(var y in model.constraints[x]){
-            for(var z in model.variables){
-                // Does our Constraint exist here?
-                if(model.variables[z][x]){
-                    output += " " + model.variables[z][x] + " " + z.replace(rxClean,"_");
-                }
-            }
-            // Add the constraint type and value...
-            output += " " + lookup[y] + " " + model.constraints[x][y];
-            output += ";\n";
-        }
-    }
-
-    // Are there any ints?
-    if(model.ints){
-        output += "\n\n";
-        for(x in model.ints){
-            output += "int " + x.replace(rxClean,"_") + ";\n";
-        }
-    }
-
-    // Are there any unrestricted?
-    if(model.unrestricted){
-        output += "\n\n";
-        for(x in model.unrestricted){
-            output += "unrestricted " + x.replace(rxClean,"_") + ";\n";
-        }
-    }
-
-    // And kick the string back
-    return output;
-}
-
-
-module.exports = function (model) {
-    // If the user is giving us an array
-    // or a string, convert it to a JSON Model
-    // otherwise, spit it out as a string
-    if(model.length){
-        return to_JSON(model);
-    } else {
-        return from_JSON(model);
-    }
-};
-
-},{}],4:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 /*global module*/
 /*global require*/
 var Solution = require("./Solution.js");
@@ -966,7 +1146,7 @@ module.exports = MilpSolution;
 MilpSolution.prototype = Object.create(Solution.prototype);
 MilpSolution.constructor = MilpSolution;
 
-},{"./Solution.js":5}],5:[function(require,module,exports){
+},{"./Solution.js":8}],8:[function(require,module,exports){
 /*global module*/
 
 function Solution(tableau, evaluation, feasible, bounded) {
@@ -1003,7 +1183,7 @@ Solution.prototype.generateSolutionSet = function () {
     return solutionSet;
 };
 
-},{}],6:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -1281,7 +1461,7 @@ Tableau.prototype.getSolution = function () {
     }
 };
 
-},{"./MilpSolution.js":4,"./Solution.js":5}],7:[function(require,module,exports){
+},{"./MilpSolution.js":7,"./Solution.js":8}],10:[function(require,module,exports){
 /*global require*/
 var Tableau = require("./Tableau.js");
 
@@ -1399,7 +1579,7 @@ Tableau.prototype.restore = function () {
     }
 };
 
-},{"./Tableau.js":6}],8:[function(require,module,exports){
+},{"./Tableau.js":9}],11:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -1671,7 +1851,7 @@ Tableau.prototype.branchAndCut = function () {
     this.branchAndCutIterations = iterations;
 };
 
-},{"./Tableau.js":6}],9:[function(require,module,exports){
+},{"./Tableau.js":9}],12:[function(require,module,exports){
 /*global require*/
 var Tableau = require("./Tableau.js");
 
@@ -1742,7 +1922,7 @@ Tableau.prototype.getFractionalVarWithLowestCost = function () {
     return new VariableData(selectedVarIndex, selectedVarValue);
 };
 
-},{"./Tableau.js":6}],10:[function(require,module,exports){
+},{"./Tableau.js":9}],13:[function(require,module,exports){
 /*global require*/
 var Tableau = require("./Tableau.js");
 var SlackVariable = require("../expressions.js").SlackVariable;
@@ -1946,7 +2126,7 @@ Tableau.prototype.applyMIRCuts = function () {
     
 };
 
-},{"../expressions.js":17,"./Tableau.js":6}],11:[function(require,module,exports){
+},{"../expressions.js":20,"./Tableau.js":9}],14:[function(require,module,exports){
 /*global require*/
 /*global console*/
 var Tableau = require("./Tableau.js");
@@ -2252,7 +2432,7 @@ Tableau.prototype.removeVariable = function (variable) {
     this.width -= 1;
 };
 
-},{"./Tableau.js":6}],12:[function(require,module,exports){
+},{"./Tableau.js":9}],15:[function(require,module,exports){
 /*global require*/
 /*global module*/
 require("./simplex.js");
@@ -2265,7 +2445,7 @@ require("./integerProperties.js");
 
 module.exports = require("./Tableau.js");
 
-},{"./Tableau.js":6,"./backup.js":7,"./branchingStrategies.js":9,"./cuttingStrategies.js":10,"./dynamicModification.js":11,"./integerProperties.js":13,"./log.js":14,"./simplex.js":15}],13:[function(require,module,exports){
+},{"./Tableau.js":9,"./backup.js":10,"./branchingStrategies.js":12,"./cuttingStrategies.js":13,"./dynamicModification.js":14,"./integerProperties.js":16,"./log.js":17,"./simplex.js":18}],16:[function(require,module,exports){
 /*global require*/
 var Tableau = require("./Tableau.js");
 
@@ -2354,7 +2534,7 @@ Tableau.prototype.computeFractionalVolume = function(ignoreIntegerValues) {
     return volume;
 };
 
-},{"./Tableau.js":6}],14:[function(require,module,exports){
+},{"./Tableau.js":9}],17:[function(require,module,exports){
 /*global require*/
 /*global console*/
 var Tableau = require("./Tableau.js");
@@ -2526,7 +2706,7 @@ Tableau.prototype.log = function (message, force) {
     return this;
 };
 
-},{"./Tableau.js":6}],15:[function(require,module,exports){
+},{"./Tableau.js":9}],18:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -2985,7 +3165,7 @@ Tableau.prototype.checkForCycles = function (varIndexes) {
     return [];
 };
 
-},{"./Tableau.js":6}],16:[function(require,module,exports){
+},{"./Tableau.js":9}],19:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -3064,7 +3244,7 @@ exports.CleanObjectiveAttributes = function(model){
     }
 };
 
-},{}],17:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -3265,7 +3445,7 @@ module.exports = {
     Term: Term
 };
 
-},{}],18:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 /*global describe*/
 /*global require*/
 /*global module*/
@@ -3293,6 +3473,7 @@ var Constraint = expressions.Constraint;
 var Variable = expressions.Variable;
 var Numeral = expressions.Numeral;
 var Term = expressions.Term;
+var External = require("./External/main.js");
 
 // Place everything under the Solver Name Space
 var Solver = function () {
@@ -3306,8 +3487,9 @@ var Solver = function () {
     this.Numeral = Numeral;
     this.Term = Term;
     this.Tableau = Tableau;
-
     this.lastSolvedModel = null;
+
+    this.External = External;
 
     /*************************************************************
      * Method: Solve
@@ -3324,9 +3506,11 @@ var Solver = function () {
      *                  functions in the *Validate* module
      **************************************************************/
     this.Solve = function (model, precision, full, validate) {
+        //
         // Run our validations on the model
         // if the model doesn't have a validate
         // attribute set to false
+        //
         if(validate){
             for(var test in validation){
                 model = validation[test](model);
@@ -3338,51 +3522,93 @@ var Solver = function () {
             throw new Error("Solver requires a model to operate on");
         }
 
-        if (model instanceof Model === false) {
-            model = new Model(precision).loadJson(model);
+        //
+        // If the objective function contains multiple objectives,
+        // pass it to the multi-solver thing...
+        //
+        if(typeof model.optimize === "object"){
+            if(Object.keys(model.optimize > 1)){
+                return require("./Polyopt")(this, model);
+            }
         }
 
-        var solution = model.solve();
-        this.lastSolvedModel = model;
-        solution.solutionSet = solution.generateSolutionSet();
+        //
+        // Try our hand at handling external solvers...
+        // 
+        //
+        if(model.external){
 
-        // If the user asks for a full breakdown
-        // of the tableau (e.g. full === true)
-        // this will return it
-        if (full) {
-            return solution;
-        } else {
-            // Otherwise; give the user the bare
-            // minimum of info necessary to carry on
-
-            var store = {};
-
-            // 1.) Add in feasibility to store;
-            store.feasible = solution.feasible;
-
-            // 2.) Add in the objective value
-            store.result = solution.evaluation;
-
-            store.bounded = solution.bounded;
+            var solvers = Object.keys(External);
+            solvers = JSON.stringify(solvers);
             
-            if(solution._tableau.__isIntegral){
-                store.isIntegral = true;
+            //
+            // The model needs to have a "solver" attribute if nothing else
+            // for us to pass data into
+            //
+            if(!model.external.solver){
+                throw new Error("The model you provided has an 'external' object that doesn't have a solver attribute. Use one of the following:" + solvers);
+            }
+            
+            //
+            // If the solver they request doesn't exist; provide them
+            // with a list of possible options:
+            //
+            if(!External[model.external.solver]){
+                throw new Error("No support (yet) for " + model.external.solver + ". Please use one of these instead:" + solvers);
+            }
+            
+            return External[model.external.solver].solve(model);
+        } else {
+
+
+
+            if (model instanceof Model === false) {
+                model = new Model(precision).loadJson(model);
             }
 
-            // 3.) Load all of the variable values
-            Object.keys(solution.solutionSet)
-                .forEach(function (d) {
-                    //
-                    // When returning data in standard format,
-                    // Remove all 0's
-                    //
-                    if(solution.solutionSet[d] !== 0){
-                        store[d] = solution.solutionSet[d];
-                    }
-                    
-                });
+            var solution = model.solve();
+            this.lastSolvedModel = model;
+            solution.solutionSet = solution.generateSolutionSet();
 
-            return store;
+            // If the user asks for a full breakdown
+            // of the tableau (e.g. full === true)
+            // this will return it
+            if (full) {
+                return solution;
+            } else {
+                // Otherwise; give the user the bare
+                // minimum of info necessary to carry on
+
+                var store = {};
+
+                // 1.) Add in feasibility to store;
+                store.feasible = solution.feasible;
+
+                // 2.) Add in the objective value
+                store.result = solution.evaluation;
+
+                store.bounded = solution.bounded;
+                
+                if(solution._tableau.__isIntegral){
+                    store.isIntegral = true;
+                }
+
+                // 3.) Load all of the variable values
+                Object.keys(solution.solutionSet)
+                    .forEach(function (d) {
+                        //
+                        // When returning data in standard format,
+                        // Remove all 0's
+                        //
+                        if(solution.solutionSet[d] !== 0){
+                            store[d] = solution.solutionSet[d];
+                        }
+                        
+                    });
+
+                return store;
+            }
+
         }
 
     };
@@ -3395,7 +3621,7 @@ var Solver = function () {
      *          real solving library...in this case
      *          lp_solver
      **************************************************************/
-    this.ReformatLP = require("./Reformat");
+    this.ReformatLP = require("./External/lpsolve/Reformat.js");
 
 
      /*************************************************************
@@ -3453,4 +3679,4 @@ if (typeof define === "function") {
 // Ensure that its available in node.js env
 module.exports = new Solver();
 
-},{"./Model":1,"./Polyopt":2,"./Reformat":3,"./Tableau/branchAndCut":8,"./Tableau/index.js":12,"./Validation":16,"./expressions.js":17}]},{},[18]);
+},{"./External/lpsolve/Reformat.js":2,"./External/main.js":4,"./Model":5,"./Polyopt":6,"./Tableau/branchAndCut":11,"./Tableau/index.js":15,"./Validation":19,"./expressions.js":20}]},{},[21]);
