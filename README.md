@@ -27,7 +27,7 @@ So How Would I Do This?
 -----------------------
 Part of the reason I built this library is that I wanted to do as little thinking / setup as possible
 to solve the actual problem. Instead of tinkering with arrays to solve this problem, you would create a
-model in a JavaScript object, and solve it through the object's `solve` function; like this:
+model in a JavaScript object, and solve it through the solver's `solve` function; like this:
 
 ```javascript
 var solver = require("./src/solver"),
@@ -64,6 +64,7 @@ which should yield the following:
 ```
 {feasible: true, brit: 24, yank: 20, result: 1080000}
 ```
+
 What If I Want Only Integers
 --------------------
 
@@ -102,254 +103,146 @@ console.log(solver.Solve(model));
 // {feasible: true, result: 1440-0, table: 8, dresser: 3}
 ```
 
-What if my Mixed-Integer Problem takes too long to Solve?
-----------------------
+Neat! What else can I do with it?
 
-For large scale integer problems the solving process can take increasingly long. However, oftentimes the solution to these problems does not have to be the absolute best possible solution, but rather a solution relatively close to the optimal one. 
-In these cases, a variable called ```tolerance``` can be specified in the model object. The value assigned to the ```tolerance``` variable states that the solver should stop the solution process when the proportional difference between the solution found and the best theoretical objective value is guaranteed to be smaller than the given termination tolerance.
 
-```javascript
-   model = {
+API / Guide
+===============
+
+Below is my first pass at describing the various parts of the model, what they do, and other miscellaneous options that might not
+be super intuitive.
+
+As much as possible, I'm trying to make all of the options / functions accessible by changing the JSON model. To me (maybe incorrectly),
+it's easier to be able to just call one method to do everything based on the model its given instead of having to hit seperate functions
+exposed on the solver itself.
+
+#### optimize
+
+This tells the model (wait for it) what to optimize (minimize or maximize). Typically (honestly, always) the thing you're optimizing is an attribute
+of a variable. For example, `profit` might be a variable attribute you want to maximize. In this case, your model would look like this:
+
+```json
+    {
         "optimize": "profit",
         "opType": "max",
-        "options": {
-            "tolerance": 0.5
-        }
-        ...
     }
 ```
 
-Additionally, a ```timeout``` variable can be added to the JSON model that will return the best solution after {{user-defined}} milliseconds.
+_MULTI OBJECTIVE OPTIMIZATION_: This is kind of a throwaway function I added because I needed it for something. I don't know if there's a better way to do this, or if it even makes sense, so please take this with a grain of salt.
 
-```javascript
-   model = {
-        "optimize": "profit",
-        "opType": "max",
-        "options": {
-            "tolerance": 0.5
-        }
-        ...
-    }
-```
+Say you have a problem where you want to eat as much "bacon", "cheddar cheese", and "french fries" as possible. To do this, set the "optimize" attribute of the model like this:
 
-
-Model Components and Options: What goes where, and what's it do?
-------------------------
-
-* To Do: This...
-
-How Fast is it?
-----------------------
-Below are the results from my home made suite of variable sized LP(s)
-
-```javascript
-{ 
-  'Monster Problem': { constraints: 576, variables: 552, time: 0.017 },
-  'monster_II': { constraints: 842, variables: 924, ints: 112, time: 0.323 },
-  'Relaxed': { variables: 2, time: 0.004899597 },
-  'Unrestricted': { constraints: 1, variables: 2, time: 0.001273972 },
-  'Chevalier 1': { constraints: 5, variables: 2, time: 0.000112002 },
-  'Artificial': { constraints: 2, variables: 2, time: 0.000101994 },
-  'Wiki 1': { variables: 3, time: 0.000358714 },
-  'Degenerate Min': { constraints: 5, variables: 2, time: 0.000097377 },
-  'Degenerate Max': { constraints: 5, variables: 2, time: 0.000085829 },
-  'Coffee Problem': { constraints: 2, variables: 2, time: 0.000296747 },
-  'Computer Problem': { constraints: 2, variables: 2, time: 0.000066585 },
-  'Generic Business Problem': { constraints: 2, variables: 2, time: 0.000083135 },
-  'Generic Business Problem 2': { constraints: 2, variables: 2, time: 0.000040413 },
-  'Chocolate Problem': { constraints: 2, variables: 2, time: 0.000058503 },
-  'Wood Shop Problem': { constraints: 2, variables: 2, time: 0.000045416 },
-  'Integer Wood Problem': { constraints: 3, variables: 2, ints: 2, time: 0.002406691 },
-  'Berlin Air Lift Problem': { constraints: 3, variables: 2, time: 0.000077362 },
-  'Integer Berlin Air Lift Problem': { constraints: 3, variables: 2, ints: 2, time: 0.000823271 },
-  'Infeasible Berlin Air Lift Problem': { constraints: 5, variables: 2, time: 0.000411828 },
-  'Integer Wood Shop Problem': { constraints: 2, variables: 3, ints: 3, time: 0.001610363 },
-  'Integer Sports Complex Problem': { constraints: 6, variables: 4, ints: 4, time: 0.001151579 },
-  'Integer Chocolate Problem': { constraints: 2, variables: 2, ints: 2, time: 0.000109692 },
-  'Integer Clothing Shop Problem': { constraints: 2, variables: 2, ints: 2, time: 0.000382191 },
-  'Integer Clothing Shop Problem II': { constraints: 2, variables: 4, ints: 4, time: 0.000113927 },
-  'Shift Work Problem': { constraints: 6, variables: 6, time: 0.000127012 },
-}
-```
-
-
-Alternative Model Formats
------------
-
-Part of the reason that I build this library is because I *hate* setting up tableaus. Sometimes though, its just easier just to work with a tableau; other times, javaScript might not be the right environment to solve linear programs in. Fear not, we (kind of) have you covered!
-
-__USING A TABLEAU__
-
-The tableau "style-guide" I used to parse LPs came from [LP_Solve](http://lpsolve.sourceforge.net/5.5/lp-format.htm). 
-
-* Get LP From File *
-
-```javascript
-  var fs = require("fs"),
-      solver = require("./src/solver"),
-      model = {};
-    
-  // Read Data from File
-  fs.readFile("./your/model/file", "utf8", function(e,d){
-      // Convert the File Data to a JSON Model
-      model = solver.ReformatLP(d);
-      
-      // Solve the LP
-      console.log(solver.Solve(model));
-  });
-```
-
-* Get LP From Arrays *
-
-```javascript
-    var solver = require("./src/solver"),
-        model = [
-                  "max: 1200 table 1600 dresser",
-                  "30 table 20 dresser <= 300",
-                  "5 table 10 dresser <= 110",
-                  "30 table 50 dresser <= 400",
-                  "int table",
-                  "int dresser",
-                ];
-  
-  // Reformat to JSON model              
-  model = solver.ReformatLP(model);
-  
-  // Solve the model
-  solver.Solve(model);
-    
-```
-
-__EXPORTING A TABLEAU__
-
-You can also exports JSON models to an [LP_Solve](http://lpsolve.sourceforge.net/5.5/lp-format.htm) format (which is convenient if you plan on using LP_Solve). 
-
-```javascript
-   var solver = require("./src/solver"),
-       fs = require("fs"),
-       model = {
-        "optimize": "profit",
-        "opType": "max",
-        "constraints": {
-            "wood": {"max": 300},
-            "labor": {"max": 110},
-            "storage": {"max": 400}
-        },
-        "variables": {
-            "table": {"wood": 30, "labor": 5, "profit": 1200, "table": 1, "storage": 30},
-            "dresser": {"wood": 20, "labor": 10, "profit": 1600, "dresser": 1, "storage": 50}
-        },
-        "ints": {"table": 1, "dresser": 1}
-    };
-    
-    // convert the model to a string
-    model = solver.ReformatLP(model);
-    
-    // Push the string to file
-    fs.writeFile("./something.LP", model);
-
-```
-
-
-
-Multi-Objective Optimization
-----------------------------
-
-__What is it?__
-
-Its a way to "solve" linear programs with multiple objective functions. Basically, it solves each objective function independent of one another and returns an object with:
-
-* The mid-point between those solutions (midpoint)
-* The solutions themselves (vertices)
-* The range of values for each variable in the solution (ranges)
-
-__Caveats__
-
-I have no idea if this is right or not. Proceed with caution.
-
-__Use Case__
-
-Say you're a dietitician and have a client that has the following constraints in their diet:
-
-* 375g of carbohydrates / day
-* 225g of protein / day
-* 66.66g of fat / day
-
-They're also a bit of a junk-food glutton and would like you to create a meal for them containing the following ingredients which meets their nutrition specifications outlined above:
-
-* egg whites
-* whole eggs
-* cheddar cheese
-* bacon
-* potato
-* fries
-
-They also mention they want to eat as much bacon, cheese, and fries as possible. After losing your appetite, you build the following linear program: 
-
-```javascript
-{ 
+```json
     "optimize": {
         "bacon": "max",
         "cheddar cheese": "max",
         "french fries": "max"
+    }
+```
+
+This will return a result where no single objective can be improved without hurting at least one other objective. It also returns the results of the "child" optimization problems 
+
+#### opType
+
+This tells the solver how to optimize your problem. Acceptable options are "min" for minimize and "max" for maximize.
+
+#### variables
+
+These are the inputs of your problem. For the word problem:
+
+>How many chairs, tables, and desks do you need to produce given that a chair requires ...
+
+...chairs, tables, and desks are your variables. You can assign attributes to the variables (size, cost, weight, etc) that you can use to constrain the problem.
+
+On your model, your variables would look like this:
+
+```json
+        "variables": {
+            "table": {"wood": 30, "labor": 5, "profit": 1200, "storage": 30},
+            "dresser": {"wood": 20, "labor": 10, "profit": 1600, "storage": 50}
+        },
+```
+
+#### constraints
+
+Real world problems don't allow you to use an unlimited number of resources (sad). In order to solve problems like 
+
+>Maximize Profit...
+
+where resources are limited; constraints come into play. Here is where you put them. (In a normal LP tableau, these are the inequalities).
+
+Using the above example, say you had at most 300 units of wood, 110 units of labour, and 400 units of storage. To represent this in JSON format, you
+would set it up like this:
+
+```json
+    "constraints": {
+        "wood": {"max": 300},
+        "labor": {"max": 110},
+        "storage": {"max": 400}
     },
-    "constraints": { 
-        "carb": { "equal": 375 },
-        "protein": { "equal": 225 },
-        "fat": { "equal": 66.666 }
-    },
-    "variables": { 
-         "egg white":{ "carb": 0.0073, "protein": 0.109, "fat": 0.0017, "egg white": 1 },
-         "egg whole":{ "carb": 0.0072, "protein": 0.1256, "fat": 0.0951, "egg whole": 1 },
-         "cheddar cheese":{ "carb": 0.0128, "protein": 0.249, "fat": 0.3314, "cheddar cheese": 1 },
-         "bacon":{ "carb": 0.00667, "protein": 0.116, "fat": 0.4504, "bacon": 1 },
-         "potato": { "carb": 0.1747, "protein": 0.0202, "fat": 0.0009, "potato": 1 },
-         "french fries": { "carb": 0.3902, "protein": 0.038, "fat": 0.1612, "french fries": 1 }
-    } 
+```
+
+...where for the first constraint, "wood" is the attribute you're setting a constraint on with a "maximum" of 300 units used to solve the the problem. Other options for constraints are "min" (minimum) and "equal" (equal to).
+
+#### options
+
+This is a catch-all place to put additional options on the model for the Solver to work with in an attempt to not clutter the "core" of the model too much.
+
+#### options.timeout
+
+This option is how many milliseconds you want to allow for the solver to try and solve the model you're running. You set it like this:
+
+```json
+"options": {
+    "timeout": 10000
 }
 ```
 
-which is solved by the ```solver.MultiObjective``` method. The result for this problem is:
+N.B. currently, it only works for mixed-integer linear programs
 
-```javascript
-{ midpoint: 
-   { feasible: true,
-     result: -0,
-     'egg white': 1494.64994046,
-     potato: 1788.20687788,
-     bacon: 46.02690209,
-     'cheddar cheese': 63.03985067,
-     'french fries': 129.61405521 },
-  vertices: 
-   [ { bacon: 138.08070627,
-       'egg white': 1532.31628515,
-       potato: 2077.23579169,
-       'cheddar cheese': 0,
-       'french fries': 0 },
-     { 'cheddar cheese': 189.119552,
-       'egg white': 1246.61767465,
-       potato: 2080.58935724,
-       bacon: 0,
-       'french fries': 0 },
-     { 'french fries': 388.84216563,
-       'egg white': 1705.0158616,
-       potato: 1206.79548473,
-       bacon: 0,
-       'cheddar cheese': 0 } ],
-  ranges: 
-   { bacon: { min: 0, max: 138.08070627 },
-     'egg white': { min: 1246.61767465, max: 1705.0158616 },
-     potato: { min: 1206.79548473, max: 2080.58935724 },
-     'cheddar cheese': { min: 0, max: 189.119552 },
-     'french fries': { min: 0, max: 388.84216563 } } }
+### options.tolerance
+
+For large scale integer problems the solving process can take increasingly long. However, oftentimes the solution to these problems does not have to be the absolute best possible solution, but rather a solution relatively close to the optimal one. In these cases, a variable called tolerance can be specified in the model object. The value assigned to the tolerance variable states that the solver should stop the solution process when the best solution found is within {{options.tolerance}}% of the best theoretical objective value.
+
+It is set up like this:
+
+```json
+"options": {
+    "tolerance": 0.05
+}
 ```
 
-__Reading the Results__
 
-midpoint: This is the solution that maximizes the amount of bacon, cheese, and fries your client can eat *simultaneously*. No single objective can be improved without hurting at least one other objective.
+External Solver Integration
+===============================
 
-vertices: The solutions to the individual objective functions
+(n.b. this is still very much in progress and subject to change...)
 
-ranges: This tells you the absolute minimum and absolute maximum values for each variable that was encountered while solving the objective functions. For instance, I can have between 0 and 138 grams of bacon. If I have 0 grams, I can have more cheese and more fries. If I have 138 grams, I can have no cheese and no fries. 
+Basically I want to be able to work with "professional-grade" solver libraries through jsLPSolver; without incorporating hard dependencies / binary builds / etc.
 
+
+## lpsolve
+
+To use, incorporate the following onto your model:
+
+```json
+    "external": {
+        "solver": "lpsolve",
+        "binPath": "C:/lpsolve/lp_solve.exe",
+        "tempName": "C:/temp/out.txt",
+        "args": [
+            "-s2",
+            "-timeout",
+            240
+        ]
+    }
+```
+
+Basically, its doing the following:
+
+1. Convert your model to something lpsolve can use
+2. Saves your model to a temporary file (hence the `tempName` attribute)
+3. Runs everything through a command line (`require("child_process").execFile`) against the lpsolve executable (binPath) with whatever arguments you need (args)
+4. Scrubs the results
+5. Returns a JSON object with the results
 
