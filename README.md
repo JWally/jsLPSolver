@@ -103,6 +103,44 @@ console.log(solver.Solve(model));
 // {feasible: true, result: 1440-0, table: 8, dresser: 3}
 ```
 
+How Fast Can It Go?
+---------------------
+
+Random selection of problems of "some" size / interest:
+
+```
+-----------------
+-----------------
+LargeFarmMIP [ 100  variables, 35  constraints,  100  integers ]
+jsLPSolver: 16.475ms
+
+
+-----------------
+-----------------
+Monster Problem [ 552  variables, 600  constraints,  0  integers ]
+jsLPSolver: 18.142ms
+
+
+-----------------
+-----------------
+monster_II [ 924  variables, 888  constraints,  112  integers ]
+jsLPSolver: 308.026ms
+
+
+-----------------
+-----------------
+Fancy Stock Cutting Problem [ 31  variables, 5  constraints,  31  integers ]
+jsLPSolver: 1.396ms
+
+
+-----------------
+-----------------
+Vendor Selection [ 1640  variables, 1641  constraints,  0  integers ]
+jsLPSolver: 1222.659ms
+
+
+``` 
+
 Neat! What else can I do with it?
 
 
