@@ -84,10 +84,13 @@ var Solver = function () {
             }
         }
 
-        //
-        // Try our hand at handling external solvers...
-        // 
-        //
+// /////////////////////////////////////////////////////////////////////
+// *********************************************************************
+// START
+// Try our hand at handling external solvers...
+// START
+// *********************************************************************
+// /////////////////////////////////////////////////////////////////////
         if(model.external){
 
             var solvers = Object.keys(External);
@@ -110,9 +113,17 @@ var Solver = function () {
             }
             
             return External[model.external.solver].solve(model);
+            
+
+// /////////////////////////////////////////////////////////////////////
+// *********************************************************************
+//  END
+// Try our hand at handling external solvers...
+//  END
+// *********************************************************************
+// /////////////////////////////////////////////////////////////////////
+
         } else {
-
-
 
             if (model instanceof Model === false) {
                 model = new Model(precision).loadJson(model);
