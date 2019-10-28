@@ -16,6 +16,52 @@ var fs = require("fs");
 
 exports.reformat = require("./Reformat.js");
 
+function clean_data(data){
+
+    //
+    // Clean Up
+    // And Reformatting...
+    //
+    data = data.replace("\\r\\n","\r\n");
+
+
+    data = data.split("\r\n");
+    data = data.filter(function(x){
+        
+        var rx;
+        
+        //
+        // Test 1
+        rx = new RegExp(" 0$","gi");
+        if(rx.test(x) === true){
+            return false;
+        }
+
+        //
+        // Test 2
+        rx = new RegExp("\\d$","gi");
+        if(rx.test(x) === false){
+            return false;
+        }
+        
+
+        return true;
+    })
+    .map(function(x){
+        return x.split(/\:{0,1} +(?=\d)/);
+    })
+    .reduce(function(o,k,i){
+        o[k[0]] = k[1];
+        return o;
+    },{});
+    
+    return data;
+}
+
+
+
+
+
 exports.solve = function(model){
     //
     return new Promise(function(res, rej){
@@ -96,7 +142,7 @@ exports.solve = function(model){
                             res(clean_data(data));
                         } else {
                             
-                            codes = {
+                            var codes = {
                                 "-2": "Out of Memory",
                                 "1": "SUBOPTIMAL",
                                 "2": "INFEASIBLE",
@@ -108,7 +154,7 @@ exports.solve = function(model){
                                 "9": "PRESOLVED",
                                 "25": "ACCURACY ERROR",
                                 "255": "FILE-ERROR"
-                            }
+                            };
                             
                             var ret_obj = {
                                 "code": e.code,
@@ -131,47 +177,7 @@ exports.solve = function(model){
 
 
 
-function clean_data(data){
 
-    //
-    // Clean Up
-    // And Reformatting...
-    //
-    data = data.replace("\\r\\n","\r\n");
-
-
-    data = data.split("\r\n");
-    data = data.filter(function(x){
-        
-        var rx;
-        
-        //
-        // Test 1
-        rx = new RegExp(" 0$","gi");
-        if(rx.test(x) === true){
-            return false;
-        }
-
-        //
-        // Test 2
-        rx = new RegExp("\\d$","gi");
-        if(rx.test(x) === false){
-            return false;
-        }
-        
-
-        return true;
-    })
-    .map(function(x){
-        return x.split(/\:{0,1} +(?=\d)/);
-    })
-    .reduce(function(o,k,i){
-        o[k[0]] = k[1];
-        return o;
-    },{});
-    
-    return data;
-}
 
 /*
 model.external = {

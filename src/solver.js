@@ -326,10 +326,61 @@ var fs = require("fs");
 
 exports.reformat = require("./Reformat.js");
 
-exports.solve = function(model){
-    
-    return new Promise(function(res, rej){
+function clean_data(data){
 
+    //
+    // Clean Up
+    // And Reformatting...
+    //
+    data = data.replace("\\r\\n","\r\n");
+
+
+    data = data.split("\r\n");
+    data = data.filter(function(x){
+        
+        var rx;
+        
+        //
+        // Test 1
+        rx = new RegExp(" 0$","gi");
+        if(rx.test(x) === true){
+            return false;
+        }
+
+        //
+        // Test 2
+        rx = new RegExp("\\d$","gi");
+        if(rx.test(x) === false){
+            return false;
+        }
+        
+
+        return true;
+    })
+    .map(function(x){
+        return x.split(/\:{0,1} +(?=\d)/);
+    })
+    .reduce(function(o,k,i){
+        o[k[0]] = k[1];
+        return o;
+    },{});
+    
+    return data;
+}
+
+
+
+
+
+exports.solve = function(model){
+    //
+    return new Promise(function(res, rej){
+        //
+        // Exit if we're in the browser...
+        //
+        if(typeof window !== "undefined"){
+            rej("Function Not Available in Browser");
+        }
         //
         // Convert JSON model to lp_solve format
         //
@@ -396,63 +447,47 @@ exports.solve = function(model){
                 
                 exec(model.external.binPath, model.external.args, function(e,data){
                     if(e){
-                        if(e.code === "1"){
-                            rej({"feasible": false, "error": "Timeout" , "code": e.code});
-                        } else if(e.code === "2"){
-                            rej({"feasible": false, "error": "Infeasible" , "code": e.code});
-                        } else if(e.code === "3"){
-                            rej({"feasible": false, "error": "Unbound" , "code": e.code});
+                        
+                        if(e.code === 1){
+                            res(clean_data(data));
                         } else {
-                            rej(e);
+                            
+                            var codes = {
+                                "-2": "Out of Memory",
+                                "1": "SUBOPTIMAL",
+                                "2": "INFEASIBLE",
+                                "3": "UNBOUNDED",
+                                "4": "DEGENERATE",
+                                "5": "NUMFAILURE",
+                                "6": "USER-ABORT",
+                                "7": "TIMEOUT",
+                                "9": "PRESOLVED",
+                                "25": "ACCURACY ERROR",
+                                "255": "FILE-ERROR"
+                            };
+                            
+                            var ret_obj = {
+                                "code": e.code,
+                                "meaning": codes[e.code],
+                                "data": data
+                            };
+                            
+                            rej(ret_obj);
                         }
 
                     } else {
-                        
-                        //
-                        // Clean Up
-                        // And Reformatting...
-                        //
-                        data = data.replace("\\r\\n","\r\n");
-
-
-                        data = data.split("\r\n");
-                        data = data.filter(function(x){
-                            
-                            var rx;
-                            
-                            //
-                            // Test 1
-                            rx = new RegExp(" 0$","gi");
-                            if(rx.test(x) === true){
-                                return false;
-                            }
-
-                            //
-                            // Test 2
-                            rx = new RegExp("\\d$","gi");
-                            if(rx.test(x) === false){
-                                return false;
-                            }
-                            
-
-                            return true;
-                        })
-                        .map(function(x){
-                            return x.split(/\:{0,1} +(?=\d)/);
-                        })
-                        .reduce(function(o,k,i){
-                            o[k[0]] = k[1];
-                            return o;
-                        },{});
-                        
                         // And finally...return it.
-                        res(data);
+                        res(clean_data(data));
                     }
                 });
             }
         });
     });
 };
+
+
+
+
 
 /*
 model.external = {
@@ -3532,10 +3567,13 @@ var Solver = function () {
             }
         }
 
-        //
-        // Try our hand at handling external solvers...
-        // 
-        //
+// /////////////////////////////////////////////////////////////////////
+// *********************************************************************
+// START
+// Try our hand at handling external solvers...
+// START
+// *********************************************************************
+// /////////////////////////////////////////////////////////////////////
         if(model.external){
 
             var solvers = Object.keys(External);
@@ -3558,9 +3596,17 @@ var Solver = function () {
             }
             
             return External[model.external.solver].solve(model);
+            
+
+// /////////////////////////////////////////////////////////////////////
+// *********************************************************************
+//  END
+// Try our hand at handling external solvers...
+//  END
+// *********************************************************************
+// /////////////////////////////////////////////////////////////////////
+
         } else {
-
-
 
             if (model instanceof Model === false) {
                 model = new Model(precision).loadJson(model);
