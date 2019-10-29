@@ -11,7 +11,7 @@
 // http://lpsolve.sourceforge.net/5.5/lp_solve.htm
 //
 //
-var fs = require("fs");
+
 // var reformat = require("./Reformat.js");
 
 exports.reformat = require("./Reformat.js");
@@ -118,6 +118,8 @@ exports.solve = function(model){
         // 4.) 
         // 
         //
+        
+        var fs = require("fs");
         
         fs.writeFile(model.external.tempName, data, function(fe, fd){
             if(fe){
