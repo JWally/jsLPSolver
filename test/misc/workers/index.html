@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="https://code.jquery.com/jquery-2.1.4.min.js" charset="utf-8"></script>
+        <script type="text/javascript">
+            var w = new Worker("./worker.js");
+
+            w.onmessage = function(d){console.log(d);}
+
+
+            window.models = [];
+
+            $(document).ready(function(){
+            
+                $.getJSON("/test/test-sanity/", function(problems){
+                    for(var problem in problems){
+                        $.getJSON("/test/test-sanity/" + problems[problem], function(model){
+                            window.models.push(model);
+
+                        });
+                    }
+                });
+                
+
+                // Run Our Expirement
+                setTimeout(function(){
+                
+                    w.postMessage(window.models[1]);
+                
+                },3000)
+                
+                
+            })
+            
+            
+
+        </script>
+    </head>
+</html>

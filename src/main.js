@@ -5,6 +5,7 @@
 /*global console*/
 /*global process*/
 /*global setTimeout*/
+/*global self*/
 
 
 //-------------------------------------------------------------------
@@ -238,6 +239,8 @@ if (typeof define === "function") {
 // If the project doesn't see define, but sees window, put solver on window
 } else if (typeof window === "object"){
     window.solver = new Solver();
+} else if (typeof self === "object"){
+    self.solver = new Solver();
 }
 // Ensure that its available in node.js env
 module.exports = new Solver();

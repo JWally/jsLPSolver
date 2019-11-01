@@ -321,7 +321,7 @@ module.exports = function (model) {
 // http://lpsolve.sourceforge.net/5.5/lp_solve.htm
 //
 //
-var fs = require("fs");
+
 // var reformat = require("./Reformat.js");
 
 exports.reformat = require("./Reformat.js");
@@ -428,6 +428,8 @@ exports.solve = function(model){
         // 4.) 
         // 
         //
+        
+        var fs = require("fs");
         
         fs.writeFile(model.external.tempName, data, function(fe, fd){
             if(fe){
@@ -3488,6 +3490,7 @@ module.exports = {
 /*global console*/
 /*global process*/
 /*global setTimeout*/
+/*global self*/
 
 
 //-------------------------------------------------------------------
@@ -3721,6 +3724,8 @@ if (typeof define === "function") {
 // If the project doesn't see define, but sees window, put solver on window
 } else if (typeof window === "object"){
     window.solver = new Solver();
+} else if (typeof self === "object"){
+    self.solver = new Solver();
 }
 // Ensure that its available in node.js env
 module.exports = new Solver();
