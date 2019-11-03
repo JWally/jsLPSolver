@@ -29,6 +29,33 @@ Part of the reason I built this library is that I wanted to do as little thinkin
 to solve the actual problem. Instead of tinkering with arrays to solve this problem, you would create a
 model in a JavaScript object, and solve it through the solver's `solve` function; like this:
 
+### Install:
+
+
+(in Node)
+```
+npm install javascript-lp-solver --save
+```
+
+(in browser through CDN)
+```html
+<script src="https://unpkg.com/javascript-lp-solver/prod/solver.js"></script>
+```
+
+(webpack)
+```javascript
+const webpack = require('webpack'); //to access built-in plugins
+
+module.exports = {
+        "mode": "development",
+        "plugins": [
+            new webpack.IgnorePlugin(/(fs|child_process)/),
+        ]
+}
+```
+
+### Use:
+
 ```javascript
 var solver = require("./src/solver"),
   results,
