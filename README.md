@@ -130,6 +130,42 @@ console.log(solver.Solve(model));
 // {feasible: true, result: 1440-0, table: 8, dresser: 3}
 ```
 
+My problem is HUGE. Can I do this async or something? 
+--------------------
+
+Yes! Or something!
+
+So its not truly async, but an instance of solver can be easily(?) put in an instance of a web worker.
+
+*worker.js*
+```javascript
+
+// n.b. Solver connects itself to the global 'self'
+// if its available...
+//
+importScripts("/prod/solver.js");
+
+onmessage = function(d){
+    var results = solver.Solve(d.data);
+    postMessage(results);
+};
+```
+
+*main.html*
+```javascript
+
+    var w = new Worker("./worker.js");
+
+    w.onmessage = function(d){
+        //
+        // do something fun / exciting with our results!
+        //
+        console.log(d);
+    }
+
+    w.postMessage(lp_model);
+```
+
 How Fast Can It Go?
 ---------------------
 
@@ -265,7 +301,7 @@ This option is how many milliseconds you want to allow for the solver to try and
 
 N.B. currently, it only works for mixed-integer linear programs
 
-### options.tolerance
+#### options.tolerance
 
 For large scale integer problems the solving process can take increasingly long. However, oftentimes the solution to these problems does not have to be the absolute best possible solution, but rather a solution relatively close to the optimal one. In these cases, a variable called tolerance can be specified in the model object. The value assigned to the tolerance variable states that the solver should stop the solution process when the best solution found is within {{options.tolerance}}% of the best theoretical objective value.
 
