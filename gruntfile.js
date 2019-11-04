@@ -38,11 +38,22 @@ module.exports = function(grunt){
         "browserify": {
             "dist": {
                 "files": {
-                    "src/solver.js": ["./src/main.js"],
-                    "prod/solver.js": ["./src/main.js"]
+                    "src/solver.js": ["./src/main.js"]
                 },
                 "options": {
                     "banner": "(function(){if (typeof exports === \"object\") {module.exports =  require(\"./main\");}})();"
+                }
+            }
+        },
+        "uglify": {
+            "prod": {
+                "options": {
+                    "sourceMap": true,
+                },
+                "files": {
+                    "prod/solver.js": [
+                        "src/solver.js"
+                    ]
                 }
             }
         }
@@ -61,6 +72,6 @@ module.exports = function(grunt){
     grunt.registerTask("test-speed", ["jshint","mochaTest"]);
     grunt.registerTask("test-wip", ["jshint","mochaTest"]);
     
-    grunt.registerTask("prod", ["jshint","browserify"]);
+    grunt.registerTask("prod", ["jshint","browserify", "uglify"]);
 
 }
