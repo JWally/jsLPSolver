@@ -3118,35 +3118,38 @@ Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex) {
     // console.time("step-2");
     for (var r = 0; r <= lastRow; r++) {
         if (r !== pivotRowIndex) {
+            //if(1 === 1){
+            if(!(matrix[r][pivotColumnIndex] >= -1e-16 && matrix[r][pivotColumnIndex] <= 1e-16)){
+            //if((matrix[r][pivotColumnIndex] !== 0)){
+                // Set reference to the row we're working on
+                //
+                var row = matrix[r];
 
-            // Set reference to the row we're working on
-            //
-            var row = matrix[r];
-
-            // Catch the coefficient that we're going to end up dividing everything by
-            coefficient = row[pivotColumnIndex];
-            
-            // No point Burning Cycles if
-            // Zero to the thing
-            if (!(coefficient >= -1e-16 && coefficient <= 1e-16)) {
-                for (i = 0; i < nNonZeroColumns; i++) {
-                    c = nonZeroColumns[i];
-                    // No point in doing math if you're just adding
-                    // Zero to the thing
-                    v0 = pivotRow[c];
-                    if (!(v0 >= -1e-16 && v0 <= 1e-16)) {
-                        row[c] = row[c] - coefficient * v0;
-                    } else {
-                        if(v0 !== 0){
-                            pivotRow[c] = 0;
+                // Catch the coefficient that we're going to end up dividing everything by
+                coefficient = row[pivotColumnIndex];
+                
+                // No point Burning Cycles if
+                // Zero to the thing
+                if (!(coefficient >= -1e-16 && coefficient <= 1e-16)) {
+                    for (i = 0; i < nNonZeroColumns; i++) {
+                        c = nonZeroColumns[i];
+                        // No point in doing math if you're just adding
+                        // Zero to the thing
+                        v0 = pivotRow[c];
+                        if (!(v0 >= -1e-16 && v0 <= 1e-16)) {
+                            row[c] = row[c] - coefficient * v0;
+                        } else {
+                            if(v0 !== 0){
+                                pivotRow[c] = 0;
+                            }
                         }
                     }
-                }
 
-                row[pivotColumnIndex] = -coefficient / quotient;
-            } else {
-                if(coefficient !== 0){
-                    row[pivotColumnIndex] = 0;
+                    row[pivotColumnIndex] = -coefficient / quotient;
+                } else {
+                    if(coefficient !== 0){
+                        row[pivotColumnIndex] = 0;
+                    }
                 }
             }
         }
