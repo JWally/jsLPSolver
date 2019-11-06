@@ -14,12 +14,29 @@ export interface IModelVariableConstraint {
  * Specifies the options when solving the problem.
  */
 export interface IModelOptions {
+    /**
+     * For MILP problems, specifies the relative tolerance of the objective,
+     * where `0` means 0% and `1` means 100%.
+     */
     tolerance?: number;
+    /**
+     * How many milliseconds you want to allow for the solver to try
+     * and solve the model you're running.
+     */
     timeout?: number;
+    /**
+     * Use MIR cuts.
+     * @deprecated NOT WORKING
+     */
+    useMIRCuts?: boolean;
+    /**
+     * Defaults to `true`.
+     */
+    exitOnCycles?: boolean;
 }
 
 /**
- * Represents a LP/MILP problem.
+ * Represents an LP/MILP problem.
  * @typeparam TSolutionVar the decision variables that will be outputed to the `Solution` object.
  * @typeparam TInternalVar the decision variables that will not be outputed to the `Solution` object.
  */
@@ -46,11 +63,23 @@ export interface IModel<TSolutionVar extends string = string, TInternalVar exten
      */
     variables: { [variable in TSolutionVar]?: { [variable in (TSolutionVar | TInternalVar)]?: number } };
     /**
-     * For each variable in the MILP problem, specifies whether it is integer variable.
+     * For each variable in the MILP problem, specifies whether it is an integer variable.
      * You need to specify `true` or `1` for integer variable.
-     * By default, all the variables are continual.
+     * If not specified, all the variables are continual non-negative (range `[0,+∞)`).
      */
     ints?: { [variable in (TSolutionVar | TInternalVar)]?: boolean | 0 | 1 };
+    /**
+     * For each variable in the MILP problem, specifies whether it is a binary variable.
+     * You need to specify `true` or `1` for binary variable.
+     * If not specified, all the variables are continual non-negative (range `[0,+∞)`).
+     */
+    binaries?: { [variable in (TSolutionVar | TInternalVar)]?: boolean | 0 | 1 };
+    /**
+     * For each variable in the MILP problem, specifies whether it is an unrestricted variable (range `(-∞,+∞)`).
+     * You need to specify `true` or `1` for unrestricted variable.
+     * If not specified, all the variables are continual non-negative (range `[0,+∞)`).
+     */
+    unrestricted?: { [variable in (TSolutionVar | TInternalVar)]?: boolean | 0 | 1 };
     /**
      * Options for solving this problem.
      */
