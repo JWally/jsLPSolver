@@ -176,6 +176,26 @@ Tableau.prototype.branchAndCut = function () {
             for (var oCopy = 0; oCopy < this.optionalObjectives.length; oCopy += 1){
                 bestOptionalObjectivesEvaluations[oCopy] = this.optionalObjectives[oCopy].reducedCosts[0];
             }
+            
+            
+            // -------------------------------------
+            // In Case we want to keep early solutions
+            if(this.model.keep_solutions){
+
+                var nowSolution = (this.model.tableau.getSolution());
+                var store = nowSolution.generateSolutionSet();
+                store.result = nowSolution.evaluation;
+                
+                if(!this.model.solutions){
+                    this.model.solutions = [];
+                }
+                
+                
+                this.model.solutions.push(store);
+
+            }
+            
+            
         } else {
             if (iterations === 1) {
                 // Saving the first iteration

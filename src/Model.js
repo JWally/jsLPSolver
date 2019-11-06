@@ -357,6 +357,15 @@ Model.prototype.loadJson = function (jsonModel) {
         } else {
             this.checkForCycles = jsonModel.options.exitOnCycles;
         }
+        
+        //
+        // STORE MILP MODELS
+        //
+        if(jsonModel.options.keep_solutions){
+            this.keep_solutions = jsonModel.options.keep_solutions;
+        } else {
+            this.keep_solutions = false;
+        }
 
         
     }
