@@ -15,6 +15,7 @@
     "url": "https://github.com/JWally/jsLPSolver"
   },
   "main": "./src/main",
+  "types": "./types/main.d.ts",
   "devDependencies": {
     "benchmark": "*",
     "grunt": "*",
