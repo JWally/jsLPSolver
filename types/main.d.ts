@@ -35,6 +35,13 @@ export interface IModelOptions {
     exitOnCycles?: boolean;
 }
 
+export interface IModelExternalSolverOptions {
+    solver: "lpsolve",
+    binPath: string,
+    tempName: string,
+    args: string[]
+}
+
 /**
  * Represents an LP/MILP problem.
  * @typeparam TSolutionVar the decision variables that will be outputed to the `Solution` object.
@@ -81,6 +88,11 @@ export interface IModelBase<TSolutionVar extends string = string, TInternalVar e
      * Options for solving this problem.
      */
     options?: IModelOptions;
+    /**
+     * For server-side JS environment, options for using external solver to solve the model.
+     * @remarks this is still very much in progress and subject to change...
+     */
+    external?: IModelExternalSolverOptions;
 }
 
 /**
