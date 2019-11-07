@@ -39,12 +39,9 @@ export interface IModelOptions {
  * Represents an LP/MILP problem.
  * @typeparam TSolutionVar the decision variables that will be outputed to the `Solution` object.
  * @typeparam TInternalVar the decision variables that will not be outputed to the `Solution` object.
+ * @see `ISingleObjectiveModel`
  */
-export interface IModel<TSolutionVar extends string = string, TInternalVar extends string = string> {
-    /** Name of the variable that will be the optimization objective. */
-    optimize: (TSolutionVar | TInternalVar);
-    /** To which direction to optimize the objective. */
-    opType: "max" | "min";
+export interface IModelBase<TSolutionVar extends string = string, TInternalVar extends string = string> {
     /**
      * Optimization constraints.
      * Specify an object with variable name as keys.
@@ -87,12 +84,37 @@ export interface IModel<TSolutionVar extends string = string, TInternalVar exten
 }
 
 /**
+ * Represents a single-objective LP/MILP problem.
+ * @typeparam TSolutionVar the decision variables that will be outputed to the `Solution` object.
+ * @typeparam TInternalVar the decision variables that will not be outputed to the `Solution` object.
+ */
+export interface ISingleObjectiveModel<TSolutionVar extends string = string, TInternalVar extends string = string> extends IModelBase<TSolutionVar, TInternalVar> {
+    /** Name of the variable that will be the optimization objective. */
+    optimize: (TSolutionVar | TInternalVar);
+    /** To which direction to optimize the objective. */
+    opType: "max" | "min";
+}
+
+/**
+ * Represents a multi-objective LP/MILP problem.
+ * @typeparam TSolutionVar the decision variables that will be outputed to the `Solution` object.
+ * @typeparam TInternalVar the decision variables that will not be outputed to the `Solution` object.
+ */
+export interface IMultiObjectiveModel<TSolutionVar extends string = string, TInternalVar extends string = string> extends IModelBase<TSolutionVar, TInternalVar> {
+    /**
+     * Name of the variables that will be the optimization objectives.
+     * Values of the object are the optimization direction.
+     */
+    optimize: { [variable?: TSolutionVar | TInternalVar]: "max" | "min" };
+}
+
+/**
  * Represents the solution status of an LP/MILP problem.
  */
 export interface ISolutionStatus {
     /** Whether the problem is feasible. */
     feasible: boolean;
-    /** Value pf the objective function. */
+    /** Value of the objective function. */
     result: number;
     /** Whether the decision variables are bounded. */
     bounded?: boolean;
@@ -107,10 +129,9 @@ export interface ISolutionStatus {
 export type Solution<TSolutionVar extends string> = ISolutionStatus & { [variable in TSolutionVar]?: number };
 
 /**
- * Gets the last solved model.
+ * Gets the lastest solved model.
  */
-export const lastSolvedModel: IModel;
-
+export const lastSolvedModel: IModelBase;
 
 /**
  * Converts the LP file content into a model object that jsLPSolver can handle.
@@ -118,16 +139,16 @@ export const lastSolvedModel: IModel;
  *      each item is a line of content, without suffixing `"\n"`.
  *      See http://lpsolve.sourceforge.net/5.5/lp-format.htm for the spec.
  */
-export function ReformatLP(model: string[]): IModel;
+export function ReformatLP(model: string[]): IModelBase;
 /**
  * Convert a friendly JSON model into a model for a real solving library...
  *      in this case lp_solver.
  * @param model The model we want solver to operate on.
  */
-export function ReformatLP(model: IModel<any, any>): string;
+export function ReformatLP(model: IModelBase<any, any>): string;
 
 /**
- * Solves an LP/MILP problem.
+ * Solves a single-objective LP/MILP problem.
  * @param model The model we want solver to operate on.
  * @param precision If we're solving a MILP, how tight
  *      do we want to define an integer, given
@@ -139,16 +160,47 @@ export function ReformatLP(model: IModel<any, any>): string;
  *      functions in the *Validate* module
  */
 export function Solve<TSolutionVar extends string, TInternalVar extends string>(
-    model: IModel<TSolutionVar, TInternalVar>, precision?: number,
+    model: ISingleObjectiveModel<TSolutionVar, TInternalVar>, precision?: number,
     full?: boolean, validate?: unknown): Solution<TSolutionVar>;
 
+/**
+ * Solves a multi-objective LP problem. See `README.md` for more information.
+ * @param model The model we want solver to operate on.
+ * @remarks *MULTI OBJECTIVE OPTIMIZATION*: This is kind of a throwaway function I added because I needed it for something.
+ *      I don't know if there's a better way to do this, or if it even makes sense, so please take this with a grain of salt.
+ */
+export function MultiObjective<TSolutionVar extends string, TInternalVar extends string>(
+    model: IMultiObjectiveModel<TSolutionVar, TInternalVar>): object;
 
-//==================== WIP BELOW ====================//
-// Members below this line are automatically generated and need to be sorted out.
-// I will gradually move the members up across this line.
+/**
+ * @internal
+ */
+export class Term {
+    public constructor(public variable: Variable, public coefficient: number);
+}
 
-/** Declaration file generated by dts-gen */
+/**
+ * @internal
+ */
+export type VariablePriority
+    = 0 | "required"
+    | 1 | "strong"
+    | 2 | "medium"
+    | 3 | "weak";
 
+/**
+ * @internal
+ */
+export class Variable {
+    public constructor(public id: any, public cost: number, public index: number, public priority: VariablePriority);
+    public value: number;
+    public readonly isInteger?: boolean;
+    public readonly isSlack?: boolean;
+}
+
+/**
+ * @internal
+ */
 export class Constraint {
     constructor(rhs: any, isUpperBound: any, index: any, model: any);
 
@@ -163,8 +215,25 @@ export class Constraint {
     setVariableCoefficient(newCoefficient: any, variable: any): any;
 }
 
+/**
+ * @internal
+ */
 export class Model {
-    constructor(precision: any, name: any);
+    constructor(precision?: number, name?: string);
+
+    private tableau: Tableau;
+    public readonly name: string | undefined;
+    private variables: Variable[];
+    private integerVariables: Variable[];
+    private unrestrictedVariables: Variable[];
+    private constraints: Constraint[];
+    private nConstraints: number;
+    private nVariables: number;
+    private isMinimization: boolean;
+    private tableauInitialized: boolean;
+    private relaxationIndex: number;
+    private useMIRCuts: boolean;
+    private checkForCycles: boolean;
 
     activateMIRCuts(useMIRCuts: any): void;
 
@@ -207,8 +276,11 @@ export class Model {
     updateRightHandSide(constraint: any, difference: any): any;
 }
 
+/**
+ * @internal
+ */
 export class Tableau {
-    constructor(precision: any);
+    constructor(precision?: number);
 
     addConstraint(constraint: any): void;
 
@@ -280,17 +352,14 @@ export class Tableau {
 
 }
 
-export const External: {
-};
+/**
+ * @internal
+ */
+export namespace External {
+}
 
-export const Numeral: any;
-
-export const branchAndCut: {
-};
-
-
-export function MultiObjective(model: any): any;
-
-export function Term(variable: any, coefficient: any): void;
-
-export function Variable(id: any, cost: any, index: any, priority: any): void;
+/**
+ * @internal
+ */
+export namespace branchAndCut {
+}
