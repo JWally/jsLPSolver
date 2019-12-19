@@ -22,10 +22,10 @@ function clean_data(data){
     // Clean Up
     // And Reformatting...
     //
-    data = data.replace("\\r\\n","\r\n");
+    data = data.replace("\\r\\n","\r\n").replace("\r\n","\n");
 
 
-    data = data.split("\r\n");
+    data = data.split("\n");
     data = data.filter(function(x){
         
         var rx;
