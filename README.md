@@ -289,7 +289,7 @@ would set it up like this:
 
 This is a catch-all place to put additional options on the model for the Solver to work with in an attempt to not clutter the "core" of the model too much.
 
-#### options.timeout
+#### options.timeout (default: none)
 
 This option is how many milliseconds you want to allow for the solver to try and solve the model you're running. You set it like this:
 
@@ -301,7 +301,7 @@ This option is how many milliseconds you want to allow for the solver to try and
 
 N.B. currently, it only works for mixed-integer linear programs
 
-#### options.tolerance
+#### options.tolerance (default: 0)
 
 For large scale integer problems the solving process can take increasingly long. However, oftentimes the solution to these problems does not have to be the absolute best possible solution, but rather a solution relatively close to the optimal one. In these cases, a variable called tolerance can be specified in the model object. The value assigned to the tolerance variable states that the solver should stop the solution process when the best solution found is within {{options.tolerance}}% of the best theoretical objective value.
 
@@ -313,6 +313,9 @@ It is set up like this:
 }
 ```
 
+#### options.exitOnCycles  (default: true)
+
+Exits when cycles detected
 
 External Solver Integration
 ===============================
