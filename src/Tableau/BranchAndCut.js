@@ -1,56 +1,48 @@
-/*global describe*/
-/*global require*/
-/*global module*/
-/*global it*/
-/*global console*/
-/*global process*/
-var Tableau = require("./Tableau.js");
+import Tableau from "./Tableau.js";
 
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
-function Cut(type, varIndex, value) {
-    this.type = type;
-    this.varIndex = varIndex;
-    this.value = value;
+class Cut {
+    constructor(type, varIndex, value) {
+        this.type = type;
+        this.varIndex = varIndex;
+        this.value = value;
+    }
 }
 
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
-function Branch(relaxedEvaluation, cuts) {
-    this.relaxedEvaluation = relaxedEvaluation;
-    this.cuts = cuts;
+class Branch {
+    constructor(relaxedEvaluation, cuts) {
+        this.relaxedEvaluation = relaxedEvaluation;
+        this.cuts = cuts;
+    }
 }
 
-//-------------------------------------------------------------------
-// Branch sorting strategies
-//-------------------------------------------------------------------
-function sortByEvaluation(a, b) {
-    return b.relaxedEvaluation - a.relaxedEvaluation;
-}
 
 
 //-------------------------------------------------------------------
 // Applying cuts on a tableau and resolving
 //-------------------------------------------------------------------
-Tableau.prototype.applyCuts = function (branchingCuts){
+Tableau.prototype.applyCuts = function (branchingCuts) {
     // Restoring initial solution
     this.restore();
 
     this.addCutConstraints(branchingCuts);
     this.simplex();
     // Adding MIR cuts
-    if (this.model.useMIRCuts){
-        var fractionalVolumeImproved = true;
-        while(fractionalVolumeImproved){
-            var fractionalVolumeBefore = this.computeFractionalVolume(true);
+    if (this.model.useMIRCuts) {
+        let fractionalVolumeImproved = true;
+        while (fractionalVolumeImproved) {
+            const fractionalVolumeBefore = this.computeFractionalVolume(true);
             this.applyMIRCuts();
             this.simplex();
 
-            var fractionalVolumeAfter = this.computeFractionalVolume(true);
+            const fractionalVolumeAfter = this.computeFractionalVolume(true);
 
             // If the new fractional volume is bigger than 90% of the previous one
             // we assume there is no improvement from the MIR cuts
-            if(fractionalVolumeAfter >= 0.9 * fractionalVolumeBefore){
+            if (fractionalVolumeAfter >= 0.9 * fractionalVolumeBefore) {
                 fractionalVolumeImproved = false;
             }
         }
@@ -63,21 +55,28 @@ Tableau.prototype.applyCuts = function (branchingCuts){
 //         solver
 //-------------------------------------------------------------------
 Tableau.prototype.branchAndCut = function () {
-    var branches = [];
-    var iterations = 0;
-    var tolerance = this.model.tolerance;
-    var toleranceFlag = true;
-    var terminalTime = 1e99;
-    
+    //-------------------------------------------------------------------
+    // Branch sorting strategies
+    //-------------------------------------------------------------------
+    function sortByEvaluation(a, b) {
+        return b.relaxedEvaluation - a.relaxedEvaluation;
+    }
+
+    const branches = [];
+    let iterations = 0;
+    const tolerance = this.model.tolerance;
+    let toleranceFlag = true;
+    let terminalTime = 1e99;
+
     //
     // Set Start Time on model...
     // Let's build out a way to *gracefully* quit
     // after {{time}} milliseconds
     //
-    
+
     // 1.) Check to see if there's a timeout on the model
     //
-    if(this.model.timeout){
+    if (this.model.timeout) {
         // 2.) Hooray! There is!
         //     Calculate the final date
         //
@@ -86,36 +85,36 @@ Tableau.prototype.branchAndCut = function () {
 
     // This is the default result
     // If nothing is both *integral* and *feasible*
-    var bestEvaluation = Infinity;
-    var bestBranch = null;
-    var bestOptionalObjectivesEvaluations = [];
-    for (var oInit = 0; oInit < this.optionalObjectives.length; oInit += 1){
+    let bestEvaluation = Infinity;
+    let bestBranch = null;
+    const bestOptionalObjectivesEvaluations = [];
+    for (let oInit = 0; oInit < this.optionalObjectives.length; oInit += 1) {
         bestOptionalObjectivesEvaluations.push(Infinity);
     }
 
     // And here...we...go!
 
     // 1.) Load a model into the queue
-    var branch = new Branch(-Infinity, []);
-    var acceptableThreshold;
-    
+    let branch = new Branch(-Infinity, []);
+    let acceptableThreshold;
+
     branches.push(branch);
     // If all branches have been exhausted terminate the loop
     while (branches.length > 0 && toleranceFlag === true && Date.now() < terminalTime) {
-        
-        if(this.model.isMinimization){
+
+        if (this.model.isMinimization) {
             acceptableThreshold = this.bestPossibleEval * (1 + tolerance);
         } else {
             acceptableThreshold = this.bestPossibleEval * (1 - tolerance);
         }
-        
+
         // Abort while loop if termination tolerance is both specified and condition is met
         if (tolerance > 0) {
             if (bestEvaluation < acceptableThreshold) {
                 toleranceFlag = false;
             }
         }
-        
+
         // Get a model from the queue
         branch = branches.pop();
         if (branch.relaxedEvaluation > bestEvaluation) {
@@ -126,7 +125,7 @@ Tableau.prototype.branchAndCut = function () {
         // with additional cut constraints
 
         // Adding cut constraints
-        var cuts = branch.cuts;
+        const cuts = branch.cuts;
         this.applyCuts(cuts);
 
         iterations++;
@@ -134,17 +133,17 @@ Tableau.prototype.branchAndCut = function () {
             continue;
         }
 
-        var evaluation = this.evaluation;
+        const evaluation = this.evaluation;
         if (evaluation > bestEvaluation) {
             // This branch does not contain the optimal solution
             continue;
         }
 
         // To deal with the optional objectives
-        if (evaluation === bestEvaluation){
-            var isCurrentEvaluationWorse = true;
-            for (var o = 0; o < this.optionalObjectives.length; o += 1){
-                if (this.optionalObjectives[o].reducedCosts[0] > bestOptionalObjectivesEvaluations[o]){
+        if (evaluation === bestEvaluation) {
+            let isCurrentEvaluationWorse = true;
+            for (var o = 0; o < this.optionalObjectives.length; o += 1) {
+                if (this.optionalObjectives[o].reducedCosts[0] > bestOptionalObjectivesEvaluations[o]) {
                     break;
                 } else if (this.optionalObjectives[o].reducedCosts[0] < bestOptionalObjectivesEvaluations[o]) {
                     isCurrentEvaluationWorse = false;
@@ -152,20 +151,20 @@ Tableau.prototype.branchAndCut = function () {
                 }
             }
 
-            if (isCurrentEvaluationWorse){
+            if (isCurrentEvaluationWorse) {
                 continue;
             }
         }
 
         // Is the model both integral and feasible?
         if (this.isIntegral() === true) {
-            
+
             //
             // Store the fact that we are integral
             //
             this.__isIntegral = true;
-            
-            
+
+
             if (iterations === 1) {
                 this.branchAndCutIterations = iterations;
                 return;
@@ -173,29 +172,29 @@ Tableau.prototype.branchAndCut = function () {
             // Store the solution as the bestSolution
             bestBranch = branch;
             bestEvaluation = evaluation;
-            for (var oCopy = 0; oCopy < this.optionalObjectives.length; oCopy += 1){
+            for (let oCopy = 0; oCopy < this.optionalObjectives.length; oCopy += 1) {
                 bestOptionalObjectivesEvaluations[oCopy] = this.optionalObjectives[oCopy].reducedCosts[0];
             }
-            
-            
+
+
             // -------------------------------------
             // In Case we want to keep early solutions
-            if(this.model.keep_solutions){
+            if (this.model.keep_solutions) {
 
-                var nowSolution = (this.model.tableau.getSolution());
-                var store = nowSolution.generateSolutionSet();
+                const nowSolution = (this.model.tableau.getSolution());
+                const store = nowSolution.generateSolutionSet();
                 store.result = nowSolution.evaluation;
-                
-                if(!this.model.solutions){
+
+                if (!this.model.solutions) {
                     this.model.solutions = [];
                 }
-                
-                
+
+
                 this.model.solutions.push(store);
 
             }
-            
-            
+
+
         } else {
             if (iterations === 1) {
                 // Saving the first iteration
@@ -240,16 +239,16 @@ Tableau.prototype.branchAndCut = function () {
             // the model is not integral at this point, and fails.
 
             // Find out where we want to split the solution
-            var variable = this.getMostFractionalVar();
+            const variable = this.getMostFractionalVar();
 
-            var varIndex = variable.index;
+            const varIndex = variable.index;
 
-            var cutsHigh = [];
-            var cutsLow = [];
+            const cutsHigh = [];
+            const cutsLow = [];
 
-            var nCuts = cuts.length;
-            for (var c = 0; c < nCuts; c += 1) {
-                var cut = cuts[c];
+            // var nCuts = cuts.length;
+            for (let c = 0; c < cuts.length; c += 1) {
+                const cut = cuts[c];
                 if (cut.varIndex === varIndex) {
                     if (cut.type === "min") {
                         cutsLow.push(cut);
@@ -262,13 +261,13 @@ Tableau.prototype.branchAndCut = function () {
                 }
             }
 
-            var min = Math.ceil(variable.value);
-            var max = Math.floor(variable.value);
+            const minVariableValue = Math.ceil(variable.value);
+            const maxVariableValue = Math.floor(variable.value);
 
-            var cutHigh = new Cut("min", varIndex, min);
+            const cutHigh = new Cut("min", varIndex, minVariableValue);
             cutsHigh.push(cutHigh);
 
-            var cutLow = new Cut("max", varIndex, max);
+            const cutLow = new Cut("max", varIndex, maxVariableValue);
             cutsLow.push(cutLow);
 
             branches.push(new Branch(evaluation, cutsHigh));

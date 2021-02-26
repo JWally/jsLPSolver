@@ -9,69 +9,89 @@
 //
 // kthxbye!
 //
+const path = require('path');
+const WrapperPlugin = require('wrapper-webpack-plugin');
 
-module.exports = function(grunt){
+
+module.exports = function (grunt) {
     grunt.initConfig({
-        "pkg": "package.json",
-        "jshint": {
-            "files": ["src/**/*.js","test/**/*.js","!src/solver.js","!test/misc/*.*","!test/test-wip/*.*"],
-            "options": {
-                "curly": true,
-                "eqeqeq": true,
-                "latedef": true,
-                "indent": 4,
-                "noempty": true,
-                "quotmark": "double",
-                "undef": true,
-                "globals": {"define": true, "window" :true}
+        pkg: "package.json",
+        eslint: {
+            target: ["src/**/*.js", "test/**/*.js", "!src/solver.js", "!test/misc/*.*", "!test/test-wip/*.*"],
+        },
+        mochaTest: {
+            test: {
+                options: {
+                },
+                src: ["test/solver.problems.js"]
             }
         },
-        "mochaTest": {
-            "test": {
-                "options": {
-                    "reporter": "spec",
-                    "quite": "false"
+        babel: {
+            prod: {
+                targets: {
+                    es6modules: false
                 },
-                "src": ["test/solver.problems.js"]
-            }
-        },
-        "browserify": {
-            "dist": {
-                "files": {
-                    "src/solver.js": ["./src/main.js"]
-                },
-                "options": {
-                    "banner": "(function(){if (typeof exports === \"object\") {module.exports =  require(\"./main\");}})();"
-                }
-            }
-        },
-        "uglify": {
-            "prod": {
-                "options": {
-                    "sourceMap": true,
-                },
-                "files": {
+                files: {
                     "prod/solver.js": [
-                        "src/solver.js"
+                        "src/solver.js",
                     ]
+                },
+                options: {
+                    sourceMap: true,
+                    presets: [
+                        "@babel/preset-env"
+                    ],
+                    "compact": true,
+                    "minified": true
                 }
             }
-        }
+        },
+        webpack: {
+            prod: {
+                mode: "production",
+                entry: './src/main.js',
+                output: {
+                    path: path.resolve(__dirname, 'src'),
+                    filename: 'solver.js',
+                    library: "solver",
+                },
+                module: {
+                    rules: [
+                        {
+                            test: /\.js$/,
+                            include: path.resolve(__dirname, 'src'),
+                            loader: 'babel-loader',
+                            query: {
+                                sourceMap: true,
+                                presets: [
+                                    "@babel/preset-env"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                plugins: [
+                    new WrapperPlugin({
+                        test: /\.js$/,
+                        footer: '\n(function(){if (typeof exports === "object") {module.exports =  solver.default;}})();\n'
+                    })
+                ]
+            }
+        },
     });
 
-    grunt.loadNpmTasks("grunt-contrib-uglify");
-    grunt.loadNpmTasks("grunt-contrib-jshint");
+    grunt.loadNpmTasks("grunt-babel");
+    grunt.loadNpmTasks("grunt-webpack");
+    grunt.loadNpmTasks("grunt-eslint");
     grunt.loadNpmTasks("grunt-mocha-test");
-    grunt.loadNpmTasks("grunt-browserify");
-    grunt.registerTask("default", ["jshint"]);
-    
+    grunt.registerTask("default", ["eslint"]);
+
     // The args can be picked up off of process.argv[2] in
     // the file Mocha is hitting...
     //
-    grunt.registerTask("test-sanity", ["jshint","mochaTest"]);
-    grunt.registerTask("test-speed", ["jshint","mochaTest"]);
-    grunt.registerTask("test-wip", ["jshint","mochaTest"]);
-    
-    grunt.registerTask("prod", ["jshint","browserify", "uglify"]);
+    grunt.registerTask("test-sanity", ["eslint", "webpack", "babel", "mochaTest"]);
+    grunt.registerTask("test-speed", ["eslint", "webpack", "babel", "mochaTest"]);
+    grunt.registerTask("test-wip", ["eslint", "webpack", "babel", "mochaTest"]);
+    grunt.registerTask("prod", ["eslint", "webpack", "babel"]);
 
 }

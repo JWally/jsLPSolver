@@ -1,8 +1,7 @@
-/*global require*/
-var Tableau = require("./Tableau.js");
+import Tableau from "./Tableau.js";
 
 Tableau.prototype.copy = function () {
-    var copy = new Tableau(this.precision);
+    const copy = new Tableau(this.precision);
 
     copy.width = this.width;
     copy.height = this.height;
@@ -26,16 +25,16 @@ Tableau.prototype.copy = function () {
 
     copy.availableIndexes = this.availableIndexes.slice();
 
-    var optionalObjectivesCopy = [];
-    for(var o = 0; o < this.optionalObjectives.length; o++){
+    const optionalObjectivesCopy = [];
+    for(let o = 0; o < this.optionalObjectives.length; o++){
         optionalObjectivesCopy[o] = this.optionalObjectives[o].copy();
     }
     copy.optionalObjectives = optionalObjectivesCopy;
 
 
-    var matrix = this.matrix;
-    var matrixCopy = new Array(this.height);
-    for (var r = 0; r < this.height; r++) {
+    const matrix = this.matrix;
+    const matrixCopy = new Array(this.height);
+    for (let r = 0; r < this.height; r++) {
         matrixCopy[r] = matrix[r].slice();
     }
 
@@ -53,8 +52,8 @@ Tableau.prototype.restore = function () {
         return;
     }
 
-    var save = this.savedState;
-    var savedMatrix = save.matrix;
+    const save = this.savedState;
+    const savedMatrix = save.matrix;
     this.nVars = save.nVars;
     this.model = save.model;
 
@@ -68,18 +67,17 @@ Tableau.prototype.restore = function () {
     this.height = save.height;
 
     // Restoring matrix
-    var r, c;
-    for (r = 0; r < this.height; r += 1) {
-        var savedRow = savedMatrix[r];
-        var row = this.matrix[r];
-        for (c = 0; c < this.width; c += 1) {
+    for (let r = 0; r < this.height; r += 1) {
+        const savedRow = savedMatrix[r];
+        const row = this.matrix[r];
+        for (let c = 0; c < this.width; c += 1) {
             row[c] = savedRow[c];
         }
     }
 
     // Restoring all the other structures
-    var savedBasicIndexes = save.varIndexByRow;
-    for (c = 0; c < this.height; c += 1) {
+    const savedBasicIndexes = save.varIndexByRow;
+    for (let c = 0; c < this.height; c += 1) {
         this.varIndexByRow[c] = savedBasicIndexes[c];
     }
 
@@ -87,8 +85,8 @@ Tableau.prototype.restore = function () {
         this.varIndexByRow.pop();
     }
 
-    var savedNonBasicIndexes = save.varIndexByCol;
-    for (r = 0; r < this.width; r += 1) {
+    const savedNonBasicIndexes = save.varIndexByCol;
+    for (let r = 0; r < this.width; r += 1) {
         this.varIndexByCol[r] = savedNonBasicIndexes[r];
     }
 
@@ -96,9 +94,9 @@ Tableau.prototype.restore = function () {
         this.varIndexByCol.pop();
     }
 
-    var savedRows = save.rowByVarIndex;
-    var savedCols = save.colByVarIndex;
-    for (var v = 0; v < this.nVars; v += 1) {
+    const savedRows = save.rowByVarIndex;
+    const savedCols = save.colByVarIndex;
+    for (let v = 0; v < this.nVars; v += 1) {
         this.rowByVarIndex[v] = savedRows[v];
         this.colByVarIndex[v] = savedCols[v];
     }
@@ -107,8 +105,8 @@ Tableau.prototype.restore = function () {
     if (save.optionalObjectives.length > 0 && this.optionalObjectives.length > 0) {
         this.optionalObjectives = [];
         this.optionalObjectivePerPriority = {};
-        for(var o = 0; o < save.optionalObjectives.length; o++){
-            var optionalObjectiveCopy = save.optionalObjectives[o].copy();
+        for(let o = 0; o < save.optionalObjectives.length; o++){
+            const optionalObjectiveCopy = save.optionalObjectives[o].copy();
             this.optionalObjectives[o] = optionalObjectiveCopy;
             this.optionalObjectivePerPriority[optionalObjectiveCopy.priority] = optionalObjectiveCopy;
         }

@@ -1,0 +1,39 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "install",
+			"problemMatcher": [],
+			"label": "npm: install",
+			"detail": "install dependencies from package",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"type": "grunt",
+			"args": [
+				"-v"
+			],
+			"task": "test-sanity",
+			"group": {
+				"kind": "test",
+				"isDefault": true
+			},
+			"problemMatcher": [],
+			"label": "grunt: test-sanity"
+		},
+		{
+			"type": "grunt",
+			"args": [
+				"-v"
+			],
+			"task": "prod",
+			"problemMatcher": [],
+			"label": "grunt: prod",
+			"group": "test"
+		}
+	]
+}

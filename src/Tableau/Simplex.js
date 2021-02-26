@@ -1,11 +1,4 @@
-/*global describe*/
-/*global require*/
-/*global module*/
-/*global it*/
-/*global console*/
-/*global process*/
-
-var Tableau = require("./Tableau.js");
+import Tableau  from "./Tableau.js";
 
 //-------------------------------------------------------------------
 // Function: solve
@@ -36,16 +29,16 @@ Tableau.prototype.simplex = function () {
 //
 //-------------------------------------------------------------------
 Tableau.prototype.phase1 = function () {
-    var debugCheckForCycles = this.model.checkForCycles;
-    var varIndexesCycle = [];
+    const debugCheckForCycles = this.model.checkForCycles;
+    const varIndexesCycle = [];
 
-    var matrix = this.matrix;
-    var rhsColumn = this.rhsColumn;
-    var lastColumn = this.width - 1;
-    var lastRow = this.height - 1;
+    const matrix = this.matrix;
+    const rhsColumn = this.rhsColumn;
+    const lastColumn = this.width - 1;
+    const lastRow = this.height - 1;
 
-    var unrestricted;
-    var iterations = 0;
+    let unrestricted = true;
+    let iterations = 0;
 
     while (true) {
         // ******************************************
@@ -55,9 +48,9 @@ Tableau.prototype.phase1 = function () {
         // Basic variable with most negative value
         //
         // ******************************************
-        var leavingRowIndex = 0;
-        var rhsValue = -this.precision;
-        for (var r = 1; r <= lastRow; r++) {
+        let leavingRowIndex = 0;
+        let rhsValue = -this.precision;
+        for (let r = 1; r <= lastRow; r++) {
             unrestricted = this.unrestrictedVars[this.varIndexByRow[r]] === true;
             
             //
@@ -67,7 +60,7 @@ Tableau.prototype.phase1 = function () {
             //    continue;
             //}
 
-            var value = matrix[r][rhsColumn];
+            const value = matrix[r][rhsColumn];
             if (value < rhsValue) {
                 rhsValue = value;
                 leavingRowIndex = r;
@@ -88,12 +81,12 @@ Tableau.prototype.phase1 = function () {
         //
         // ******************************************
         // Selecting entering variable
-        var enteringColumn = 0;
-        var maxQuotient = -Infinity;
-        var costRow = matrix[0];
-        var leavingRow = matrix[leavingRowIndex];
-        for (var c = 1; c <= lastColumn; c++) {
-            var coefficient = leavingRow[c];
+        let enteringColumn = 0;
+        let maxQuotient = -Infinity;
+        const costRow = matrix[0];
+        const leavingRow = matrix[leavingRowIndex];
+        for (let c = 1; c <= lastColumn; c++) {
+            const coefficient = leavingRow[c];
             //
             // *Don't think this does anything...
             //
@@ -121,7 +114,7 @@ Tableau.prototype.phase1 = function () {
         if(debugCheckForCycles){
             varIndexesCycle.push([this.varIndexByRow[leavingRowIndex], this.varIndexByCol[enteringColumn]]);
 
-            var cycleData = this.checkForCycles(varIndexesCycle);
+            const cycleData = this.checkForCycles(varIndexesCycle);
             if(cycleData.length > 0){
 
                 this.model.messages.push("Cycle in phase 1");
@@ -248,7 +241,7 @@ Tableau.prototype.phase2 = function () {
         var leavingRow = 0;
         var minQuotient = Infinity;
 
-        var varIndexByRow = this.varIndexByRow;
+        // var varIndexByRow = this.varIndexByRow;
 
         for (var r = 1; r <= lastRow; r++) {
             var row = matrix[r];
@@ -351,7 +344,7 @@ Tableau.prototype.pivot = function (pivotRowIndex, pivotColumnIndex) {
     // multiplying the value of all elements in the objective
     // row by ... yuck... just look below; better explanation later
     var coefficient, i, v0;
-    var precision = this.precision;
+    // var precision = this.precision;
     
     // //////////////////////////////////////
     //
