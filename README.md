@@ -42,18 +42,6 @@ npm install javascript-lp-solver --save
 <script src="https://unpkg.com/javascript-lp-solver/prod/solver.js"></script>
 ```
 
-(webpack)
-```javascript
-const webpack = require('webpack'); //to access built-in plugins
-
-module.exports = {
-        "mode": "development",
-        "plugins": [
-            new webpack.IgnorePlugin(/(fs|child_process)/),
-        ]
-}
-```
-
 ### Use:
 
 ```javascript
