@@ -1,6 +1,4 @@
-/*global require*/
-/*global console*/
-var Tableau = require("./Tableau.js");
+import Tableau from "./Tableau.js";
 
 //-------------------------------------------------------------------
 // Description: Display a tableau matrix
@@ -21,27 +19,23 @@ Tableau.prototype.log = function (message, force) {
     console.log("Rows", this.rowByVarIndex);
     console.log("Cols", this.colByVarIndex);
 
-    var digitPrecision = 5;
+    const digitPrecision = 5;
 
     // Variable declaration
     var varNameRowString = "",
         spacePerColumn = [" "],
-        j,
-        c,
-        s,
-        r,
         variable,
         varIndex,
         varName,
         varNameLength,
-        nSpaces,
+        // nSpaces,
         valueSpace,
         nameSpace;
 
     var row,
         rowString;
 
-    for (c = 1; c < this.width; c += 1) {
+    for (let c = 1; c < this.width; c += 1) {
         varIndex = this.varIndexByCol[c];
         variable = this.variablesPerIndex[varIndex];
         if (variable === undefined) {
@@ -51,7 +45,7 @@ Tableau.prototype.log = function (message, force) {
         }
 
         varNameLength = varName.length;
-        nSpaces = Math.abs(varNameLength - 5);
+        // nSpaces = Math.abs(varNameLength - 5);
         valueSpace = " ";
         nameSpace = "\t";
 
@@ -99,7 +93,7 @@ Tableau.prototype.log = function (message, force) {
     console.log(firstRowString + " Z");*/
 
     ///////////
-    for (j = 1; j < this.width; j += 1) {
+    for (let j = 1; j < this.width; j += 1) {
         signSpace = "\t";
         firstRowString += signSpace;
         firstRowString += spacePerColumn[j];
@@ -112,7 +106,7 @@ Tableau.prototype.log = function (message, force) {
 
 
     // Then the basic variable rowByVarIndex
-    for (r = 1; r < this.height; r += 1) {
+    for (let r = 1; r < this.height; r += 1) {
         row = this.matrix[r];
         rowString = "\t";
 
@@ -125,7 +119,7 @@ Tableau.prototype.log = function (message, force) {
         rowString += signSpace + spacePerColumn[0] + row[0].toFixed(2);*/
 
         ///////////
-        for (c = 1; c < this.width; c += 1) {
+        for (let c = 1; c < this.width; c += 1) {
             signSpace = "\t";
             rowString += signSpace + spacePerColumn[c] + row[c].toFixed(digitPrecision);
         }
@@ -145,13 +139,13 @@ Tableau.prototype.log = function (message, force) {
     console.log("");
 
     // Then reduced costs for optional objectives
-    var nOptionalObjectives = this.optionalObjectives.length;
-    if (nOptionalObjectives > 0) {
+    // var nOptionalObjectives = this.optionalObjectives.length;
+    if (this.optionalObjectives.length > 0) {
         console.log("    Optional objectives:");
-        for (var o = 0; o < nOptionalObjectives; o += 1) {
-            var reducedCosts = this.optionalObjectives[o].reducedCosts;
-            var reducedCostsString = "";
-            for (j = 1; j < this.width; j += 1) {
+        for (let o = 0; o < this.optionalObjectives.length; o += 1) {
+            const reducedCosts = this.optionalObjectives[o].reducedCosts;
+            let reducedCostsString = "";
+            for (let j = 1; j < this.width; j += 1) {
                 signSpace = reducedCosts[j] < 0 ? "" : " ";
                 reducedCostsString += signSpace;
                 reducedCostsString += spacePerColumn[j];

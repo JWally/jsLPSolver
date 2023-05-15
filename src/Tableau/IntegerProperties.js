@@ -1,11 +1,12 @@
-/*global require*/
-var Tableau = require("./Tableau.js");
+import { IntegerVariable } from "../Expressions.js";
+import Tableau from "./Tableau.js";
 
-Tableau.prototype.countIntegerValues = function(){
-    var count = 0;
-    for (var r = 1; r < this.height; r += 1) {
-        if (this.variablesPerIndex[this.varIndexByRow[r]].isInteger) {
-            var decimalPart = this.matrix[r][this.rhsColumn];
+Tableau.prototype.countIntegerValues = function () {
+    let count = 0;
+    for (let r = 1; r < this.height; r += 1) {
+        // if (this.variablesPerIndex[this.varIndexByRow[r]].isInteger) {
+        if (this.variablesPerIndex[this.varIndexByRow[r]] instanceof IntegerVariable) {
+            let decimalPart = this.matrix[r][this.rhsColumn];
             decimalPart = decimalPart - Math.floor(decimalPart);
             if (decimalPart < this.precision && -decimalPart < this.precision) {
                 count += 1;
@@ -19,15 +20,15 @@ Tableau.prototype.countIntegerValues = function(){
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
 Tableau.prototype.isIntegral = function () {
-    var integerVariables = this.model.integerVariables;
-    var nIntegerVars = integerVariables.length;
-    for (var v = 0; v < nIntegerVars; v++) {
-        var varRow = this.rowByVarIndex[integerVariables[v].index];
+    const integerVariables = this.model.integerVariables;
+    // var nIntegerVars = integerVariables.length;
+    for (let v = 0; v < integerVariables.length; v++) {
+        const varRow = this.rowByVarIndex[integerVariables[v].index];
         if (varRow === -1) {
             continue;
         }
 
-        var varValue = this.matrix[varRow][this.rhsColumn];
+        const varValue = this.matrix[varRow][this.rhsColumn];
         if (Math.abs(varValue - Math.round(varValue)) > this.precision) {
             return false;
         }
@@ -36,7 +37,7 @@ Tableau.prototype.isIntegral = function () {
 };
 
 // Multiply all the fractional parts of variables supposed to be integer
-Tableau.prototype.computeFractionalVolume = function(ignoreIntegerValues) {
+Tableau.prototype.computeFractionalVolume = function (ignoreIntegerValues) {
     var volume = -1;
     // var integerVariables = this.model.integerVariables;
     // var nIntegerVars = integerVariables.length;
@@ -61,11 +62,12 @@ Tableau.prototype.computeFractionalVolume = function(ignoreIntegerValues) {
     //     }
     // }
 
-    for (var r = 1; r < this.height; r += 1) {
-        if (this.variablesPerIndex[this.varIndexByRow[r]].isInteger) {
-            var rhs = this.matrix[r][this.rhsColumn];
-            rhs = Math.abs(rhs);
-            var decimalPart = Math.min(rhs - Math.floor(rhs), Math.floor(rhs + 1));
+    for (let r = 1; r < this.height; r += 1) {
+        // if (this.variablesPerIndex[this.varIndexByRow[r]].isInteger) {
+        if (this.variablesPerIndex[this.varIndexByRow[r]] instanceof IntegerVariable) {
+            const rhs = Math.abs(this.matrix[r][this.rhsColumn]);
+            // rhs = Math.abs(rhs);
+            const decimalPart = Math.min(rhs - Math.floor(rhs), Math.floor(rhs + 1));
             if (decimalPart < this.precision) {
                 if (!ignoreIntegerValues) {
                     return 0;
@@ -80,7 +82,7 @@ Tableau.prototype.computeFractionalVolume = function(ignoreIntegerValues) {
         }
     }
 
-    if (volume === -1){
+    if (volume === -1) {
         return 0;
     }
     return volume;

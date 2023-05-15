@@ -7,6 +7,7 @@
     "Justin W. Wolcott <justin.w.wolcott@gmail.com>"
   ],
   "contributors": [
+    "Jonathon Fletcher <jonathon.fletcher@gmail.com>",
     "Brice Chevalier <bchevalier@wizcorp.jp>",
     "Loïc Venerosy <lvenerosy@wizcorp.jp>"
   ],
@@ -20,14 +21,18 @@
   },
   "types": "./types/main.d.ts",
   "devDependencies": {
-    "benchmark": "*",
+    "@babel/core": "^7.13.8",
+    "@babel/eslint-parser": "*",
+    "@babel/preset-env": "*",
+    "babel-loader": "*",
+    "babelify": "*",
     "grunt": "*",
-    "grunt-browserify": "*",
-    "grunt-contrib-jshint": "*",
-    "grunt-contrib-uglify": "*",
-    "grunt-jsbeautifier": "*",
+    "grunt-babel": "*",
+    "grunt-eslint": "*",
     "grunt-mocha-test": "*",
-    "mocha": "*"
+    "grunt-webpack": "*",
+    "mocha": "*",
+    "webpack": "*"
   },
   "keywords": [
     "Linear",
@@ -41,5 +46,35 @@
     "Mixed Integer Optimization",
     "Mixed Integer Programming"
   ],
-  "license": "Unlicense"
+  "browser": {
+    "child_process": false,
+    "fs": false
+  },
+  "license": "Unlicense",
+  "dependencies": {
+    "@babel/cli": "^7.13.0",
+    "child_process": "^1.0.2",
+    "wrapper-webpack-plugin": "^2.1.0"
+  },
+  "babel": {
+    "presets": [
+      "@babel/preset-env"
+    ]
+  },
+  "eslintConfig": {
+    "extends": "eslint:recommended",
+    "parserOptions": {
+      "ecmaVersion": 6,
+      "sourceType": "module"
+    },
+    "env": {
+      "browser": true,
+      "node": true,
+      "es6": true
+    },
+    "rules": {
+      "no-constant-condition": 0,
+      "no-useless-escape": 0
+    }
+  }
 }

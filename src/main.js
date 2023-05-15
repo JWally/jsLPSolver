@@ -1,13 +1,3 @@
-/*global describe*/
-/*global require*/
-/*global module*/
-/*global it*/
-/*global console*/
-/*global process*/
-/*global setTimeout*/
-/*global self*/
-
-
 //-------------------------------------------------------------------
 // SimplexJS
 // https://github.com/
@@ -17,37 +7,35 @@
 // Licensed under the MIT License.
 //-------------------------------------------------------------------
 
-var Tableau = require("./Tableau/index.js");
-var Model = require("./Model");
-var branchAndCut = require("./Tableau/branchAndCut");
-var expressions = require("./expressions.js");
-var validation = require("./Validation");
-var Constraint = expressions.Constraint;
-var Variable = expressions.Variable;
-var Numeral = expressions.Numeral;
-var Term = expressions.Term;
-var External = require("./External/main.js");
+// import Tableau from "./Tableau/index.js";
+import Model from "./Model.js";
+import Polyopt from "./Polyopt.js";
+import Reformat from "./External/lpsolve/Reformat.js";
+// var branchAndCut = require("./Tableau/branchAndCut.js");
+// import { Constraint, Variable, Numeral, Term } from "./Expressions.js";
+import validatorList from "./Validation.js";
+// import External from "./External/main.js";
 
 // Place everything under the Solver Name Space
-var Solver = function () {
+class Solver {
 
-    "use strict";
+    constructor() {
+        // this.Model = Model;
+        // this.branchAndCut = branchAndCut;
+        // this.Constraint = Constraint;
+        // this.Variable = Variable;
+        // this.Numeral = Numeral;
+        // this.Term = Term;
+        // this.Tableau = Tableau;
+        this.lastSolvedModel = null;
 
-    this.Model = Model;
-    this.branchAndCut = branchAndCut;
-    this.Constraint = Constraint;
-    this.Variable = Variable;
-    this.Numeral = Numeral;
-    this.Term = Term;
-    this.Tableau = Tableau;
-    this.lastSolvedModel = null;
-
-    this.External = External;
+        // this.External = External;
+    }
 
     /*************************************************************
      * Method: Solve
      * Scope: Public:
-     * Agruments:
+     * Agruments:live
      *        model: The model we want solver to operate on
      *        precision: If we're solving a MILP, how tight
      *                   do we want to define an integer, given
@@ -58,15 +46,15 @@ var Solver = function () {
      *                  it will run the model through all validation
      *                  functions in the *Validate* module
      **************************************************************/
-    this.Solve = function (model, precision, full, validate) {
+    Solve(model, precision, full, validate) {
         //
         // Run our validations on the model
         // if the model doesn't have a validate
         // attribute set to false
         //
-        if(validate){
-            for(var test in validation){
-                model = validation[test](model);
+        if (validate) {
+            for (const test in validatorList) {
+                model = validatorList[test](model);
             }
         }
 
@@ -79,50 +67,53 @@ var Solver = function () {
         // If the objective function contains multiple objectives,
         // pass it to the multi-solver thing...
         //
-        if(typeof model.optimize === "object"){
-            if(Object.keys(model.optimize > 1)){
-                return require("./Polyopt")(this, model);
+        if (typeof model.optimize === "object") {
+            if (Object.keys(model.optimize > 1)) {
+                return Polyopt(this, model);
             }
         }
 
-// /////////////////////////////////////////////////////////////////////
-// *********************************************************************
-// START
-// Try our hand at handling external solvers...
-// START
-// *********************************************************************
-// /////////////////////////////////////////////////////////////////////
-        if(model.external){
+        // /////////////////////////////////////////////////////////////////////
+        // *********************************************************************
+        // START
+        // Try our hand at handling external solvers...
+        // START
+        // *********************************************************************
+        // /////////////////////////////////////////////////////////////////////
+        // Disable / Remove the External solvers for now.
+        // if (model.external) {
+        // eslint-disable-next-line no-constant-condition
+        if (false) {
 
-            var solvers = Object.keys(External);
-            solvers = JSON.stringify(solvers);
-            
-            //
-            // The model needs to have a "solver" attribute if nothing else
-            // for us to pass data into
-            //
-            if(!model.external.solver){
-                throw new Error("The model you provided has an 'external' object that doesn't have a solver attribute. Use one of the following:" + solvers);
-            }
-            
-            //
-            // If the solver they request doesn't exist; provide them
-            // with a list of possible options:
-            //
-            if(!External[model.external.solver]){
-                throw new Error("No support (yet) for " + model.external.solver + ". Please use one of these instead:" + solvers);
-            }
-            
-            return External[model.external.solver].solve(model);
-            
+            //     var solvers = Object.keys(External);
+            //     solvers = JSON.stringify(solvers);
 
-// /////////////////////////////////////////////////////////////////////
-// *********************************************************************
-//  END
-// Try our hand at handling external solvers...
-//  END
-// *********************************************************************
-// /////////////////////////////////////////////////////////////////////
+            //     //
+            //     // The model needs to have a "solver" attribute if nothing else
+            //     // for us to pass data into
+            //     //
+            //     if (!model.external.solver) {
+            //         throw new Error("The model you provided has an 'external' object that doesn't have a solver attribute. Use one of the following:" + solvers);
+            //     }
+
+            //     //
+            //     // If the solver they request doesn't exist; provide them
+            //     // with a list of possible options:
+            //     //
+            //     if (!External[model.external.solver]) {
+            //         throw new Error("No support (yet) for " + model.external.solver + ". Please use one of these instead:" + solvers);
+            //     }
+
+            //     return External[model.external.solver].solve(model);
+
+
+            //     // /////////////////////////////////////////////////////////////////////
+            //     // *********************************************************************
+            //     //  END
+            //     // Try our hand at handling external solvers...
+            //     //  END
+            //     // *********************************************************************
+            //     // /////////////////////////////////////////////////////////////////////
 
         } else {
 
@@ -130,7 +121,7 @@ var Solver = function () {
                 model = new Model(precision).loadJson(model);
             }
 
-            var solution = model.solve();
+            const solution = model.solve();
             this.lastSolvedModel = model;
             solution.solutionSet = solution.generateSolutionSet();
 
@@ -152,8 +143,8 @@ var Solver = function () {
                 store.result = solution.evaluation;
 
                 store.bounded = solution.bounded;
-                
-                if(solution._tableau.__isIntegral){
+
+                if (solution._tableau.__isIntegral) {
                     store.isIntegral = true;
                 }
 
@@ -164,10 +155,10 @@ var Solver = function () {
                         // When returning data in standard format,
                         // Remove all 0's
                         //
-                        if(solution.solutionSet[d] !== 0){
+                        if (solution.solutionSet[d] !== 0) {
                             store[d] = solution.solutionSet[d];
                         }
-                        
+
                     });
 
                 return store;
@@ -175,7 +166,7 @@ var Solver = function () {
 
         }
 
-    };
+    }
 
     /*************************************************************
      * Method: ReformatLP
@@ -185,62 +176,65 @@ var Solver = function () {
      *          real solving library...in this case
      *          lp_solver
      **************************************************************/
-    this.ReformatLP = require("./External/lpsolve/Reformat.js");
+    ReformatLP(model) {
+        return Reformat(model);
+    }
 
 
-     /*************************************************************
-     * Method: MultiObjective
-     * Scope: Public:
-     * Agruments:
-     *        model: The model we want solver to operate on
-     *        detail: if false, or undefined; it will return the
-     *                result of using the mid-point formula; otherwise
-     *                it will return an object containing:
-     *
-     *                1. The results from the mid point formula
-     *                2. The solution for each objective solved
-     *                   in isolation (pareto)
-     *                3. The min and max of each variable along
-     *                   the frontier of the polytope (ranges)
-     * Purpose: Solve a model with multiple objective functions.
-     *          Since a potential infinite number of solutions exist
-     *          this naively returns the mid-point between
-     *
-     * Note: The model has to be changed a little to work with this.
-     *       Before an *opType* was required. No more. The objective
-     *       attribute of the model is now an object instead of a
-     *       string.
-     *
-     *  *EXAMPLE MODEL*
-     *
-     *   model = {
-     *       optimize: {scotch: "max", soda: "max"},
-     *       constraints: {fluid: {equal: 100}},
-     *       variables: {
-     *           scotch: {fluid: 1, scotch: 1},
-     *           soda: {fluid: 1, soda: 1}
-     *       }
-     *   }
-     *
-     **************************************************************/
-    this.MultiObjective = function(model){
-        return require("./Polyopt")(this, model);
-    };
-};
+    /*************************************************************
+    * Method: MultiObjective
+    * Scope: Public:
+    * Agruments:
+    *        model: The model we want solver to operate on
+    *        detail: if false, or undefined; it will return the
+    *                result of using the mid-point formula; otherwise
+    *                it will return an object containing:
+    *
+    *                1. The results from the mid point formula
+    *                2. The solution for each objective solved
+    *                   in isolation (pareto)
+    *                3. The min and max of each variable along
+    *                   the frontier of the polytope (ranges)
+    * Purpose: Solve a model with multiple objective functions.
+    *          Since a potential infinite number of solutions exist
+    *          this naively returns the mid-point between
+    *
+    * Note: The model has to be changed a little to work with this.
+    *       Before an *opType* was required. No more. The objective
+    *       attribute of the model is now an object instead of a
+    *       string.
+    *
+    *  *EXAMPLE MODEL*
+    *
+    *   model = {
+    *       optimize: {scotch: "max", soda: "max"},
+    *       constraints: {fluid: {equal: 100}},
+    *       variables: {
+    *           scotch: {fluid: 1, scotch: 1},
+    *           soda: {fluid: 1, soda: 1}
+    *       }
+    *   }
+    *
+    **************************************************************/
+    MultiObjective(model) {
+        return Polyopt(this, model);
+    }
+}
 
 // var define = define || undefined;
 // var window = window || undefined;
 
-// If the project is loading through require.js, use `define` and exit
-if (typeof define === "function") {
-    define([], function () {
-        return new Solver();
-    });
-// If the project doesn't see define, but sees window, put solver on window
-} else if (typeof window === "object"){
-    window.solver = new Solver();
-} else if (typeof self === "object"){
-    self.solver = new Solver();
-}
+// // If the project is loading through require.js, use `define` and exit
+// if (typeof define === "function") {
+//     define([], function () {
+//         return new Solver();
+//     });
+//     // If the project doesn't see define, but sees window, put solver on window
+// } else if (typeof window === "object") {
+//     window.solver = new Solver();
+// } else if (typeof self === "object") {
+//     self.solver = new Solver();
+// }
 // Ensure that its available in node.js env
-module.exports = new Solver();
+const solver = new Solver()
+export default solver;

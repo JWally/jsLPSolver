@@ -1,21 +1,19 @@
-/*global require*/
-/*global console*/
-var Tableau = require("./Tableau.js");
+import Tableau from "./Tableau.js";
 
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
 Tableau.prototype._putInBase = function (varIndex) {
     // Is varIndex in the base?
-    var r = this.rowByVarIndex[varIndex];
+    let r = this.rowByVarIndex[varIndex];
     if (r === -1) {
         // Outside the base
         // pivoting to take it out
-        var c = this.colByVarIndex[varIndex];
+        const c = this.colByVarIndex[varIndex];
 
         // Selecting pivot row
         // (Any row with coefficient different from 0)
-        for (var r1 = 1; r1 < this.height; r1 += 1) {
-            var coefficient = this.matrix[r1][c];
+        for (let r1 = 1; r1 < this.height; r1 += 1) {
+            const coefficient = this.matrix[r1][c];
             if (coefficient < -this.precision || this.precision < coefficient) {
                 r = r1;
                 break;
@@ -30,17 +28,17 @@ Tableau.prototype._putInBase = function (varIndex) {
 
 Tableau.prototype._takeOutOfBase = function (varIndex) {
     // Is varIndex in the base?
-    var c = this.colByVarIndex[varIndex];
+    let c = this.colByVarIndex[varIndex];
     if (c === -1) {
         // Inside the base
         // pivoting to take it out
-        var r = this.rowByVarIndex[varIndex];
+        const r = this.rowByVarIndex[varIndex];
 
         // Selecting pivot column
         // (Any column with coefficient different from 0)
-        var pivotRow = this.matrix[r];
-        for (var c1 = 1; c1 < this.height; c1 += 1) {
-            var coefficient = pivotRow[c1];
+        const pivotRow = this.matrix[r];
+        for (let c1 = 1; c1 < this.height; c1 += 1) {
+            const coefficient = pivotRow[c1];
             if (coefficient < -this.precision || this.precision < coefficient) {
                 c = c1;
                 break;
@@ -54,19 +52,19 @@ Tableau.prototype._takeOutOfBase = function (varIndex) {
 };
 
 Tableau.prototype.updateVariableValues = function () {
-    var nVars = this.variables.length;
-    var roundingCoeff = Math.round(1 / this.precision);
-    for (var v = 0; v < nVars; v += 1) {
-        var variable = this.variables[v];
-        var varIndex = variable.index;
+    // var nVars = this.variables.length;
+    const roundingCoeff = Math.round(1 / this.precision);
+    for (var v = 0; v < this.variables.length; v += 1) {
+        const variable = this.variables[v];
+        const varIndex = variable.index;
 
-        var r = this.rowByVarIndex[varIndex];
+        const r = this.rowByVarIndex[varIndex];
         if (r === -1) {
             // Variable is non basic
             variable.value = 0;
         } else {
             // Variable is basic
-            var varValue = this.matrix[r][this.rhsColumn];
+            const varValue = this.matrix[r][this.rhsColumn];
             variable.value = Math.round((varValue + Number.EPSILON) * roundingCoeff) / roundingCoeff;
         }
     }
@@ -74,22 +72,22 @@ Tableau.prototype.updateVariableValues = function () {
 
 Tableau.prototype.updateRightHandSide = function (constraint, difference) {
     // Updates RHS of given constraint
-    var lastRow = this.height - 1;
-    var constraintRow = this.rowByVarIndex[constraint.index];
+    const lastRow = this.height - 1;
+    const constraintRow = this.rowByVarIndex[constraint.index];
     if (constraintRow === -1) {
         // Slack is not in base
-        var slackColumn = this.colByVarIndex[constraint.index];
+        const slackColumn = this.colByVarIndex[constraint.index];
 
         // Upading all the RHS values
-        for (var r = 0; r <= lastRow; r += 1) {
-            var row = this.matrix[r];
+        for (let r = 0; r <= lastRow; r += 1) {
+            const row = this.matrix[r];
             row[this.rhsColumn] -= difference * row[slackColumn];
         }
 
-        var nOptionalObjectives = this.optionalObjectives.length;
+        const nOptionalObjectives = this.optionalObjectives.length;
         if (nOptionalObjectives > 0) {
-            for (var o = 0; o < nOptionalObjectives; o += 1) {
-                var reducedCosts = this.optionalObjectives[o].reducedCosts;
+            for (let o = 0; o < nOptionalObjectives; o += 1) {
+                const reducedCosts = this.optionalObjectives[o].reducedCosts;
                 reducedCosts[this.rhsColumn] -= difference * reducedCosts[slackColumn];
             }
         }
@@ -106,12 +104,12 @@ Tableau.prototype.updateConstraintCoefficient = function (constraint, variable, 
         throw new Error("[Tableau.updateConstraintCoefficient] constraint index should not be equal to variable index !");
     }
 
-    var r = this._putInBase(constraint.index);
+    const r = this._putInBase(constraint.index);
 
-    var colVar = this.colByVarIndex[variable.index];
+    const colVar = this.colByVarIndex[variable.index];
     if (colVar === -1) {
-        var rowVar = this.rowByVarIndex[variable.index];
-        for (var c = 0; c < this.width; c += 1){
+        const rowVar = this.rowByVarIndex[variable.index];
+        for (let c = 0; c < this.width; c += 1){
             this.matrix[r][c] += difference * this.matrix[rowVar][c];
         }
     } else {
@@ -121,24 +119,23 @@ Tableau.prototype.updateConstraintCoefficient = function (constraint, variable, 
 
 Tableau.prototype.updateCost = function (variable, difference) {
     // Updates variable coefficient within the objective function
-    var varIndex = variable.index;
-    var lastColumn = this.width - 1;
-    var varColumn = this.colByVarIndex[varIndex];
+    const varIndex = variable.index;
+    const lastColumn = this.width - 1;
+    const varColumn = this.colByVarIndex[varIndex];
     if (varColumn === -1) {
         // Variable is in base
-        var variableRow = this.matrix[this.rowByVarIndex[varIndex]];
+        const variableRow = this.matrix[this.rowByVarIndex[varIndex]];
 
-        var c;
         if (variable.priority === 0) {
-            var costRow = this.matrix[0];
+            const costRow = this.matrix[0];
 
             // Upading all the reduced costs
-            for (c = 0; c <= lastColumn; c += 1) {
+            for (let c = 0; c <= lastColumn; c += 1) {
                 costRow[c] += difference * variableRow[c];
             }
         } else {
-            var reducedCosts = this.objectivesByPriority[variable.priority].reducedCosts;
-            for (c = 0; c <= lastColumn; c += 1) {
+            const reducedCosts = this.objectivesByPriority[variable.priority].reducedCosts;
+            for (let c = 0; c <= lastColumn; c += 1) {
                 reducedCosts[c] += difference * variableRow[c];
             }
         }
@@ -151,46 +148,46 @@ Tableau.prototype.updateCost = function (variable, difference) {
 
 Tableau.prototype.addConstraint = function (constraint) {
     // Adds a constraint to the tableau
-    var sign = constraint.isUpperBound ? 1 : -1;
-    var lastRow = this.height;
+    const sign = constraint.isUpperBound ? 1 : -1;
+    const lastRow = this.height;
 
-    var constraintRow = this.matrix[lastRow];
+    let constraintRow = this.matrix[lastRow];
     if (constraintRow === undefined) {
         constraintRow = this.matrix[0].slice();
         this.matrix[lastRow] = constraintRow;
     }
 
     // Setting all row cells to 0
-    var lastColumn = this.width - 1;
-    for (var c = 0; c <= lastColumn; c += 1) {
+    const lastColumn = this.width - 1;
+    for (let c = 0; c <= lastColumn; c += 1) {
         constraintRow[c] = 0;
     }
 
     // Initializing RHS
     constraintRow[this.rhsColumn] = sign * constraint.rhs;
 
-    var terms = constraint.terms;
-    var nTerms = terms.length;
-    for (var t = 0; t < nTerms; t += 1) {
-        var term = terms[t];
-        var coefficient = term.coefficient;
-        var varIndex = term.variable.index;
+    const terms = constraint.terms;
+    // var nTerms = terms.length;
+    for (let t = 0; t < terms.length; t += 1) {
+        const term = terms[t];
+        const coefficient = term.coefficient;
+        const varIndex = term.variable.index;
 
-        var varRowIndex = this.rowByVarIndex[varIndex];
+        const varRowIndex = this.rowByVarIndex[varIndex];
         if (varRowIndex === -1) {
             // Variable is non basic
             constraintRow[this.colByVarIndex[varIndex]] += sign * coefficient;
         } else {
             // Variable is basic
             var varRow = this.matrix[varRowIndex];
-            var varValue = varRow[this.rhsColumn];
-            for (c = 0; c <= lastColumn; c += 1) {
+            // var varValue = varRow[this.rhsColumn];
+            for (let c = 0; c <= lastColumn; c += 1) {
                 constraintRow[c] -= sign * coefficient * varRow[c];
             }
         }
     }
     // Creating slack variable
-    var slackIndex = constraint.index;
+    const slackIndex = constraint.index;
     this.varIndexByRow[lastRow] = slackIndex;
     this.rowByVarIndex[slackIndex] = lastRow;
     this.colByVarIndex[slackIndex] = -1;
@@ -199,16 +196,16 @@ Tableau.prototype.addConstraint = function (constraint) {
 };
 
 Tableau.prototype.removeConstraint = function (constraint) {
-    var slackIndex = constraint.index;
-    var lastRow = this.height - 1;
+    const slackIndex = constraint.index;
+    const lastRow = this.height - 1;
 
     // Putting the constraint's slack in the base
-    var r = this._putInBase(slackIndex);
+    const r = this._putInBase(slackIndex);
 
     // Removing constraint
     // by putting the corresponding row at the bottom of the matrix
     // and virtually reducing the height of the matrix by 1
-    var tmpRow = this.matrix[lastRow];
+    const tmpRow = this.matrix[lastRow];
     this.matrix[lastRow] = this.matrix[r];
     this.matrix[r] = tmpRow;
 
@@ -229,15 +226,15 @@ Tableau.prototype.addVariable = function (variable) {
     // Adds a variable to the tableau
     // var sign = constraint.isUpperBound ? 1 : -1;
 
-    var lastRow = this.height - 1;
-    var lastColumn = this.width;
-    var cost = this.model.isMinimization === true ? -variable.cost : variable.cost;
-    var priority = variable.priority;
+    const lastRow = this.height - 1;
+    const lastColumn = this.width;
+    const cost = this.model.isMinimization === true ? -variable.cost : variable.cost;
+    const priority = variable.priority;
 
     // Setting reduced costs
-    var nOptionalObjectives = this.optionalObjectives.length;
+    const nOptionalObjectives = this.optionalObjectives.length;
     if (nOptionalObjectives > 0) {
-        for (var o = 0; o < nOptionalObjectives; o += 1) {
+        for (let o = 0; o < nOptionalObjectives; o += 1) {
             this.optionalObjectives[o].reducedCosts[lastColumn] = 0;
         }
     }
@@ -266,27 +263,27 @@ Tableau.prototype.addVariable = function (variable) {
 
 
 Tableau.prototype.removeVariable = function (variable) {
-    var varIndex = variable.index;
+    const varIndex = variable.index;
 
     // Putting the variable out of the base
-    var c = this._takeOutOfBase(varIndex);
-    var lastColumn = this.width - 1;
+    let c = this._takeOutOfBase(varIndex);
+    const lastColumn = this.width - 1;
     if (c !== lastColumn) {
-        var lastRow = this.height - 1;
-        for (var r = 0; r <= lastRow; r += 1) {
-            var row = this.matrix[r];
+        const lastRow = this.height - 1;
+        for (let r = 0; r <= lastRow; r += 1) {
+            const row = this.matrix[r];
             row[c] = row[lastColumn];
         }
 
-        var nOptionalObjectives = this.optionalObjectives.length;
+        const nOptionalObjectives = this.optionalObjectives.length;
         if (nOptionalObjectives > 0) {
-            for (var o = 0; o < nOptionalObjectives; o += 1) {
-                var reducedCosts = this.optionalObjectives[o].reducedCosts;
+            for (let o = 0; o < nOptionalObjectives; o += 1) {
+                const reducedCosts = this.optionalObjectives[o].reducedCosts;
                 reducedCosts[c] = reducedCosts[lastColumn];
             }
         }
 
-        var switchVarIndex = this.varIndexByCol[lastColumn];
+        const switchVarIndex = this.varIndexByCol[lastColumn];
         this.varIndexByCol[c] = switchVarIndex;
         this.colByVarIndex[switchVarIndex] = c;
     }

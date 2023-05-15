@@ -1,11 +1,11 @@
-/*global require*/
-/*global module*/
-require("./simplex.js");
-require("./cuttingStrategies.js");
-require("./dynamicModification.js");
-require("./log.js");
-require("./backup.js");
-require("./branchingStrategies.js");
-require("./integerProperties.js");
+import Tableau from "./Tableau.js";
+import "./Simplex.js";
+import "./CuttingStrategies.js";
+import "./DynamicModification.js";
+import "./Log.js";
+import "./Backup.js";
+import "./BranchAndCut.js";
+import "./BranchingStrategies.js";
+import "./IntegerProperties.js";
 
-module.exports = require("./Tableau.js");
+export default Tableau;
