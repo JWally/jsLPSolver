@@ -19,6 +19,10 @@
     "./src/External/main.js": "./src/shims/External.js"
   },
   "types": "./types/main.d.ts",
+  "browser": {                                                                                                                                                                  
+    "fs": false,                                                                                                                                                                
+    "child_process": false                                                                                                                                                      
+  },
   "devDependencies": {
     "benchmark": "*",
     "grunt": "*",
