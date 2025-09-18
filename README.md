@@ -127,7 +127,7 @@ var solver = require("./src/solver"),
     }
     
 console.log(solver.Solve(model));
-// {feasible: true, result: 1440-0, table: 8, dresser: 3}
+// {feasible: true, result: 14400, table: 8, dresser: 3}
 ```
 
 My problem is HUGE. Can I do this async or something? 
