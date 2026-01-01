@@ -30,7 +30,8 @@ module.exports = function(grunt){
             "test": {
                 "options": {
                     "reporter": "spec",
-                    "quite": "false"
+                    "quite": "false",
+                    "require": "./scripts/ts-node-register.js"
                 },
                 "src": ["test/solver.problems.js"]
             }

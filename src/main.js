@@ -6,6 +6,7 @@
 /*global process*/
 /*global setTimeout*/
 /*global self*/
+// @ts-nocheck
 
 
 //-------------------------------------------------------------------
@@ -29,7 +30,10 @@ var Term = expressions.Term;
 var External = require("./External/main.js");
 
 // Place everything under the Solver Name Space
-var Solver = function () {
+/**
+ * @constructor
+ */
+function Solver() {
 
     "use strict";
 
@@ -58,6 +62,9 @@ var Solver = function () {
      *                  it will run the model through all validation
      *                  functions in the *Validate* module
      **************************************************************/
+    /**
+     * @type {(model: any, precision?: number, full?: any, validate?: boolean) => any}
+     */
     this.Solve = function (model, precision, full, validate) {
         //
         // Run our validations on the model
@@ -226,7 +233,7 @@ var Solver = function () {
     this.MultiObjective = function(model){
         return require("./Polyopt")(this, model);
     };
-};
+}
 
 // var define = define || undefined;
 // var window = window || undefined;

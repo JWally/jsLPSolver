@@ -5,3 +5,4 @@ _pw.js
 test_results.txt
 test/misc/*.*
 test/test-wip/*.*
+dist/
