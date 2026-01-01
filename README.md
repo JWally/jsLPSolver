@@ -204,6 +204,23 @@ jsLPSolver: 1222.659ms
 
 ``` 
 
+Sanity Checks
+-------------
+
+To guard the current JavaScript code during the TypeScript refactor, run the sanity suite:
+
+```
+npm test
+```
+
+By default this runs the models in `test/test-sanity/`. You can point the runner at a different suite by passing a directory name (relative to `test/`) or by setting an environment variable:
+
+```
+npm run test:speed
+JSLP_TEST_SUITE=test-speed npm test
+npm test -- test-speed
+```
+
 Neat! What else can I do with it?
 
 
@@ -349,4 +366,3 @@ Basically, its doing the following:
 3. Runs everything through a command line (`require("child_process").execFile`) against the lpsolve executable (binPath) with whatever arguments you need (args)
 4. Scrubs the results
 5. Returns a JSON object with the results
-
