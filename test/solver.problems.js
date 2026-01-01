@@ -13,10 +13,45 @@
 //
 var assert = require("assert");
 var fs = require("fs");
+var path = require("path");
 
-// This is useful, because it lets us tell the test-runner
-// Which directory of models to go through...
-var path_of = process.argv[2];
+var DEFAULT_SUITE = "test-sanity";
+
+function getSuiteName() {
+    if (process.env.JSLP_TEST_SUITE) {
+        return process.env.JSLP_TEST_SUITE;
+    }
+
+    var positionalArgs = process.argv.slice(2)
+        .filter(function (arg) {
+            return arg &&
+                arg[0] !== "-" &&
+                !/\\.js$/.test(arg) &&
+                arg.indexOf("solver.problems.js") === -1;
+        });
+
+    if (positionalArgs.length > 0) {
+        return positionalArgs[0];
+    }
+
+    return DEFAULT_SUITE;
+}
+
+function normalizeSuiteName(rawSuite) {
+    var trimmed = rawSuite.trim();
+    if (trimmed.indexOf("test/") === 0) {
+        return trimmed.substring(5);
+    }
+
+    return trimmed;
+}
+
+var path_of = normalizeSuiteName(getSuiteName());
+var suitePath = path.join(__dirname, path_of);
+
+if (!fs.existsSync(suitePath)) {
+    throw new Error("Unable to find test suite directory: " + suitePath);
+}
 
 
 
@@ -28,7 +63,7 @@ var path_of = process.argv[2];
 //          TODO: Error Handling for when the user gives us a bad directory...
 //
 //
-var ary = fs.readdirSync("test/" + path_of + "/")
+var ary = fs.readdirSync(suitePath)
             .filter(function(file){return /\.json$/.test(file);});
 
 
@@ -41,7 +76,7 @@ var ary = fs.readdirSync("test/" + path_of + "/")
 //          in time...
 //
 var problems = ary.map(function(x){
-    var tmp = fs.readFileSync("test/" + path_of + "/" + x, "utf8");
+    var tmp = fs.readFileSync(path.join(suitePath, x), "utf8");
     console.log("opening - ",x);
     return JSON.parse(tmp);
 });

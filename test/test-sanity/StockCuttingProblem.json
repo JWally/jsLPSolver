@@ -310,12 +310,12 @@
     "expects": {
         "feasible": true,
         "result": 19,
-        "version30": 2,
+        "version28": 5,
         "version9": 4,
-        "version21": 2,
-        "version28": 6,
-        "version15": 2,
-        "version23": 2,
-        "version0": 1
+        "version21": 3,
+        "version23": 4,
+        "version0": 1,
+        "version20": 1,
+        "version27": 1
     }
 }

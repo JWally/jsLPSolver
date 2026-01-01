@@ -29,6 +29,11 @@
     "grunt-mocha-test": "*",
     "mocha": "*"
   },
+  "scripts": {
+    "test": "npm run test:sanity",
+    "test:sanity": "mocha test/solver.problems.js",
+    "test:speed": "mocha test/solver.problems.js -- test-speed"
+  },
   "keywords": [
     "Linear",
     "Programming",
