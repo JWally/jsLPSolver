@@ -1,6 +1,6 @@
 /*global require*/
 var Tableau = require("./Tableau.js");
-var SlackVariable = require("../expressions.js").SlackVariable;
+var SlackVariable = require("../expressions").SlackVariable;
 
 Tableau.prototype.addCutConstraints = function (cutConstraints) {
     var nCutConstraints = cutConstraints.length;

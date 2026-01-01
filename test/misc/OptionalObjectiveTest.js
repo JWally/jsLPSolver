@@ -3,7 +3,7 @@
 /*global it*/
 
 var assert = require("assert");
-var solver = require("../src/main.js");
+var solver = require("../src/main");
 
 describe("Testing if optional objectives are taken into account", function () {
 
