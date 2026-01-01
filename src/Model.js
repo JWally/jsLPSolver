@@ -4,14 +4,20 @@
 /*global it*/
 /*global console*/
 /*global process*/
+// @ts-nocheck
 
 var Tableau = require("./Tableau/Tableau.js");
 var branchAndCut = require("./Tableau/branchAndCut.js");
 var expressions = require("./expressions.js");
+/** @type {typeof import("./expressions").Constraint} */
 var Constraint = expressions.Constraint;
+/** @type {typeof import("./expressions").Equality} */
 var Equality = expressions.Equality;
+/** @type {typeof import("./expressions").Variable} */
 var Variable = expressions.Variable;
+/** @type {typeof import("./expressions").IntegerVariable} */
 var IntegerVariable = expressions.IntegerVariable;
+/** @type {typeof import("./expressions").Term} */
 var Term = expressions.Term;
 
 /*************************************************************

@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "es2019",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "allowJs": true,
+    "checkJs": false,
+    "declaration": true,
+    "outDir": "dist",
+    "esModuleInterop": true,
+    "isolatedDeclarations": false,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/**/*",
+    "test/**/*",
+    "types/**/*"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "prod"
+  ]
+}
