@@ -1,6 +1,6 @@
 import Tableau from "./tableau/tableau";
-import { Constraint, Equality, IntegerVariable, Variable } from "./expressions";
-import type { Priority } from "./expressions";
+import { Constraint, Equality, IntegerVariable, Variable, Priority } from "./expressions";
+type Priority = import("./expressions").Priority;
 import type { BranchAndCutService } from "./tableau/branch-and-cut";
 import type { ConstraintBound, Model as JsonModel } from "./types/solver";
 import type { TableauSolution, TableauSolutionSet } from "./tableau";
