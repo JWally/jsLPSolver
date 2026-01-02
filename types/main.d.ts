@@ -30,6 +30,15 @@ export interface Solution<TVariable extends string = string> extends SolveResult
     [variable in TVariable]?: number;
 }
 
+export interface ExternalSolverModule {
+    reformat?: (model: ModelDefinition) => unknown;
+    solve: (model: ModelDefinition) => Promise<unknown>;
+}
+
+export type ExternalSolvers = Record<string, ExternalSolverModule>;
+
+export type { ExternalSolvers, ExternalSolverModule };
+
 export interface SolverAPI {
     Model: typeof import("../src/Model");
     branchAndCut: typeof import("../src/Tableau/branchAndCut");
@@ -38,7 +47,7 @@ export interface SolverAPI {
     Numeral: Numeral;
     Term: typeof import("../src/expressions").Term;
     Tableau: typeof import("../src/Tableau/index");
-    External: typeof import("../src/External/main");
+    External: ExternalSolvers;
     lastSolvedModel: InstanceType<typeof import("../src/Model")> | null;
     Solve<TVariable extends string = string>(
         model: ModelDefinition,
