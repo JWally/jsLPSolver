@@ -3,7 +3,7 @@
 /*global postMessage*/
 /*global onmessage*/
 /*
-importScripts("/prod/solver.js");
+importScripts("/dist/solver.global.js");
 
 console.log("SELF", self);
 

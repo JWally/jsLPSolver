@@ -39,7 +39,7 @@ npm install javascript-lp-solver --save
 
 (in browser through CDN)
 ```html
-<script src="https://unpkg.com/javascript-lp-solver/prod/solver.js"></script>
+<script src="https://unpkg.com/javascript-lp-solver/dist/solver.global.js"></script>
 ```
 
 (webpack)
@@ -57,7 +57,7 @@ module.exports = {
 ### Use:
 
 ```javascript
-var solver = require("./src/solver"),
+var solver = require("javascript-lp-solver"),
   results,
   model = {
     "optimize": "capacity",
@@ -110,7 +110,7 @@ Say you live in the real world and partial results aren't realistic, too messy, 
 > aren't allowed in this dumb world problem?
 
 ```javascript
-var solver = require("./src/solver"),
+var solver = require("javascript-lp-solver"),
     model = {
         "optimize": "profit",
         "opType": "max",
@@ -143,7 +143,7 @@ So its not truly async, but an instance of solver can be easily(?) put in an ins
 // n.b. Solver connects itself to the global 'self'
 // if its available...
 //
-importScripts("/prod/solver.js");
+importScripts("/dist/solver.global.js");
 
 onmessage = function(d){
     var results = solver.Solve(d.data);
