@@ -1,11 +1,11 @@
 import Tableau from "./Tableau";
 import Model from "./Model";
-import "./Tableau/branchAndCut";
 import * as expressions from "./expressions";
 import * as validation from "./Validation";
 import External from "./External/main";
 import Polyopt from "./Polyopt";
 import ReformatLP from "./External/lpsolve/Reformat";
+import { createBranchAndCutService } from "./Tableau/branch-and-cut";
 import type { Model as ModelDefinition, SolveResult } from "./types/solver";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -22,7 +22,8 @@ type ValidationFn = (model: ModelDefinition) => ModelDefinition;
 
 class Solver {
     Model = Model;
-    branchAndCut = (Tableau as any).prototype.branchAndCut;
+    branchAndCutService = createBranchAndCutService();
+    branchAndCut = (tableau: Tableau): void => this.branchAndCutService.branchAndCut(tableau);
     Constraint = expressions.Constraint;
     Variable = expressions.Variable;
     Numeral = expressions.Numeral;
@@ -130,7 +131,7 @@ class Solver {
 
         let modelInstance: Model;
         if (model instanceof Model === false) {
-            modelInstance = new Model(precision).loadJson(model as ModelDefinition);
+            modelInstance = new Model(precision, undefined, this.branchAndCutService).loadJson(model as ModelDefinition);
         } else {
             modelInstance = model as Model;
         }

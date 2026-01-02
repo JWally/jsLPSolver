@@ -1,7 +1,7 @@
 import Tableau from "./Tableau";
 
 Tableau.prototype.copy = function copy(this: Tableau): Tableau {
-    const copy = new Tableau(this.precision);
+    const copy = new Tableau(this.precision, this.branchAndCutService);
 
     copy.width = this.width;
     copy.height = this.height;

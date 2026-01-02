@@ -1,5 +1,4 @@
 import Tableau from "./Tableau/Tableau";
-import "./Tableau/branchAndCut";
 import "./Tableau/backup";
 import "./Tableau/cuttingStrategies";
 import "./Tableau/dynamicModification";
@@ -8,6 +7,7 @@ import "./Tableau/branchingStrategies";
 import "./Tableau/log";
 import "./Tableau/simplex";
 import { Constraint, Equality, IntegerVariable, Variable, Priority } from "./expressions";
+import type { BranchAndCutService } from "./Tableau/branch-and-cut";
 import type { ConstraintBound, Model as JsonModel } from "./types/solver";
 import type { TableauSolution, TableauSolutionSet } from "./Tableau";
 
@@ -35,8 +35,8 @@ class Model {
     availableIndexes: number[];
     lastElementIndex: number;
 
-    constructor(precision?: number, name?: string) {
-        this.tableau = new Tableau(precision);
+    constructor(precision?: number, name?: string, branchAndCutService?: BranchAndCutService) {
+        this.tableau = new Tableau(precision, branchAndCutService);
 
         this.name = name;
 

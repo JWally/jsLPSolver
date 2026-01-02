@@ -5,9 +5,9 @@ import "./log";
 import "./backup";
 import "./branchingStrategies";
 import "./integerProperties";
-import "./branchAndCut";
 
 import Tableau from "./Tableau";
+export { createBranchAndCutService } from "./branch-and-cut";
 
 export type {
     BoundType,
