@@ -24,14 +24,41 @@ try {
             ts = require(nvmTypescriptPath);
         }
 
+        const compilerOptions = (() => {
+            const baseOptions = {
+                module: ts.ModuleKind.CommonJS,
+                target: ts.ScriptTarget.ES2019,
+                esModuleInterop: true
+            };
+
+            const tsconfigPath = ts.findConfigFile(process.cwd(), ts.sys.fileExists, "tsconfig.json");
+            if (!tsconfigPath) {
+                return baseOptions;
+            }
+
+            const configFile = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
+            if (configFile.error) {
+                return baseOptions;
+            }
+
+            const parsedConfig = ts.parseJsonConfigFileContent(
+                configFile.config,
+                ts.sys,
+                path.dirname(tsconfigPath)
+            );
+
+            return {
+                ...baseOptions,
+                module: parsedConfig.options.module ?? baseOptions.module,
+                target: parsedConfig.options.target ?? baseOptions.target,
+                esModuleInterop: parsedConfig.options.esModuleInterop ?? baseOptions.esModuleInterop
+            };
+        })();
+
         require.extensions[".ts"] = function compile(module, filename) {
             const source = fs.readFileSync(filename, "utf8");
             const { outputText } = ts.transpileModule(source, {
-                compilerOptions: {
-                    module: ts.ModuleKind.CommonJS,
-                    target: ts.ScriptTarget.ES2019,
-                    esModuleInterop: true
-                },
+                compilerOptions,
                 fileName: filename
             });
 

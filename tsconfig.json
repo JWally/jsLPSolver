@@ -3,10 +3,10 @@
     "target": "es2019",
     "module": "commonjs",
     "moduleResolution": "node",
+    "rootDir": ".",
+    "outDir": "dist",
     "allowJs": true,
     "checkJs": false,
-    "declaration": true,
-    "outDir": "dist",
     "esModuleInterop": true,
     "isolatedDeclarations": false,
     "forceConsistentCasingInFileNames": true,
@@ -14,6 +14,7 @@
   },
   "include": [
     "src/**/*",
+    "scripts/**/*",
     "test/**/*",
     "types/**/*"
   ],
