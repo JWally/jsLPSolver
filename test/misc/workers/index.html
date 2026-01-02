@@ -3,7 +3,7 @@
     <head>
         <script src="https://code.jquery.com/jquery-2.1.4.min.js" charset="utf-8"></script>
         <script type="text/javascript">
-            var w = new Worker("./worker.js");
+            var w = new Worker("./worker.ts");
 
             w.onmessage = function(d){console.log(d);}
 

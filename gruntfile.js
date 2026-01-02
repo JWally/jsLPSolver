@@ -34,7 +34,7 @@ module.exports = function(grunt){
                     "quite": "false",
                     "require": "./scripts/ts-node-register.js"
                 },
-                "src": ["test/solver.problems.js"]
+                "src": ["test/solver.problems.ts"]
             }
         },
         "browserify": {
