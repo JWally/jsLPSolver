@@ -3,6 +3,8 @@ import Solution from "./Solution";
 import type Model from "../Model";
 import type { Constraint, Variable } from "../expressions";
 import type { BranchCut, OptionalObjective, TableauSolution, VariableValue } from "./types";
+import type { BranchAndCutService } from "./branch-and-cut";
+import { createBranchAndCutService } from "./branch-and-cut";
 
 const createOptionalObjective = (
     priority: number,
@@ -60,6 +62,8 @@ export default class Tableau {
     bestPossibleEval: number;
     __isIntegral?: boolean;
 
+    branchAndCutService: BranchAndCutService;
+
     simplex!: () => this;
     phase1!: () => number;
     phase2!: () => number;
@@ -70,8 +74,6 @@ export default class Tableau {
     computeFractionalVolume!: (ignoreIntegerValues?: boolean) => number;
     addCutConstraints!: (cutConstraints: BranchCut[]) => void;
     applyMIRCuts!: () => void;
-    applyCuts!: (branchingCuts: BranchCut[]) => void;
-    branchAndCut!: () => void;
     _putInBase!: (varIndex: number) => number;
     _takeOutOfBase!: (varIndex: number) => number;
     _addLowerBoundMIRCut!: (rowIndex: number) => boolean;
@@ -95,7 +97,7 @@ export default class Tableau {
     getMostFractionalVar!: () => VariableValue;
     getFractionalVarWithLowestCost!: () => VariableValue;
 
-    constructor(precision = 1e-8) {
+    constructor(precision = 1e-8, branchAndCutService: BranchAndCutService = createBranchAndCutService()) {
         this.model = null;
 
         this.matrix = [];
@@ -138,6 +140,7 @@ export default class Tableau {
 
         this.branchAndCutIterations = 0;
         this.bestPossibleEval = 0;
+        this.branchAndCutService = branchAndCutService;
     }
 
     solve(): TableauSolution {
@@ -164,6 +167,14 @@ export default class Tableau {
         }
 
         objectiveForPriority.reducedCosts[column] = cost;
+    }
+
+    applyCuts(branchingCuts: BranchCut[]): void {
+        this.branchAndCutService.applyCuts(this, branchingCuts);
+    }
+
+    branchAndCut(): void {
+        this.branchAndCutService.branchAndCut(this);
     }
 
     initialize(

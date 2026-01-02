@@ -4,6 +4,8 @@ import path from "path";
 import { createRequire } from "module";
 
 import solver from "../src/solver";
+import Tableau from "../src/Tableau/Tableau";
+import { createBranchAndCutService } from "../src/Tableau/branch-and-cut";
 import type { ProblemExpectations, TestModel } from "./types";
 
 const requireForExtensions = createRequire(__filename);
@@ -130,6 +132,46 @@ function assertSolution(solutionA: ProblemExpectations, solutionB: ProblemExpect
 
     return assert.deepStrictEqual(failActual, failExpects);
 }
+
+describe("Branch-and-cut service", () => {
+    it("does not mutate the Tableau prototype when created", () => {
+        const prototypeBefore = Object.getOwnPropertyNames(Tableau.prototype).sort();
+
+        createBranchAndCutService();
+
+        const prototypeAfter = Object.getOwnPropertyNames(Tableau.prototype).sort();
+        assert.deepStrictEqual(prototypeAfter, prototypeBefore);
+    });
+
+    it("solves integer problems through the injected branch-and-cut service", () => {
+        const integerModel: TestModel = {
+            name: "Simple integer branch-and-cut model",
+            optimize: "profit",
+            opType: "max",
+            constraints: {
+                capacity: { max: 5 },
+            },
+            variables: {
+                widget: {
+                    capacity: 1,
+                    profit: 1,
+                },
+            },
+            ints: {
+                widget: 1,
+            },
+            expects: {
+                feasible: true,
+                widget: 5,
+                result: 5,
+            },
+        };
+
+        const solverInstance = solver;
+        const obtainedResult = solverInstance.Solve(integerModel) as ProblemExpectations;
+        assertSolution(obtainedResult, integerModel.expects);
+    });
+});
 
 describe("Test Suite of EXPECTED results to ACTUAL results:",
     function () {
