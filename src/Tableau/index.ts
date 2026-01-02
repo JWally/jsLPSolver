@@ -5,13 +5,20 @@ import "./log";
 import "./backup";
 import "./branchingStrategies";
 import "./integerProperties";
+import "./branchAndCut";
 
 import Tableau from "./Tableau";
 
-declare const module: { exports: unknown } | undefined;
+export type {
+    BoundType,
+    Branch,
+    BranchCut,
+    OptionalObjective,
+    SavedState,
+    TableauSolution,
+    TableauSolutionSet,
+    VariableValue,
+} from "./types";
 
 export default Tableau;
-
-if (typeof module !== "undefined") {
-    module.exports = Tableau;
-}
+export { Tableau };
