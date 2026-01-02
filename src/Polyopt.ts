@@ -7,7 +7,7 @@ interface SolverLike {
         precision?: number,
         full?: boolean,
         validate?: boolean
-    ): PolyoptSolution;
+    ): unknown;
 }
 
 // Multi-objective solutions are still shaped like regular solve results but may
@@ -30,6 +30,14 @@ export interface PolyoptResult {
  */
 function cloneModel(model: ModelDefinition): ModelDefinition {
     return JSON.parse(JSON.stringify(model));
+}
+
+function asPolyoptSolution(value: unknown): PolyoptSolution {
+    if (value && typeof value === "object") {
+        return value as PolyoptSolution;
+    }
+
+    throw new Error("Polyopt requires the solver to return an object result.");
 }
 
 /**
@@ -141,8 +149,9 @@ export default function Polyopt(solver: SolverLike, model: ModelDefinition): Pol
     }
 
     // We'll replace optimize/opType repeatedly, so start with a clean slate.
-    delete (workingModel as Record<string, unknown>).optimize;
-    delete (workingModel as Record<string, unknown>).opType;
+    const workingRecord = workingModel as unknown as Record<string, unknown>;
+    delete workingRecord.optimize;
+    delete workingRecord.opType;
 
     const aggregatedTargets: Record<string, number> = {};
     const uniqueVectors = new Set<string>();
@@ -157,7 +166,7 @@ export default function Polyopt(solver: SolverLike, model: ModelDefinition): Pol
         workingModel.optimize = objectiveName;
         workingModel.opType = objectives[objectiveName];
 
-        const solution = solver.Solve(workingModel, undefined, undefined, true);
+        const solution = asPolyoptSolution(solver.Solve(workingModel, undefined, undefined, true));
 
         // Ensure attributes that are not explicit variables still get values we can compare.
         backfillObjectiveAttributes(solution, workingModel, objectiveKeys);
@@ -196,7 +205,7 @@ export default function Polyopt(solver: SolverLike, model: ModelDefinition): Pol
     }
 
     const ranges = computeRanges(paretoVertices);
-    const midpoint = solver.Solve(workingModel, undefined, undefined, true);
+    const midpoint = asPolyoptSolution(solver.Solve(workingModel, undefined, undefined, true));
 
     return {
         midpoint,

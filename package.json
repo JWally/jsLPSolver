@@ -14,9 +14,9 @@
     "type": "git",
     "url": "https://github.com/JWally/jsLPSolver"
   },
-  "main": "./src/main",
+  "main": "./dist/src/main.js",
   "browser": {
-    "./src/External/main.js": "./src/shims/External.js"
+    "./dist/src/External/main.js": "./dist/src/shims/External.js"
   },
   "types": "./types/main.d.ts",
   "devDependencies": {
@@ -32,8 +32,10 @@
     "typescript": "^5.5.4"
   },
   "scripts": {
-    "build": "tsc --noEmit",
-    "compile": "tsc --emitDeclarationOnly",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "compile": "tsc --allowJs false --emitDeclarationOnly --declarationDir types/generated",
+    "prepublishOnly": "npm run build",
     "test": "npm run test:sanity",
     "test:sanity": "JSLP_TEST_SUITE=test-sanity mocha -r ./scripts/ts-node-register.js test/solver.problems.js",
     "test:speed": "JSLP_TEST_SUITE=test-speed mocha -r ./scripts/ts-node-register.js test/solver.problems.js -- test-speed"
