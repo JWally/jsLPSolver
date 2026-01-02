@@ -148,7 +148,7 @@ class Solver {
             // Otherwise; give the user the bare
             // minimum of info necessary to carry on
 
-            const store: SolveResult & Record<string, number> = {
+            const store: SolveResult = {
                 feasible: solution.feasible,
                 result: solution.evaluation,
                 bounded: solution.bounded

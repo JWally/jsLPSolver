@@ -1,12 +1,20 @@
 import Tableau from "./Tableau/Tableau";
 import "./Tableau/branchAndCut";
+import "./Tableau/backup";
+import "./Tableau/cuttingStrategies";
+import "./Tableau/dynamicModification";
+import "./Tableau/integerProperties";
+import "./Tableau/branchingStrategies";
+import "./Tableau/log";
+import "./Tableau/simplex";
 import { Constraint, Equality, IntegerVariable, Variable, Priority } from "./expressions";
 import type { ConstraintBound, Model as JsonModel } from "./types/solver";
+import type { TableauSolution, TableauSolutionSet } from "./Tableau";
 
 type ConstraintDefinition = ConstraintBound | ConstraintBound & { equal?: number };
 
 class Model {
-    tableau: any;
+    tableau: Tableau;
     name?: string;
     variables: Variable[];
     integerVariables: IntegerVariable[];
@@ -23,6 +31,7 @@ class Model {
     tolerance?: number;
     timeout?: number;
     keep_solutions?: boolean;
+    solutions?: TableauSolutionSet[];
     availableIndexes: number[];
     lastElementIndex: number;
 
@@ -443,7 +452,7 @@ class Model {
         return this.integerVariables.length;
     }
 
-    solve(): any {
+    solve(): TableauSolution {
         // Setting tableau if not done
         if (this.tableauInitialized === false) {
             this.tableau.setModel(this);
@@ -457,12 +466,12 @@ class Model {
         return this.tableau.feasible;
     }
 
-    save(): any {
-        return this.tableau.save();
+    save(): void {
+        this.tableau.save();
     }
 
-    restore(): any {
-        return this.tableau.restore();
+    restore(): void {
+        this.tableau.restore();
     }
 
     activateMIRCuts(useMIRCuts: boolean): void {
@@ -473,7 +482,7 @@ class Model {
         this.checkForCycles = debugCheckForCycles;
     }
 
-    log(message: any): any {
+    log(message: unknown): Tableau {
         return this.tableau.log(message);
     }
 }
