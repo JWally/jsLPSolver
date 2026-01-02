@@ -15,8 +15,7 @@
   "include": [
     "src/**/*",
     "scripts/**/*",
-    "test/**/*",
-    "types/**/*"
+    "test/**/*"
   ],
   "exclude": [
     "dist",

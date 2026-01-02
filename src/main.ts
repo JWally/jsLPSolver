@@ -240,4 +240,4 @@ if (typeof define === "function") {
 }
 // Ensure that its available in node.js env
 
-export = solver;
+export default solver;
