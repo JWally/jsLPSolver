@@ -74,7 +74,7 @@ exports.solve = function(model){
         //
         // Convert JSON model to lp_solve format
         //
-        var data = require("./Reformat.js")(model);
+        var data = require("./reformat.js")(model);
         
         
         if(!model.external){

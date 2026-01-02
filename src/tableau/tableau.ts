@@ -87,38 +87,34 @@ export default class Tableau {
 
     branchAndCutService: BranchAndCutService;
 
-    simplex: () => this;
-    phase1: () => number;
-    phase2: () => number;
-    pivot: (pivotRowIndex: number, pivotColumnIndex: number) => void;
-    checkForCycles: (varIndexes: Array<[number, number]>) => number[];
-    countIntegerValues: () => number;
-    isIntegral: () => boolean;
-    computeFractionalVolume: (ignoreIntegerValues?: boolean) => number;
-    addCutConstraints: (cutConstraints: BranchCut[]) => void;
-    applyMIRCuts: () => void;
-    putInBase: (varIndex: number) => number;
-    takeOutOfBase: (varIndex: number) => number;
-    addLowerBoundMIRCut: (rowIndex: number) => boolean;
-    addUpperBoundMIRCut: (rowIndex: number) => boolean;
-    updateVariableValues: () => void;
-    updateRightHandSide: (constraint: Constraint, difference: number) => void;
-    updateConstraintCoefficient: (
-        constraint: Constraint,
-        variable: Variable,
-        difference: number
-    ) => void;
-    updateCost: (variable: Variable, difference: number) => void;
-    addConstraint: (constraint: Constraint) => void;
-    removeConstraint: (constraint: Constraint) => void;
-    addVariable: (variable: Variable) => void;
-    removeVariable: (variable: Variable) => void;
-    log: (message: unknown, force?: boolean) => this;
-    copy: () => Tableau;
-    save: () => void;
-    restore: () => void;
-    getMostFractionalVar: () => VariableValue;
-    getFractionalVarWithLowestCost: () => VariableValue;
+    simplex: typeof simplex;
+    phase1: typeof phase1;
+    phase2: typeof phase2;
+    pivot: typeof pivot;
+    checkForCycles: typeof checkForCycles;
+    countIntegerValues: typeof countIntegerValues;
+    isIntegral: typeof isIntegral;
+    computeFractionalVolume: typeof computeFractionalVolume;
+    addCutConstraints: typeof addCutConstraints;
+    applyMIRCuts: typeof applyMIRCuts;
+    putInBase: typeof putInBase;
+    takeOutOfBase: typeof takeOutOfBase;
+    addLowerBoundMIRCut: typeof addLowerBoundMIRCut;
+    addUpperBoundMIRCut: typeof addUpperBoundMIRCut;
+    updateVariableValues: typeof updateVariableValues;
+    updateRightHandSide: typeof updateRightHandSide;
+    updateConstraintCoefficient: typeof updateConstraintCoefficient;
+    updateCost: typeof updateCost;
+    addConstraint: typeof addConstraint;
+    removeConstraint: typeof removeConstraint;
+    addVariable: typeof addVariable;
+    removeVariable: typeof removeVariable;
+    log: typeof log;
+    copy: typeof copy;
+    save: typeof save;
+    restore: typeof restore;
+    getMostFractionalVar: typeof getMostFractionalVar;
+    getFractionalVarWithLowestCost: typeof getFractionalVarWithLowestCost;
 
     constructor(precision = 1e-8, branchAndCutService: BranchAndCutService = createBranchAndCutService()) {
         this.model = null;
