@@ -4,8 +4,8 @@ import path from "path";
 import { createRequire } from "module";
 
 import solver from "../src/solver";
-import Tableau from "../src/Tableau/Tableau";
-import { createBranchAndCutService } from "../src/Tableau/branch-and-cut";
+import Tableau from "../src/tableau/tableau";
+import { createBranchAndCutService } from "../src/tableau/branch-and-cut";
 import type { ProblemExpectations, TestModel } from "./types";
 
 const requireForExtensions = createRequire(__filename);
@@ -25,7 +25,7 @@ function getSuiteName(): string {
         .filter((arg) => arg &&
                 arg[0] !== "-" &&
                 !/\.ts$/.test(arg) &&
-                arg.indexOf("solver.problems.ts") === -1);
+                arg.indexOf("solver-problems.ts") === -1);
 
     if (positionalArgs.length > 0) {
         return positionalArgs[0];

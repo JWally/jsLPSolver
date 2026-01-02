@@ -1,4 +1,4 @@
-import type Tableau from "./Tableau";
+import type Tableau from "./tableau";
 import type { Branch, BranchCut } from "./types";
 
 export interface BranchAndCutService {
@@ -188,4 +188,3 @@ export function createBranchAndCutService(): BranchAndCutService {
 
     return { applyCuts, branchAndCut };
 }
-

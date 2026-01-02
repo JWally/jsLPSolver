@@ -1,6 +1,6 @@
-import Tableau from "./Tableau";
+import type Tableau from "./tableau";
 
-Tableau.prototype.simplex = function simplex(this: Tableau): Tableau {
+export function simplex(this: Tableau): Tableau {
     this.bounded = true;
     this.phase1();
 
@@ -9,9 +9,9 @@ Tableau.prototype.simplex = function simplex(this: Tableau): Tableau {
     }
 
     return this;
-};
+}
 
-Tableau.prototype.phase1 = function phase1(this: Tableau): number {
+export function phase1(this: Tableau): number {
     const debugCheckForCycles = this.model.checkForCycles;
     const varIndexesCycle: Array<[number, number]> = [];
 
@@ -80,9 +80,9 @@ Tableau.prototype.phase1 = function phase1(this: Tableau): number {
         this.pivot(leavingRowIndex, enteringColumn);
         iterations += 1;
     }
-};
+}
 
-Tableau.prototype.phase2 = function phase2(this: Tableau): number {
+export function phase2(this: Tableau): number {
     const debugCheckForCycles = this.model.checkForCycles;
     const varIndexesCycle: Array<[number, number]> = [];
 
@@ -230,11 +230,11 @@ Tableau.prototype.phase2 = function phase2(this: Tableau): number {
         this.pivot(leavingRow, enteringColumn);
         iterations += 1;
     }
-};
+}
 
 const nonZeroColumns: number[] = [];
 
-Tableau.prototype.pivot = function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: number): void {
+export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: number): void {
     const matrix = this.matrix;
 
     const quotient = matrix[pivotRowIndex][pivotColumnIndex];
@@ -314,9 +314,9 @@ Tableau.prototype.pivot = function pivot(this: Tableau, pivotRowIndex: number, p
             }
         }
     }
-};
+}
 
-Tableau.prototype.checkForCycles = function checkForCycles(this: Tableau, varIndexes: Array<[number, number]>): number[] {
+export function checkForCycles(this: Tableau, varIndexes: Array<[number, number]>): number[] {
     for (let e1 = 0; e1 < varIndexes.length - 1; e1++) {
         for (let e2 = e1 + 1; e2 < varIndexes.length; e2++) {
             const elt1 = varIndexes[e1];
@@ -341,4 +341,4 @@ Tableau.prototype.checkForCycles = function checkForCycles(this: Tableau, varInd
         }
     }
     return [];
-};
+}

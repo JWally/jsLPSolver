@@ -1,11 +1,11 @@
-import Tableau from "./Tableau";
-import Model from "./Model";
+import Tableau from "./tableau";
+import Model from "./model";
 import * as expressions from "./expressions";
-import * as validation from "./Validation";
-import External from "./External/main";
-import Polyopt from "./Polyopt";
-import ReformatLP from "./External/lpsolve/Reformat";
-import { createBranchAndCutService } from "./Tableau/branch-and-cut";
+import * as validation from "./validation";
+import External from "./external/main";
+import Polyopt from "./polyopt";
+import ReformatLP from "./external/lpsolve/reformat";
+import { createBranchAndCutService } from "./tableau/branch-and-cut";
 import type { Model as ModelDefinition, SolveResult } from "./types/solver";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment

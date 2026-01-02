@@ -12,9 +12,9 @@
 //
 //
 
-// var reformat = require("./Reformat.js");
+// var reformat = require("./reformat.js");
 
-exports.reformat = require("./Reformat.js");
+exports.reformat = require("./reformat.js");
 
 function clean_data(data){
 

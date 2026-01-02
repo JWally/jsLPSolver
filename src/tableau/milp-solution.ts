@@ -1,5 +1,5 @@
-import type Tableau from "./Tableau";
-import Solution from "./Solution";
+import type Tableau from "./tableau";
+import Solution from "./solution";
 
 class MilpSolution extends Solution {
     iter: number;

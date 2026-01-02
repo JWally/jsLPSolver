@@ -1,12 +1,4 @@
-import "./simplex";
-import "./cuttingStrategies";
-import "./dynamicModification";
-import "./log";
-import "./backup";
-import "./branchingStrategies";
-import "./integerProperties";
-
-import Tableau from "./Tableau";
+import Tableau from "./tableau";
 export { createBranchAndCutService } from "./branch-and-cut";
 
 export type {

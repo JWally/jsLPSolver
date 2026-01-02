@@ -1,10 +1,33 @@
-import MilpSolution from "./MilpSolution";
-import Solution from "./Solution";
-import type Model from "../Model";
+import MilpSolution from "./milp-solution";
+import Solution from "./solution";
+import type Model from "../model";
 import type { Constraint, Variable } from "../expressions";
 import type { BranchCut, OptionalObjective, TableauSolution, VariableValue } from "./types";
 import type { BranchAndCutService } from "./branch-and-cut";
 import { createBranchAndCutService } from "./branch-and-cut";
+import { simplex, phase1, phase2, pivot, checkForCycles } from "./simplex";
+import {
+    addLowerBoundMIRCut,
+    addUpperBoundMIRCut,
+    addCutConstraints,
+    applyMIRCuts
+} from "./cutting-strategies";
+import {
+    putInBase,
+    takeOutOfBase,
+    updateVariableValues,
+    updateRightHandSide,
+    updateConstraintCoefficient,
+    updateCost,
+    addConstraint,
+    removeConstraint,
+    addVariable,
+    removeVariable
+} from "./dynamic-modification";
+import { log } from "./log";
+import { copy, save, restore } from "./backup";
+import { countIntegerValues, isIntegral, computeFractionalVolume } from "./integer-properties";
+import { getMostFractionalVar, getFractionalVarWithLowestCost } from "./branching-strategies";
 
 const createOptionalObjective = (
     priority: number,
@@ -64,38 +87,38 @@ export default class Tableau {
 
     branchAndCutService: BranchAndCutService;
 
-    simplex!: () => this;
-    phase1!: () => number;
-    phase2!: () => number;
-    pivot!: (pivotRowIndex: number, pivotColumnIndex: number) => void;
-    checkForCycles!: (varIndexes: Array<[number, number]>) => number[];
-    countIntegerValues!: () => number;
-    isIntegral!: () => boolean;
-    computeFractionalVolume!: (ignoreIntegerValues?: boolean) => number;
-    addCutConstraints!: (cutConstraints: BranchCut[]) => void;
-    applyMIRCuts!: () => void;
-    _putInBase!: (varIndex: number) => number;
-    _takeOutOfBase!: (varIndex: number) => number;
-    _addLowerBoundMIRCut!: (rowIndex: number) => boolean;
-    _addUpperBoundMIRCut!: (rowIndex: number) => boolean;
-    updateVariableValues!: () => void;
-    updateRightHandSide!: (constraint: Constraint, difference: number) => void;
-    updateConstraintCoefficient!: (
+    simplex: () => this;
+    phase1: () => number;
+    phase2: () => number;
+    pivot: (pivotRowIndex: number, pivotColumnIndex: number) => void;
+    checkForCycles: (varIndexes: Array<[number, number]>) => number[];
+    countIntegerValues: () => number;
+    isIntegral: () => boolean;
+    computeFractionalVolume: (ignoreIntegerValues?: boolean) => number;
+    addCutConstraints: (cutConstraints: BranchCut[]) => void;
+    applyMIRCuts: () => void;
+    putInBase: (varIndex: number) => number;
+    takeOutOfBase: (varIndex: number) => number;
+    addLowerBoundMIRCut: (rowIndex: number) => boolean;
+    addUpperBoundMIRCut: (rowIndex: number) => boolean;
+    updateVariableValues: () => void;
+    updateRightHandSide: (constraint: Constraint, difference: number) => void;
+    updateConstraintCoefficient: (
         constraint: Constraint,
         variable: Variable,
         difference: number
     ) => void;
-    updateCost!: (variable: Variable, difference: number) => void;
-    addConstraint!: (constraint: Constraint) => void;
-    removeConstraint!: (constraint: Constraint) => void;
-    addVariable!: (variable: Variable) => void;
-    removeVariable!: (variable: Variable) => void;
-    log!: (message: unknown, force?: boolean) => this;
-    copy!: () => Tableau;
-    save!: () => void;
-    restore!: () => void;
-    getMostFractionalVar!: () => VariableValue;
-    getFractionalVarWithLowestCost!: () => VariableValue;
+    updateCost: (variable: Variable, difference: number) => void;
+    addConstraint: (constraint: Constraint) => void;
+    removeConstraint: (constraint: Constraint) => void;
+    addVariable: (variable: Variable) => void;
+    removeVariable: (variable: Variable) => void;
+    log: (message: unknown, force?: boolean) => this;
+    copy: () => Tableau;
+    save: () => void;
+    restore: () => void;
+    getMostFractionalVar: () => VariableValue;
+    getFractionalVarWithLowestCost: () => VariableValue;
 
     constructor(precision = 1e-8, branchAndCutService: BranchAndCutService = createBranchAndCutService()) {
         this.model = null;
@@ -141,6 +164,35 @@ export default class Tableau {
         this.branchAndCutIterations = 0;
         this.bestPossibleEval = 0;
         this.branchAndCutService = branchAndCutService;
+
+        this.simplex = simplex;
+        this.phase1 = phase1;
+        this.phase2 = phase2;
+        this.pivot = pivot;
+        this.checkForCycles = checkForCycles;
+        this.countIntegerValues = countIntegerValues;
+        this.isIntegral = isIntegral;
+        this.computeFractionalVolume = computeFractionalVolume;
+        this.addCutConstraints = addCutConstraints;
+        this.applyMIRCuts = applyMIRCuts;
+        this.putInBase = putInBase;
+        this.takeOutOfBase = takeOutOfBase;
+        this.addLowerBoundMIRCut = addLowerBoundMIRCut;
+        this.addUpperBoundMIRCut = addUpperBoundMIRCut;
+        this.updateVariableValues = updateVariableValues;
+        this.updateRightHandSide = updateRightHandSide;
+        this.updateConstraintCoefficient = updateConstraintCoefficient;
+        this.updateCost = updateCost;
+        this.addConstraint = addConstraint;
+        this.removeConstraint = removeConstraint;
+        this.addVariable = addVariable;
+        this.removeVariable = removeVariable;
+        this.log = log;
+        this.copy = copy;
+        this.save = save;
+        this.restore = restore;
+        this.getMostFractionalVar = getMostFractionalVar;
+        this.getFractionalVarWithLowestCost = getFractionalVarWithLowestCost;
     }
 
     solve(): TableauSolution {

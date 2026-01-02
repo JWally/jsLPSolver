@@ -1,4 +1,4 @@
-import type Tableau from "./Tableau";
+import type Tableau from "./tableau";
 import type { TableauSolutionSet } from "./types";
 
 class Solution {

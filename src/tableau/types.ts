@@ -1,7 +1,7 @@
-import type MilpSolution from "./MilpSolution";
-import type Solution from "./Solution";
+import type MilpSolution from "./milp-solution";
+import type Solution from "./solution";
 import type { Variable } from "../expressions";
-import type Model from "../Model";
+import type Model from "../model";
 
 export type BoundType = "min" | "max";
 
