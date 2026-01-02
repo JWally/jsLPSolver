@@ -19,6 +19,7 @@ module.exports = function(grunt){
                 "curly": true,
                 "eqeqeq": true,
                 "latedef": true,
+                "node": true,
                 "indent": 4,
                 "noempty": true,
                 "quotmark": "double",
@@ -39,10 +40,10 @@ module.exports = function(grunt){
         "browserify": {
             "dist": {
                 "files": {
-                    "src/solver.js": ["./src/main.js"]
+                    "dist/solver.js": ["./dist/src/main.js"]
                 },
                 "options": {
-                    "banner": "(function(){if (typeof exports === \"object\") {module.exports =  require(\"./main\");}})();"
+                    "banner": "(function(){if (typeof exports === \"object\") {module.exports =  require(\"./src/main\");}})();"
                 }
             }
         },
@@ -53,7 +54,7 @@ module.exports = function(grunt){
                 },
                 "files": {
                     "prod/solver.js": [
-                        "src/solver.js"
+                        "dist/solver.js"
                     ]
                 }
             }
