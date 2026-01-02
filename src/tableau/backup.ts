@@ -1,7 +1,7 @@
-import Tableau from "./Tableau";
+import type Tableau from "./tableau";
 
-Tableau.prototype.copy = function copy(this: Tableau): Tableau {
-    const copy = new Tableau(this.precision, this.branchAndCutService);
+export function copy(this: Tableau): Tableau {
+    const copy = new (this.constructor as typeof Tableau)(this.precision, this.branchAndCutService);
 
     copy.width = this.width;
     copy.height = this.height;
@@ -39,13 +39,13 @@ Tableau.prototype.copy = function copy(this: Tableau): Tableau {
     copy.matrix = matrixCopy;
 
     return copy;
-};
+}
 
-Tableau.prototype.save = function save(this: Tableau): void {
+export function save(this: Tableau): void {
     this.savedState = this.copy();
-};
+}
 
-Tableau.prototype.restore = function restore(this: Tableau): void {
+export function restore(this: Tableau): void {
     if (this.savedState === null) {
         return;
     }
@@ -106,4 +106,4 @@ Tableau.prototype.restore = function restore(this: Tableau): void {
             this.objectivesByPriority[optionalObjectiveCopy.priority] = optionalObjectiveCopy;
         }
     }
-};
+}

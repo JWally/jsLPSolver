@@ -40,15 +40,15 @@ export type ExternalSolvers = Record<string, ExternalSolverModule>;
 export type { ExternalSolvers, ExternalSolverModule };
 
 export interface SolverAPI {
-    Model: typeof import("../src/Model");
-    branchAndCut: typeof import("../src/Tableau/branchAndCut");
+    Model: typeof import("../src/model");
+    branchAndCut: typeof import("../src/tableau/branch-and-cut");
     Constraint: typeof import("../src/expressions").Constraint;
     Variable: typeof import("../src/expressions").Variable;
     Numeral: Numeral;
     Term: typeof import("../src/expressions").Term;
-    Tableau: typeof import("../src/Tableau/index");
+    Tableau: typeof import("../src/tableau/index");
     External: ExternalSolvers;
-    lastSolvedModel: InstanceType<typeof import("../src/Model")> | null;
+    lastSolvedModel: InstanceType<typeof import("../src/model")> | null;
     Solve<TVariable extends string = string>(
         model: ModelDefinition,
         precision?: number,

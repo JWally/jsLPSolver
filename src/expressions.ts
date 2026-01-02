@@ -1,4 +1,4 @@
-import type Model from "./Model";
+import type Model from "./model";
 
 export type Priority = number | "required" | "strong" | "medium" | "weak";
 

@@ -1,7 +1,7 @@
-import Tableau from "./Tableau";
+import type Tableau from "./tableau";
 import type { Constraint, Variable } from "../expressions";
 
-Tableau.prototype._putInBase = function _putInBase(this: Tableau, varIndex: number): number {
+export function putInBase(this: Tableau, varIndex: number): number {
     let r = this.rowByVarIndex[varIndex];
     if (r === -1) {
         const c = this.colByVarIndex[varIndex];
@@ -18,9 +18,9 @@ Tableau.prototype._putInBase = function _putInBase(this: Tableau, varIndex: numb
     }
 
     return r;
-};
+}
 
-Tableau.prototype._takeOutOfBase = function _takeOutOfBase(this: Tableau, varIndex: number): number {
+export function takeOutOfBase(this: Tableau, varIndex: number): number {
     let c = this.colByVarIndex[varIndex];
     if (c === -1) {
         const r = this.rowByVarIndex[varIndex];
@@ -38,9 +38,9 @@ Tableau.prototype._takeOutOfBase = function _takeOutOfBase(this: Tableau, varInd
     }
 
     return c;
-};
+}
 
-Tableau.prototype.updateVariableValues = function updateVariableValues(this: Tableau): void {
+export function updateVariableValues(this: Tableau): void {
     const nVars = this.variables.length;
     const roundingCoeff = Math.round(1 / this.precision);
     for (let v = 0; v < nVars; v += 1) {
@@ -55,9 +55,9 @@ Tableau.prototype.updateVariableValues = function updateVariableValues(this: Tab
             variable.value = Math.round((varValue + Number.EPSILON) * roundingCoeff) / roundingCoeff;
         }
     }
-};
+}
 
-Tableau.prototype.updateRightHandSide = function updateRightHandSide(
+export function updateRightHandSide(
     this: Tableau,
     constraint: Constraint,
     difference: number
@@ -82,9 +82,9 @@ Tableau.prototype.updateRightHandSide = function updateRightHandSide(
     } else {
         this.matrix[constraintRow][this.rhsColumn] -= difference;
     }
-};
+}
 
-Tableau.prototype.updateConstraintCoefficient = function updateConstraintCoefficient(
+export function updateConstraintCoefficient(
     this: Tableau,
     constraint: Constraint,
     variable: Variable,
@@ -96,7 +96,7 @@ Tableau.prototype.updateConstraintCoefficient = function updateConstraintCoeffic
         );
     }
 
-    const r = this._putInBase(constraint.index);
+    const r = this.putInBase(constraint.index);
 
     const colVar = this.colByVarIndex[variable.index];
     if (colVar === -1) {
@@ -107,9 +107,9 @@ Tableau.prototype.updateConstraintCoefficient = function updateConstraintCoeffic
     } else {
         this.matrix[r][colVar] -= difference;
     }
-};
+}
 
-Tableau.prototype.updateCost = function updateCost(this: Tableau, variable: Variable, difference: number): void {
+export function updateCost(this: Tableau, variable: Variable, difference: number): void {
     const varIndex = variable.index;
     const lastColumn = this.width - 1;
     const varColumn = this.colByVarIndex[varIndex];
@@ -131,9 +131,9 @@ Tableau.prototype.updateCost = function updateCost(this: Tableau, variable: Vari
     } else {
         this.matrix[0][varColumn] -= difference;
     }
-};
+}
 
-Tableau.prototype.addConstraint = function addConstraint(this: Tableau, constraint: Constraint): void {
+export function addConstraint(this: Tableau, constraint: Constraint): void {
     const sign = constraint.isUpperBound ? 1 : -1;
     const lastRow = this.height;
 
@@ -174,13 +174,13 @@ Tableau.prototype.addConstraint = function addConstraint(this: Tableau, constrai
     this.colByVarIndex[slackIndex] = -1;
 
     this.height += 1;
-};
+}
 
-Tableau.prototype.removeConstraint = function removeConstraint(this: Tableau, constraint: Constraint): void {
+export function removeConstraint(this: Tableau, constraint: Constraint): void {
     const slackIndex = constraint.index;
     const lastRow = this.height - 1;
 
-    const r = this._putInBase(slackIndex);
+    const r = this.putInBase(slackIndex);
 
     const tmpRow = this.matrix[lastRow];
     this.matrix[lastRow] = this.matrix[r];
@@ -195,9 +195,9 @@ Tableau.prototype.removeConstraint = function removeConstraint(this: Tableau, co
     constraint.slack.index = -1;
 
     this.height -= 1;
-};
+}
 
-Tableau.prototype.addVariable = function addVariable(this: Tableau, variable: Variable): void {
+export function addVariable(this: Tableau, variable: Variable): void {
     const lastRow = this.height - 1;
     const lastColumn = this.width;
     const cost = this.model.isMinimization === true ? -variable.cost : variable.cost;
@@ -220,47 +220,29 @@ Tableau.prototype.addVariable = function addVariable(this: Tableau, variable: Va
     for (let r = 1; r <= lastRow; r += 1) {
         this.matrix[r][lastColumn] = 0;
     }
-
-    const varIndex = variable.index;
-    this.varIndexByCol[lastColumn] = varIndex;
-
-    this.rowByVarIndex[varIndex] = -1;
-    this.colByVarIndex[varIndex] = lastColumn;
+    this.colByVarIndex[variable.index] = lastColumn;
+    this.varIndexByCol[lastColumn] = variable.index;
 
     this.width += 1;
-};
+}
 
-Tableau.prototype.removeVariable = function removeVariable(this: Tableau, variable: Variable): void {
+export function removeVariable(this: Tableau, variable: Variable): void {
     const varIndex = variable.index;
-
-    const c = this._takeOutOfBase(varIndex);
     const lastColumn = this.width - 1;
-    if (c !== lastColumn) {
-        const lastRow = this.height - 1;
-        for (let r = 0; r <= lastRow; r += 1) {
-            const row = this.matrix[r];
-            row[c] = row[lastColumn];
-        }
 
-        const nOptionalObjectives = this.optionalObjectives.length;
-        if (nOptionalObjectives > 0) {
-            for (let o = 0; o < nOptionalObjectives; o += 1) {
-                const reducedCosts = this.optionalObjectives[o].reducedCosts;
-                reducedCosts[c] = reducedCosts[lastColumn];
-            }
-        }
+    const c = this.takeOutOfBase(varIndex);
 
-        const switchVarIndex = this.varIndexByCol[lastColumn];
-        this.varIndexByCol[c] = switchVarIndex;
-        this.colByVarIndex[switchVarIndex] = c;
+    const lastRow = this.height - 1;
+    for (let r = 0; r <= lastRow; r += 1) {
+        const row = this.matrix[r];
+        row[c] = row[lastColumn];
     }
 
-    this.varIndexByCol[lastColumn] = -1;
+    this.varIndexByCol[c] = this.varIndexByCol[lastColumn];
+    this.rowByVarIndex[varIndex] = -1;
     this.colByVarIndex[varIndex] = -1;
 
     this.availableIndexes[this.availableIndexes.length] = varIndex;
 
-    variable.index = -1;
-
     this.width -= 1;
-};
+}

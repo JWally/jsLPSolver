@@ -24,11 +24,15 @@
   ],
   "main": "./dist/src/main.js",
   "browser": {
-    "./dist/src/External/main.js": "./dist/src/shims/External.js"
+    "./dist/src/external/main.js": "./dist/src/shims/external.js"
   },
   "types": "./types/main.d.ts",
   "devDependencies": {
     "benchmark": "*",
+    "eslint": "^9.4.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint-plugin-unicorn": "^55.0.0",
     "grunt": "*",
     "grunt-browserify": "*",
     "grunt-contrib-jshint": "*",
@@ -41,13 +45,14 @@
   },
   "scripts": {
     "build": "tsc",
+    "lint": "eslint .",
     "build:bundle": "npm run build && grunt prod",
     "typecheck": "tsc --noEmit",
     "compile": "tsc --allowJs false --emitDeclarationOnly --declarationDir types/generated",
     "prepublishOnly": "npm run build:bundle",
     "test": "npm run test:sanity",
-    "test:sanity": "JSLP_TEST_SUITE=test-sanity mocha -r ./scripts/ts-node-register.js test/solver.problems.ts",
-    "test:speed": "JSLP_TEST_SUITE=test-speed mocha -r ./scripts/ts-node-register.js test/solver.problems.ts -- test-speed"
+    "test:sanity": "JSLP_TEST_SUITE=test-sanity mocha -r ./scripts/ts-node-register.js test/solver-problems.ts",
+    "test:speed": "JSLP_TEST_SUITE=test-speed mocha -r ./scripts/ts-node-register.js test/solver-problems.ts -- test-speed"
   },
   "keywords": [
     "Linear",

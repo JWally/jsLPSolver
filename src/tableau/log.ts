@@ -1,6 +1,6 @@
-import Tableau from "./Tableau";
+import type Tableau from "./tableau";
 
-Tableau.prototype.log = function log(this: Tableau, message: unknown, force?: boolean): Tableau {
+export function log(this: Tableau, message: unknown, force?: boolean): Tableau {
     if (false && !force) {
         return this;
     }
@@ -124,4 +124,4 @@ Tableau.prototype.log = function log(this: Tableau, message: unknown, force?: bo
     console.log("evaluation", this.evaluation);
 
     return this;
-};
+}

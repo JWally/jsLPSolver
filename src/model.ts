@@ -1,15 +1,8 @@
-import Tableau from "./Tableau/Tableau";
-import "./Tableau/backup";
-import "./Tableau/cuttingStrategies";
-import "./Tableau/dynamicModification";
-import "./Tableau/integerProperties";
-import "./Tableau/branchingStrategies";
-import "./Tableau/log";
-import "./Tableau/simplex";
+import Tableau from "./tableau/tableau";
 import { Constraint, Equality, IntegerVariable, Variable, Priority } from "./expressions";
-import type { BranchAndCutService } from "./Tableau/branch-and-cut";
+import type { BranchAndCutService } from "./tableau/branch-and-cut";
 import type { ConstraintBound, Model as JsonModel } from "./types/solver";
-import type { TableauSolution, TableauSolutionSet } from "./Tableau";
+import type { TableauSolution, TableauSolutionSet } from "./tableau";
 
 type ConstraintDefinition = ConstraintBound | ConstraintBound & { equal?: number };
 
