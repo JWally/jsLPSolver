@@ -46,8 +46,8 @@
     "compile": "tsc --allowJs false --emitDeclarationOnly --declarationDir types/generated",
     "prepublishOnly": "npm run build:bundle",
     "test": "npm run test:sanity",
-    "test:sanity": "JSLP_TEST_SUITE=test-sanity mocha -r ./scripts/ts-node-register.js test/solver.problems.js",
-    "test:speed": "JSLP_TEST_SUITE=test-speed mocha -r ./scripts/ts-node-register.js test/solver.problems.js -- test-speed"
+    "test:sanity": "JSLP_TEST_SUITE=test-sanity mocha -r ./scripts/ts-node-register.js test/solver.problems.ts",
+    "test:speed": "JSLP_TEST_SUITE=test-speed mocha -r ./scripts/ts-node-register.js test/solver.problems.ts -- test-speed"
   },
   "keywords": [
     "Linear",

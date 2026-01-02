@@ -1,9 +1,3 @@
-/*global describe*/
-/*global require*/
-/*global module*/
-/*global it*/
-/*global console*/
-/*global process*/
 /*global importScripts*/
 /*global self*/
 /*global postMessage*/
