@@ -14,6 +14,14 @@
     "type": "git",
     "url": "https://github.com/JWally/jsLPSolver"
   },
+  "files": [
+    "dist/**/*",
+    "prod/**/*",
+    "types/**/*",
+    "scripts/ts-node-register.js",
+    "README.md",
+    "LICENSE"
+  ],
   "main": "./dist/src/main.js",
   "browser": {
     "./dist/src/External/main.js": "./dist/src/shims/External.js"
@@ -33,9 +41,10 @@
   },
   "scripts": {
     "build": "tsc",
+    "build:bundle": "npm run build && grunt prod",
     "typecheck": "tsc --noEmit",
     "compile": "tsc --allowJs false --emitDeclarationOnly --declarationDir types/generated",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "npm run build:bundle",
     "test": "npm run test:sanity",
     "test:sanity": "JSLP_TEST_SUITE=test-sanity mocha -r ./scripts/ts-node-register.js test/solver.problems.js",
     "test:speed": "JSLP_TEST_SUITE=test-speed mocha -r ./scripts/ts-node-register.js test/solver.problems.js -- test-speed"
