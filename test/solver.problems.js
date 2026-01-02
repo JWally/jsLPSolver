@@ -15,6 +15,12 @@ var assert = require("assert");
 var fs = require("fs");
 var path = require("path");
 
+// Ensure the test harness is evaluating the TypeScript sources via the runtime
+// loader rather than falling back to any precompiled JavaScript artifacts.
+if (!require.extensions[".ts"]) {
+    throw new Error("TypeScript loader missing: sanity tests must exercise .ts sources.");
+}
+
 var DEFAULT_SUITE = "test-sanity";
 
 function getSuiteName() {
