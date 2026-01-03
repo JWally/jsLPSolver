@@ -2,15 +2,6 @@ import type Model from "./model";
 
 export type Priority = number | "required" | "strong" | "medium" | "weak";
 
-// Runtime companion for the Priority type to avoid missing-export errors when
-// bundlers treat it as a value import.
-export const Priority = {
-    required: "required",
-    strong: "strong",
-    medium: "medium",
-    weak: "weak"
-} as const;
-
 export class Variable {
     id: string;
     cost: number;

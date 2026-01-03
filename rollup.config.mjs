@@ -84,13 +84,12 @@ export default [
         ]
     },
     {
-        input: "src/solver.ts",
+        input: "dist/types/solver.d.ts",
         output: {
             file: "dist/index.d.ts",
             format: "es"
         },
         plugins: [
-            createAliases(true),
             dts({
                 tsconfig: "./tsconfig.build.json"
             })
