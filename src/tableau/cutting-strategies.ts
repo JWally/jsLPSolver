@@ -6,40 +6,47 @@ export function addCutConstraints(this: Tableau, cutConstraints: BranchCut[]): v
     const nCutConstraints = cutConstraints.length;
     const height = this.height;
     const heightWithCuts = height + nCutConstraints;
-    for (let h = height; h < heightWithCuts; h += 1) {
-        if (this.matrix[h] === undefined) {
-            this.matrix[h] = this.matrix[h - 1].slice();
-        }
+    const width = this.width;
+    const lastColumn = width - 1;
+
+    // Grow the matrix to accommodate new rows
+    const oldMatrix = this.matrix;
+    const newSize = heightWithCuts * width;
+    if (oldMatrix.length < newSize) {
+        const newMatrix = new Float64Array(newSize);
+        newMatrix.set(oldMatrix);
+        this.matrix = newMatrix;
     }
+    const matrix = this.matrix;
 
     this.height = heightWithCuts;
     this.nVars = this.width + this.height - 2;
-    const lastColumn = this.width - 1;
+
     for (let h = 0; h < nCutConstraints; h += 1) {
         const cut = cutConstraints[h];
         const cutRow = height + h;
+        const cutRowOffset = cutRow * width;
         const sign = cut.type === "min" ? -1 : 1;
 
         const varIndex = cut.varIndex;
         let varRowIndex = this.rowByVarIndex[varIndex];
-        const cutRowVector = this.matrix[cutRow];
 
         if (varRowIndex === -1) {
-            cutRowVector[this.rhsColumn] = sign * cut.value;
+            matrix[cutRowOffset + this.rhsColumn] = sign * cut.value;
 
             for (let c = 1; c <= lastColumn; c += 1) {
-                cutRowVector[c] = 0;
+                matrix[cutRowOffset + c] = 0;
             }
 
-            cutRowVector[this.colByVarIndex[varIndex]] = sign;
+            matrix[cutRowOffset + this.colByVarIndex[varIndex]] = sign;
         } else {
-            const varRow = this.matrix[varRowIndex];
-            const varValue = varRow[this.rhsColumn];
+            const varRowOffset = varRowIndex * width;
+            const varValue = matrix[varRowOffset + this.rhsColumn];
 
-            cutRowVector[this.rhsColumn] = sign * (cut.value - varValue);
+            matrix[cutRowOffset + this.rhsColumn] = sign * (cut.value - varValue);
 
             for (let c = 1; c <= lastColumn; c += 1) {
-                cutRowVector[c] = -sign * varRow[c];
+                matrix[cutRowOffset + c] = -sign * matrix[varRowOffset + c];
             }
         }
 
@@ -58,19 +65,32 @@ export function addLowerBoundMIRCut(this: Tableau, rowIndex: number): boolean {
         return false;
     }
 
-    const cutRow = this.matrix[rowIndex];
+    const width = this.width;
+    const matrix = this.matrix;
+    const cutRowOffset = rowIndex * width;
     const integerVar = this.variablesPerIndex[this.varIndexByRow[rowIndex]];
     if (integerVar === undefined || !integerVar.isInteger) {
         return false;
     }
 
-    const fractionalPart = cutRow[this.rhsColumn] - Math.floor(cutRow[this.rhsColumn]);
+    const rhsValue = matrix[cutRowOffset + this.rhsColumn];
+    const fractionalPart = rhsValue - Math.floor(rhsValue);
     if (fractionalPart < this.precision || fractionalPart > 1 - this.precision) {
         return false;
     }
 
     const height = this.height;
-    const newRow = this.matrix[height] = this.matrix[height - 1].slice();
+    const newRowOffset = height * width;
+
+    // Grow matrix to add new row
+    const newSize = (height + 1) * width;
+    if (matrix.length < newSize) {
+        const newMatrix = new Float64Array(newSize);
+        newMatrix.set(matrix);
+        this.matrix = newMatrix;
+    }
+    const mat = this.matrix;
+
     this.height += 1;
     this.nVars += 1;
 
@@ -80,21 +100,21 @@ export function addLowerBoundMIRCut(this: Tableau, rowIndex: number): boolean {
     this.colByVarIndex[slackVarIndex] = -1;
     this.variablesPerIndex[slackVarIndex] = new SlackVariable("s" + slackVarIndex, slackVarIndex);
 
-    newRow[this.rhsColumn] = Math.floor(cutRow[this.rhsColumn]);
+    mat[newRowOffset + this.rhsColumn] = Math.floor(rhsValue);
 
     for (let colIndex = 1; colIndex < this.varIndexByCol.length; colIndex += 1) {
         const variable = this.variablesPerIndex[this.varIndexByCol[colIndex]];
+        const coefficient = mat[cutRowOffset + colIndex];
         if (variable !== undefined && variable.isInteger) {
-            const coefficient = cutRow[colIndex];
             const termCoeff = Math.floor(coefficient) + Math.max(0, coefficient - Math.floor(coefficient) - fractionalPart) / (1 - fractionalPart);
-            newRow[colIndex] = termCoeff;
+            mat[newRowOffset + colIndex] = termCoeff;
         } else {
-            newRow[colIndex] = Math.min(0, cutRow[colIndex] / (1 - fractionalPart));
+            mat[newRowOffset + colIndex] = Math.min(0, coefficient / (1 - fractionalPart));
         }
     }
 
-    for (let c = 0; c < this.width; c += 1) {
-        newRow[c] -= cutRow[c];
+    for (let c = 0; c < width; c += 1) {
+        mat[newRowOffset + c] -= mat[cutRowOffset + c];
     }
 
     return true;
@@ -105,19 +125,32 @@ export function addUpperBoundMIRCut(this: Tableau, rowIndex: number): boolean {
         return false;
     }
 
-    const cutRow = this.matrix[rowIndex];
+    const width = this.width;
+    const matrix = this.matrix;
+    const cutRowOffset = rowIndex * width;
     const integerVar = this.variablesPerIndex[this.varIndexByRow[rowIndex]];
     if (integerVar === undefined || !integerVar.isInteger) {
         return false;
     }
 
-    const fractionalPart = cutRow[this.rhsColumn] - Math.floor(cutRow[this.rhsColumn]);
+    const rhsValue = matrix[cutRowOffset + this.rhsColumn];
+    const fractionalPart = rhsValue - Math.floor(rhsValue);
     if (fractionalPart < this.precision || fractionalPart > 1 - this.precision) {
         return false;
     }
 
     const height = this.height;
-    const newRow = this.matrix[height] = this.matrix[height - 1].slice();
+    const newRowOffset = height * width;
+
+    // Grow matrix to add new row
+    const newSize = (height + 1) * width;
+    if (matrix.length < newSize) {
+        const newMatrix = new Float64Array(newSize);
+        newMatrix.set(matrix);
+        this.matrix = newMatrix;
+    }
+    const mat = this.matrix;
+
     this.height += 1;
     this.nVars += 1;
 
@@ -127,16 +160,16 @@ export function addUpperBoundMIRCut(this: Tableau, rowIndex: number): boolean {
     this.colByVarIndex[slackVarIndex] = -1;
     this.variablesPerIndex[slackVarIndex] = new SlackVariable("s" + slackVarIndex, slackVarIndex);
 
-    newRow[this.rhsColumn] = -fractionalPart;
+    mat[newRowOffset + this.rhsColumn] = -fractionalPart;
 
     for (let colIndex = 1; colIndex < this.varIndexByCol.length; colIndex += 1) {
         const variable = this.variablesPerIndex[this.varIndexByCol[colIndex]];
-        const coefficient = cutRow[colIndex];
+        const coefficient = mat[cutRowOffset + colIndex];
         const termCoeff = coefficient - Math.floor(coefficient);
         if (variable !== undefined && variable.isInteger) {
-            newRow[colIndex] = termCoeff <= fractionalPart ? -termCoeff : -(1 - termCoeff) * fractionalPart / termCoeff;
+            mat[newRowOffset + colIndex] = termCoeff <= fractionalPart ? -termCoeff : -(1 - termCoeff) * fractionalPart / termCoeff;
         } else {
-            newRow[colIndex] = coefficient >= 0 ? -coefficient : coefficient * fractionalPart / (1 - fractionalPart);
+            mat[newRowOffset + colIndex] = coefficient >= 0 ? -coefficient : coefficient * fractionalPart / (1 - fractionalPart);
         }
     }
 

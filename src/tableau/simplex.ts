@@ -16,6 +16,7 @@ export function phase1(this: Tableau): number {
     const varIndexesCycle: Array<[number, number]> = [];
 
     const matrix = this.matrix;
+    const width = this.width;
     const rhsColumn = this.rhsColumn;
     const lastColumn = this.width - 1;
     const lastRow = this.height - 1;
@@ -29,7 +30,7 @@ export function phase1(this: Tableau): number {
         for (let r = 1; r <= lastRow; r++) {
             unrestricted = this.unrestrictedVars[this.varIndexByRow[r]] === true;
 
-            const value = matrix[r][rhsColumn];
+            const value = matrix[r * width + rhsColumn];
             if (value < rhsValue) {
                 rhsValue = value;
                 leavingRowIndex = r;
@@ -43,14 +44,14 @@ export function phase1(this: Tableau): number {
 
         let enteringColumn = 0;
         let maxQuotient = -Infinity;
-        const costRow = matrix[0];
-        const leavingRow = matrix[leavingRowIndex];
+        const costRowOffset = 0; // row 0
+        const leavingRowOffset = leavingRowIndex * width;
         for (let c = 1; c <= lastColumn; c++) {
-            const coefficient = leavingRow[c];
+            const coefficient = matrix[leavingRowOffset + c];
 
             unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
             if (unrestricted || coefficient < -this.precision) {
-                const quotient = -costRow[c] / coefficient;
+                const quotient = -matrix[costRowOffset + c] / coefficient;
                 if (maxQuotient < quotient) {
                     maxQuotient = quotient;
                     enteringColumn = c;
@@ -87,6 +88,7 @@ export function phase2(this: Tableau): number {
     const varIndexesCycle: Array<[number, number]> = [];
 
     const matrix = this.matrix;
+    const width = this.width;
     const rhsColumn = this.rhsColumn;
     const lastColumn = this.width - 1;
     const lastRow = this.height - 1;
@@ -100,7 +102,7 @@ export function phase2(this: Tableau): number {
     let unrestricted: boolean;
 
     while (true) {
-        const costRow = matrix[this.costRowIndex];
+        const costRowOffset = this.costRowIndex * width;
 
         if (nOptionalObjectives > 0) {
             optionalCostsColumns = [];
@@ -110,7 +112,7 @@ export function phase2(this: Tableau): number {
         let enteringValue = precision;
         let isReducedCostNegative = false;
         for (let c = 1; c <= lastColumn; c++) {
-            reducedCost = costRow[c];
+            reducedCost = matrix[costRowOffset + c];
             unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
 
             if (nOptionalObjectives > 0 && -precision < reducedCost && reducedCost < precision) {
@@ -185,9 +187,9 @@ export function phase2(this: Tableau): number {
         const varIndexByRow = this.varIndexByRow;
 
         for (let r = 1; r <= lastRow; r++) {
-            const row = matrix[r];
-            const rhsValue = row[rhsColumn];
-            const colValue = row[enteringColumn];
+            const rowOffset = r * width;
+            const rhsValue = matrix[rowOffset + rhsColumn];
+            const colValue = matrix[rowOffset + enteringColumn];
 
             if (-precision < colValue && colValue < precision) {
                 continue;
@@ -236,8 +238,10 @@ const nonZeroColumns: number[] = [];
 
 export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: number): void {
     const matrix = this.matrix;
+    const width = this.width;
 
-    const quotient = matrix[pivotRowIndex][pivotColumnIndex];
+    const pivotRowOffset = pivotRowIndex * width;
+    const quotient = matrix[pivotRowOffset + pivotColumnIndex];
 
     const lastRow = this.height - 1;
     const lastColumn = this.width - 1;
@@ -254,48 +258,52 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
     this.colByVarIndex[enteringBasicIndex] = -1;
     this.colByVarIndex[leavingBasicIndex] = pivotColumnIndex;
 
-    const pivotRow = matrix[pivotRowIndex];
+    // Normalize pivot row and track non-zero columns
     let nNonZeroColumns = 0;
     for (let c = 0; c <= lastColumn; c++) {
-        if (!(pivotRow[c] >= -1e-16 && pivotRow[c] <= 1e-16)) {
-            pivotRow[c] /= quotient;
+        const idx = pivotRowOffset + c;
+        const val = matrix[idx];
+        if (!(val >= -1e-16 && val <= 1e-16)) {
+            matrix[idx] = val / quotient;
             nonZeroColumns[nNonZeroColumns] = c;
             nNonZeroColumns += 1;
         } else {
-            pivotRow[c] = 0;
+            matrix[idx] = 0;
         }
     }
-    pivotRow[pivotColumnIndex] = 1 / quotient;
+    matrix[pivotRowOffset + pivotColumnIndex] = 1 / quotient;
 
+    // Update all other rows
     let coefficient: number;
     let i: number;
     let v0: number;
     for (let r = 0; r <= lastRow; r++) {
         if (r !== pivotRowIndex) {
-            if (!(matrix[r][pivotColumnIndex] >= -1e-16 && matrix[r][pivotColumnIndex] <= 1e-16)) {
-                const row = matrix[r];
-
-                coefficient = row[pivotColumnIndex];
+            const rowOffset = r * width;
+            const pivotColVal = matrix[rowOffset + pivotColumnIndex];
+            if (!(pivotColVal >= -1e-16 && pivotColVal <= 1e-16)) {
+                coefficient = pivotColVal;
 
                 if (!(coefficient >= -1e-16 && coefficient <= 1e-16)) {
                     for (i = 0; i < nNonZeroColumns; i++) {
                         const c = nonZeroColumns[i];
-                        v0 = pivotRow[c];
+                        v0 = matrix[pivotRowOffset + c];
                         if (!(v0 >= -1e-16 && v0 <= 1e-16)) {
-                            row[c] = row[c] - coefficient * v0;
+                            matrix[rowOffset + c] = matrix[rowOffset + c] - coefficient * v0;
                         } else if (v0 !== 0) {
-                            pivotRow[c] = 0;
+                            matrix[pivotRowOffset + c] = 0;
                         }
                     }
 
-                    row[pivotColumnIndex] = -coefficient / quotient;
+                    matrix[rowOffset + pivotColumnIndex] = -coefficient / quotient;
                 } else if (coefficient !== 0) {
-                    row[pivotColumnIndex] = 0;
+                    matrix[rowOffset + pivotColumnIndex] = 0;
                 }
             }
         }
     }
 
+    // Update optional objectives
     const nOptionalObjectives = this.optionalObjectives.length;
     if (nOptionalObjectives > 0) {
         for (let o = 0; o < nOptionalObjectives; o += 1) {
@@ -304,7 +312,7 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
             if (coefficient !== 0) {
                 for (i = 0; i < nNonZeroColumns; i++) {
                     const c = nonZeroColumns[i];
-                    v0 = pivotRow[c];
+                    v0 = matrix[pivotRowOffset + c];
                     if (v0 !== 0) {
                         reducedCosts[c] = reducedCosts[c] - coefficient * v0;
                     }

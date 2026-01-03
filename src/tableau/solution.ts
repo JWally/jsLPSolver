@@ -23,6 +23,7 @@ class Solution {
         const varIndexByRow = tableau.varIndexByRow;
         const variablesPerIndex = tableau.variablesPerIndex;
         const matrix = tableau.matrix;
+        const width = tableau.width;
         const rhsColumn = tableau.rhsColumn;
         const lastRow = tableau.height - 1;
         const roundingCoeff = Math.round(1 / tableau.precision);
@@ -34,7 +35,7 @@ class Solution {
                 continue;
             }
 
-            const varValue = matrix[r][rhsColumn];
+            const varValue = matrix[r * width + rhsColumn];
             solutionSet[variable.id] =
                 Math.round((Number.EPSILON + varValue) * roundingCoeff) / roundingCoeff;
         }

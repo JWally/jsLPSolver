@@ -22,6 +22,8 @@ export function log(this: Tableau, message: unknown, force?: boolean): Tableau {
     console.log("Cols", this.colByVarIndex);
 
     const digitPrecision = 5;
+    const matrix = this.matrix;
+    const width = this.width;
 
     let varNameRowString = "";
     const spacePerColumn: string[] = [" "];
@@ -61,30 +63,30 @@ export function log(this: Tableau, message: unknown, force?: boolean): Tableau {
 
     let signSpace: string;
 
-    const firstRow = this.matrix[this.costRowIndex];
+    const costRowOffset = this.costRowIndex * width;
     let firstRowString = "\t";
 
     for (j = 1; j < this.width; j += 1) {
         signSpace = "\t";
         firstRowString += signSpace;
         firstRowString += spacePerColumn[j];
-        firstRowString += firstRow[j].toFixed(digitPrecision);
+        firstRowString += matrix[costRowOffset + j].toFixed(digitPrecision);
     }
     signSpace = "\t";
-    firstRowString += signSpace + spacePerColumn[0] + firstRow[0].toFixed(digitPrecision);
+    firstRowString += signSpace + spacePerColumn[0] + matrix[costRowOffset].toFixed(digitPrecision);
     // eslint-disable-next-line no-console
     console.log(firstRowString + "\tZ");
 
     for (let r = 1; r < this.height; r += 1) {
-        const row = this.matrix[r];
+        const rowOffset = r * width;
         let rowString = "\t";
 
         for (c = 1; c < this.width; c += 1) {
             signSpace = "\t";
-            rowString += signSpace + spacePerColumn[c] + row[c].toFixed(digitPrecision);
+            rowString += signSpace + spacePerColumn[c] + matrix[rowOffset + c].toFixed(digitPrecision);
         }
         signSpace = "\t";
-        rowString += signSpace + spacePerColumn[0] + row[0].toFixed(digitPrecision);
+        rowString += signSpace + spacePerColumn[0] + matrix[rowOffset].toFixed(digitPrecision);
 
         varIndex = this.varIndexByRow[r];
         const variable = this.variablesPerIndex[varIndex];

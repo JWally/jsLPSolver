@@ -30,13 +30,8 @@ export function copy(this: Tableau): Tableau {
     copy.objectivesByPriority = { ...this.objectivesByPriority };
     copy.optionalObjectivePerPriority = { ...this.optionalObjectivePerPriority };
 
-    const matrix = this.matrix;
-    const matrixCopy = new Array<number[]>(this.height);
-    for (let r = 0; r < this.height; r++) {
-        matrixCopy[r] = matrix[r].slice();
-    }
-
-    copy.matrix = matrixCopy;
+    // Fast Float64Array copy using constructor
+    copy.matrix = new Float64Array(this.matrix);
 
     return copy;
 }
@@ -51,7 +46,6 @@ export function restore(this: Tableau): void {
     }
 
     const save = this.savedState;
-    const savedMatrix = save.matrix;
     this.nVars = save.nVars;
     this.model = save.model;
 
@@ -63,13 +57,8 @@ export function restore(this: Tableau): void {
     this.width = save.width;
     this.height = save.height;
 
-    for (let r = 0; r < this.height; r += 1) {
-        const savedRow = savedMatrix[r];
-        const row = this.matrix[r];
-        for (let c = 0; c < this.width; c += 1) {
-            row[c] = savedRow[c];
-        }
-    }
+    // Fast Float64Array restore using set()
+    this.matrix.set(save.matrix);
 
     const savedBasicIndexes = save.varIndexByRow;
     for (let c = 0; c < this.height; c += 1) {

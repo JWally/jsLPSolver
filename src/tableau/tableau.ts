@@ -44,7 +44,7 @@ const createOptionalObjective = (
 export default class Tableau {
     model: Model | null;
 
-    matrix: number[][];
+    matrix: Float64Array;
     width: number;
     height: number;
 
@@ -119,7 +119,7 @@ export default class Tableau {
     constructor(precision = 1e-8, branchAndCutService: BranchAndCutService = createBranchAndCutService()) {
         this.model = null;
 
-        this.matrix = [];
+        this.matrix = new Float64Array(0);
         this.width = 0;
         this.height = 0;
 
@@ -237,14 +237,8 @@ export default class Tableau {
         this.width = width;
         this.height = height;
 
-        // BUILD AN EMPTY ARRAY OF THAT WIDTH
-        const tmpRow = new Array<number>(width).fill(0);
-
-        // BUILD AN EMPTY TABLEAU
-        this.matrix = new Array<number[]>(height);
-        for (let j = 0; j < height; j++) {
-            this.matrix[j] = tmpRow.slice();
-        }
+        // BUILD AN EMPTY TABLEAU (flat Float64Array, row-major order)
+        this.matrix = new Float64Array(width * height);
 
         this.varIndexByRow = new Array<number>(this.height);
         this.varIndexByCol = new Array<number>(this.width);
@@ -264,6 +258,8 @@ export default class Tableau {
             throw new Error("[Tableau._resetMatrix] Model not set");
         }
 
+        const matrix = this.matrix;
+        const width = this.width;
         const variables = this.model.variables;
         const constraints = this.model.constraints;
 
@@ -272,14 +268,14 @@ export default class Tableau {
 
         let v: number;
         let varIndex: number;
-        const costRow = this.matrix[0];
         const coeff = this.model.isMinimization === true ? -1 : 1;
+        // Cost row is row 0
         for (v = 0; v < nVars; v += 1) {
             const variable = variables[v];
             const priority = variable.priority;
             const cost = coeff * variable.cost;
             if (priority === 0) {
-                costRow[v + 1] = cost;
+                matrix[v + 1] = cost; // row 0, col v+1
             } else {
                 this.setOptionalObjective(priority, v + 1, cost);
             }
@@ -301,23 +297,24 @@ export default class Tableau {
 
             const terms = constraint.terms;
             const nTerms = terms.length;
-            const row = this.matrix[rowIndex++];
+            const rowOffset = rowIndex * width;
+            rowIndex++;
             if (constraint.isUpperBound) {
                 for (let t = 0; t < nTerms; t += 1) {
                     const term = terms[t];
                     const column = this.colByVarIndex[term.variable.index];
-                    row[column] = term.coefficient;
+                    matrix[rowOffset + column] = term.coefficient;
                 }
 
-                row[0] = constraint.rhs;
+                matrix[rowOffset] = constraint.rhs; // column 0
             } else {
                 for (let t = 0; t < nTerms; t += 1) {
                     const term = terms[t];
                     const column = this.colByVarIndex[term.variable.index];
-                    row[column] = -term.coefficient;
+                    matrix[rowOffset + column] = -term.coefficient;
                 }
 
-                row[0] = -constraint.rhs;
+                matrix[rowOffset] = -constraint.rhs; // column 0
             }
         }
     }
@@ -347,10 +344,11 @@ export default class Tableau {
         let density = 0;
 
         const matrix = this.matrix;
+        const width = this.width;
         for (let r = 0; r < this.height; r++) {
-            const row = matrix[r];
-            for (let c = 0; c < this.width; c++) {
-                if (row[c] !== 0) {
+            const rowOffset = r * width;
+            for (let c = 0; c < width; c++) {
+                if (matrix[rowOffset + c] !== 0) {
                     density += 1;
                 }
             }
@@ -361,7 +359,7 @@ export default class Tableau {
 
     setEvaluation(): void {
         const roundingCoeff = Math.round(1 / this.precision);
-        const evaluation = this.matrix[this.costRowIndex][this.rhsColumn];
+        const evaluation = this.matrix[this.costRowIndex * this.width + this.rhsColumn];
         const roundedEvaluation =
             Math.round((Number.EPSILON + evaluation) * roundingCoeff) / roundingCoeff;
 
