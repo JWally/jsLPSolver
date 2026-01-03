@@ -177,5 +177,16 @@ export function addUpperBoundMIRCut(this: Tableau, rowIndex: number): boolean {
 }
 
 export function applyMIRCuts(this: Tableau): void {
-    // Nothing in the original implementation.
+    // Apply MIR (Mixed Integer Rounding) cuts to all rows with fractional integer variables
+    // This tightens the LP relaxation and can help prune the branch-and-bound tree
+    const height = this.height;
+    let cutsAdded = 0;
+    const maxCuts = 10; // Limit cuts per iteration to avoid excessive growth
+
+    for (let r = 1; r < height && cutsAdded < maxCuts; r++) {
+        // Try lower bound MIR cut first (typically more effective)
+        if (this.addLowerBoundMIRCut(r)) {
+            cutsAdded++;
+        }
+    }
 }

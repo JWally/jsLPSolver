@@ -234,6 +234,7 @@ export function phase2(this: Tableau): number {
     }
 }
 
+// Pre-allocated array for non-zero column tracking
 const nonZeroColumns: number[] = [];
 
 export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: number): void {
@@ -243,8 +244,7 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
     const pivotRowOffset = pivotRowIndex * width;
     const quotient = matrix[pivotRowOffset + pivotColumnIndex];
 
-    const lastRow = this.height - 1;
-    const lastColumn = this.width - 1;
+    const height = this.height;
 
     const leavingBasicIndex = this.varIndexByRow[pivotRowIndex];
     const enteringBasicIndex = this.varIndexByCol[pivotColumnIndex];
@@ -260,13 +260,13 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
 
     // Normalize pivot row and track non-zero columns
     let nNonZeroColumns = 0;
-    for (let c = 0; c <= lastColumn; c++) {
+    for (let c = 0; c < width; c++) {
         const idx = pivotRowOffset + c;
         const val = matrix[idx];
         if (!(val >= -1e-16 && val <= 1e-16)) {
             matrix[idx] = val / quotient;
             nonZeroColumns[nNonZeroColumns] = c;
-            nNonZeroColumns += 1;
+            nNonZeroColumns++;
         } else {
             matrix[idx] = 0;
         }
@@ -274,20 +274,17 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
     matrix[pivotRowOffset + pivotColumnIndex] = 1 / quotient;
 
     // Update all other rows
-    let coefficient: number;
-    let i: number;
-    let v0: number;
-    for (let r = 0; r <= lastRow; r++) {
+    for (let r = 0; r < height; r++) {
         if (r !== pivotRowIndex) {
             const rowOffset = r * width;
             const pivotColVal = matrix[rowOffset + pivotColumnIndex];
             if (!(pivotColVal >= -1e-16 && pivotColVal <= 1e-16)) {
-                coefficient = pivotColVal;
+                const coefficient = pivotColVal;
 
                 if (!(coefficient >= -1e-16 && coefficient <= 1e-16)) {
-                    for (i = 0; i < nNonZeroColumns; i++) {
+                    for (let i = 0; i < nNonZeroColumns; i++) {
                         const c = nonZeroColumns[i];
-                        v0 = matrix[pivotRowOffset + c];
+                        const v0 = matrix[pivotRowOffset + c];
                         if (!(v0 >= -1e-16 && v0 <= 1e-16)) {
                             matrix[rowOffset + c] = matrix[rowOffset + c] - coefficient * v0;
                         } else if (v0 !== 0) {
@@ -304,15 +301,16 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
     }
 
     // Update optional objectives
-    const nOptionalObjectives = this.optionalObjectives.length;
+    const optionalObjectives = this.optionalObjectives;
+    const nOptionalObjectives = optionalObjectives.length;
     if (nOptionalObjectives > 0) {
-        for (let o = 0; o < nOptionalObjectives; o += 1) {
-            const reducedCosts = this.optionalObjectives[o].reducedCosts;
-            coefficient = reducedCosts[pivotColumnIndex];
+        for (let o = 0; o < nOptionalObjectives; o++) {
+            const reducedCosts = optionalObjectives[o].reducedCosts;
+            const coefficient = reducedCosts[pivotColumnIndex];
             if (coefficient !== 0) {
-                for (i = 0; i < nNonZeroColumns; i++) {
+                for (let i = 0; i < nNonZeroColumns; i++) {
                     const c = nonZeroColumns[i];
-                    v0 = matrix[pivotRowOffset + c];
+                    const v0 = matrix[pivotRowOffset + c];
                     if (v0 !== 0) {
                         reducedCosts[c] = reducedCosts[c] - coefficient * v0;
                     }

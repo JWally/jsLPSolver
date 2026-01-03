@@ -1,5 +1,6 @@
 import type Tableau from "./tableau";
 import type { Branch, BranchCut } from "./types";
+import { BranchMinHeap } from "./min-heap";
 
 export interface BranchAndCutService {
     applyCuts(tableau: Tableau, branchingCuts: BranchCut[]): void;
@@ -12,10 +13,6 @@ function createCut(type: BranchCut["type"], varIndex: number, value: number): Br
 
 function createBranch(relaxedEvaluation: number, cuts: BranchCut[]): Branch {
     return { relaxedEvaluation, cuts };
-}
-
-function sortByEvaluation(a: Branch, b: Branch): number {
-    return b.relaxedEvaluation - a.relaxedEvaluation;
 }
 
 export function createBranchAndCutService(): BranchAndCutService {
@@ -41,7 +38,7 @@ export function createBranchAndCutService(): BranchAndCutService {
     };
 
     const branchAndCut = (tableau: Tableau): void => {
-        const branches: Branch[] = [];
+        const branches = new BranchMinHeap();
         let iterations = 0;
         const tolerance = tableau.model?.tolerance ?? 0;
         let toleranceFlag = true;
@@ -62,7 +59,7 @@ export function createBranchAndCutService(): BranchAndCutService {
         let acceptableThreshold: number;
 
         branches.push(branch);
-        while (branches.length > 0 && toleranceFlag === true && Date.now() < terminalTime) {
+        while (!branches.isEmpty() && toleranceFlag === true && Date.now() < terminalTime) {
             if (tableau.model?.isMinimization) {
                 acceptableThreshold = tableau.bestPossibleEval * (1 + tolerance);
             } else {
@@ -75,7 +72,7 @@ export function createBranchAndCutService(): BranchAndCutService {
                 }
             }
 
-            const activeBranch = branches.pop() as Branch;
+            const activeBranch = branches.pop()!;
             if (activeBranch.relaxedEvaluation > bestEvaluation) {
                 continue;
             }
@@ -175,8 +172,6 @@ export function createBranchAndCutService(): BranchAndCutService {
 
                 branches.push(createBranch(evaluation, cutsHigh));
                 branches.push(createBranch(evaluation, cutsLow));
-
-                branches.sort(sortByEvaluation);
             }
         }
 

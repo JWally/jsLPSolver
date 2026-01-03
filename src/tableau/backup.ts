@@ -61,22 +61,18 @@ export function restore(this: Tableau): void {
     this.matrix.set(save.matrix);
 
     const savedBasicIndexes = save.varIndexByRow;
-    for (let c = 0; c < this.height; c += 1) {
+    const height = this.height;
+    for (let c = 0; c < height; c += 1) {
         this.varIndexByRow[c] = savedBasicIndexes[c];
     }
-
-    while (this.varIndexByRow.length > this.height) {
-        this.varIndexByRow.pop();
-    }
+    this.varIndexByRow.length = height;
 
     const savedNonBasicIndexes = save.varIndexByCol;
-    for (let r = 0; r < this.width; r += 1) {
+    const width = this.width;
+    for (let r = 0; r < width; r += 1) {
         this.varIndexByCol[r] = savedNonBasicIndexes[r];
     }
-
-    while (this.varIndexByCol.length > this.width) {
-        this.varIndexByCol.pop();
-    }
+    this.varIndexByCol.length = width;
 
     const savedRows = save.rowByVarIndex;
     const savedCols = save.colByVarIndex;
