@@ -56,6 +56,7 @@
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build",
     "test": "npm run test:sanity",
+    "profile": "node -r ./scripts/ts-node-register.js scripts/profile.ts",
     "test:sanity": "JSLP_TEST_SUITE=test-sanity mocha -r ./scripts/ts-node-register.js test/solver-problems.ts",
     "test:speed": "JSLP_TEST_SUITE=test-speed mocha -r ./scripts/ts-node-register.js test/solver-problems.ts -- test-speed",
     "release": "npm run lint && npm test && npm run build"
