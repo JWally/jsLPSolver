@@ -8,6 +8,10 @@ export interface SolveOptions {
     useMIRCuts?: boolean;
     exitOnCycles?: boolean;
     keep_solutions?: boolean;
+    // Enhanced solver options
+    nodeSelection?: 'best-first' | 'depth-first' | 'hybrid';
+    branching?: 'most-fractional' | 'pseudocost' | 'strong';
+    presolve?: boolean;
 }
 
 export interface ConstraintBound {

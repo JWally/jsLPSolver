@@ -6,7 +6,8 @@ import External from "./external/main";
 import Polyopt from "./polyopt";
 import ReformatLP from "./external/lpsolve/reformat";
 import { createBranchAndCutService } from "./tableau/branch-and-cut";
-import type { Model as ModelDefinition, SolveResult } from "./types/solver";
+import { createEnhancedBranchAndCutService } from "./tableau/enhanced-branch-and-cut";
+import type { Model as ModelDefinition, SolveResult, SolveOptions } from "./types/solver";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -32,6 +33,32 @@ class Solver {
     lastSolvedModel: Model | null = null;
 
     External = External;
+
+    /**
+     * Select the appropriate branch-and-cut service based on options and problem structure.
+     *
+     * Users can enable enhanced strategies via model.options:
+     * - nodeSelection: 'best-first' | 'depth-first' | 'hybrid'
+     * - branching: 'most-fractional' | 'pseudocost' | 'strong'
+     */
+    private selectBranchAndCutService(model: ModelDefinition) {
+        const options = model.options;
+
+        // Only use enhanced service when explicitly requested
+        const useEnhanced = options?.nodeSelection ||
+                           options?.branching;
+
+        if (useEnhanced) {
+            return createEnhancedBranchAndCutService({
+                nodeSelection: options?.nodeSelection ?? 'hybrid',
+                branching: options?.branching ?? 'pseudocost',
+                useDiving: true
+            });
+        }
+
+        // Default to standard service (with heap optimization)
+        return createBranchAndCutService();
+    }
 
     /*************************************************************
      * Method: Solve
@@ -131,7 +158,9 @@ class Solver {
 
         let modelInstance: Model;
         if (model instanceof Model === false) {
-            modelInstance = new Model(precision, undefined, this.branchAndCutService).loadJson(model as ModelDefinition);
+            // Select appropriate branch-and-cut service based on problem
+            const branchAndCutService = this.selectBranchAndCutService(model as ModelDefinition);
+            modelInstance = new Model(precision, undefined, branchAndCutService).loadJson(model as ModelDefinition);
         } else {
             modelInstance = model as Model;
         }
