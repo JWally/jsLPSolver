@@ -1,7 +1,16 @@
+/**
+ * Solution classes for LP and MIP problems.
+ *
+ * Solution: Base solution class for continuous LP problems
+ * MilpSolution: Extended solution class for mixed-integer problems
+ */
 import type Tableau from "./tableau";
 import type { TableauSolutionSet } from "./types";
 
-class Solution {
+/**
+ * Represents a solution to a linear programming problem.
+ */
+export class Solution {
     feasible: boolean;
     evaluation: number;
     bounded: boolean;
@@ -16,6 +25,9 @@ class Solution {
         this.solutionSet = {};
     }
 
+    /**
+     * Generate the solution set mapping variable IDs to their values.
+     */
     generateSolutionSet(): TableauSolutionSet {
         const solutionSet: TableauSolutionSet = {};
 
@@ -44,4 +56,24 @@ class Solution {
     }
 }
 
+/**
+ * Represents a solution to a mixed-integer programming problem.
+ * Extends Solution with branch-and-cut iteration tracking.
+ */
+export class MilpSolution extends Solution {
+    iter: number;
+
+    constructor(
+        tableau: Tableau,
+        evaluation: number,
+        feasible: boolean,
+        bounded: boolean,
+        branchAndCutIterations: number
+    ) {
+        super(tableau, evaluation, feasible, bounded);
+        this.iter = branchAndCutIterations;
+    }
+}
+
+// Default export for backwards compatibility
 export default Solution;

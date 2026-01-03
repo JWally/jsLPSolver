@@ -27,6 +27,7 @@ export interface VariableCoefficients {
 }
 
 export interface Model {
+    name?: string;
     optimize: string | Record<string, ObjectiveDirection>;
     opType?: ObjectiveDirection;
     constraints: Record<string, ConstraintBound | ConstraintRelation>;
@@ -80,3 +81,15 @@ export interface SolveResult {
     isIntegral?: boolean;
     [variable: string]: number | boolean | undefined;
 }
+
+// Re-export external solver types
+export type { ExternalSolvers, ExternalSolverModule } from "../external/main";
+
+// Convenience type for typed solution access
+export type Solution<TVariable extends string = string> = SolveResult & Record<TVariable, number | undefined>;
+
+// Full solver API type
+export type SolverAPI = typeof import("../main").default;
+
+// Alias for backwards compatibility
+export type ModelDefinition = Model;

@@ -1,5 +1,4 @@
-import type MilpSolution from "./milp-solution";
-import type Solution from "./solution";
+import type { Solution, MilpSolution } from "./solution";
 import type { Variable } from "../expressions";
 import type Model from "../model";
 

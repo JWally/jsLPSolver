@@ -1,198 +1,225 @@
-import MilpSolution from "./milp-solution";
-import Solution from "./solution";
+import { Solution, MilpSolution } from "./solution";
 import type Model from "../model";
 import type { Constraint, Variable } from "../expressions";
 import type { BranchCut, OptionalObjective, TableauSolution, VariableValue } from "./types";
 import type { BranchAndCutService } from "./branch-and-cut";
 import { createBranchAndCutService } from "./branch-and-cut";
-import { simplex, phase1, phase2, pivot, checkForCycles } from "./simplex";
-import {
-    addLowerBoundMIRCut,
-    addUpperBoundMIRCut,
-    addCutConstraints,
-    applyMIRCuts
-} from "./cutting-strategies";
-import {
-    putInBase,
-    takeOutOfBase,
-    updateVariableValues,
-    updateRightHandSide,
-    updateConstraintCoefficient,
-    updateCost,
-    addConstraint,
-    removeConstraint,
-    addVariable,
-    removeVariable
-} from "./dynamic-modification";
-import { log } from "./log";
-import { copy, save, restore } from "./backup";
-import { countIntegerValues, isIntegral, computeFractionalVolume } from "./integer-properties";
-import { getMostFractionalVar, getFractionalVarWithLowestCost } from "./branching-strategies";
 
-const createOptionalObjective = (
+// Import implementations
+import * as simplexOps from "./simplex";
+import * as cuttingOps from "./cutting-strategies";
+import * as dynamicOps from "./dynamic-modification";
+import * as backupOps from "./backup";
+import * as mipOps from "./mip-utils";
+import { log as logImpl } from "./log";
+
+function createOptionalObjective(
     priority: number,
     nColumns: number,
     reducedCosts?: number[]
-): OptionalObjective => ({
-    priority,
-    reducedCosts: reducedCosts ? reducedCosts.slice() : new Array<number>(nColumns).fill(0),
-    copy(): OptionalObjective {
-        return createOptionalObjective(this.priority, this.reducedCosts.length, this.reducedCosts);
-    },
-});
+): OptionalObjective {
+    return {
+        priority,
+        reducedCosts: reducedCosts ? reducedCosts.slice() : new Array<number>(nColumns).fill(0),
+        copy(): OptionalObjective {
+            return createOptionalObjective(this.priority, this.reducedCosts.length, this.reducedCosts);
+        },
+    };
+}
 
 export default class Tableau {
-    model: Model | null;
+    model: Model | null = null;
 
-    matrix: Float64Array;
-    width: number;
-    height: number;
+    matrix: Float64Array = new Float64Array(0);
+    width = 0;
+    height = 0;
 
-    costRowIndex: number;
-    rhsColumn: number;
+    costRowIndex = 0;
+    rhsColumn = 0;
 
-    variablesPerIndex: Array<Variable | undefined>;
-    unrestrictedVars: Record<number, boolean>;
+    variablesPerIndex: Array<Variable | undefined> = [];
+    unrestrictedVars: Record<number, boolean> = {};
 
-    feasible: boolean;
-    evaluation: number;
-    simplexIters: number;
+    feasible = true;
+    evaluation = 0;
+    simplexIters = 0;
 
-    varIndexByRow: number[];
-    varIndexByCol: number[];
+    varIndexByRow: number[] = [];
+    varIndexByCol: number[] = [];
 
-    rowByVarIndex: number[];
-    colByVarIndex: number[];
+    rowByVarIndex: number[] = [];
+    colByVarIndex: number[] = [];
 
     precision: number;
 
-    optionalObjectives: OptionalObjective[];
-    objectivesByPriority: Record<number, OptionalObjective>;
-    optionalObjectivePerPriority: Record<number, OptionalObjective>;
+    optionalObjectives: OptionalObjective[] = [];
+    objectivesByPriority: Record<number, OptionalObjective> = {};
+    optionalObjectivePerPriority: Record<number, OptionalObjective> = {};
 
-    savedState: Tableau | null;
+    savedState: Tableau | null = null;
 
-    availableIndexes: number[];
-    lastElementIndex: number;
+    availableIndexes: number[] = [];
+    lastElementIndex = 0;
 
-    variables: Variable[];
-    nVars: number;
+    variables: Variable[] = [];
+    nVars = 0;
 
-    bounded: boolean;
-    unboundedVarIndex: number | null;
+    bounded = true;
+    unboundedVarIndex: number | null = null;
 
-    branchAndCutIterations: number;
-    bestPossibleEval: number;
+    branchAndCutIterations = 0;
+    bestPossibleEval = 0;
     __isIntegral?: boolean;
 
-    branchAndCutService: BranchAndCutService;
+    readonly branchAndCutService: BranchAndCutService;
 
-    simplex: typeof simplex;
-    phase1: typeof phase1;
-    phase2: typeof phase2;
-    pivot: typeof pivot;
-    checkForCycles: typeof checkForCycles;
-    countIntegerValues: typeof countIntegerValues;
-    isIntegral: typeof isIntegral;
-    computeFractionalVolume: typeof computeFractionalVolume;
-    addCutConstraints: typeof addCutConstraints;
-    applyMIRCuts: typeof applyMIRCuts;
-    putInBase: typeof putInBase;
-    takeOutOfBase: typeof takeOutOfBase;
-    addLowerBoundMIRCut: typeof addLowerBoundMIRCut;
-    addUpperBoundMIRCut: typeof addUpperBoundMIRCut;
-    updateVariableValues: typeof updateVariableValues;
-    updateRightHandSide: typeof updateRightHandSide;
-    updateConstraintCoefficient: typeof updateConstraintCoefficient;
-    updateCost: typeof updateCost;
-    addConstraint: typeof addConstraint;
-    removeConstraint: typeof removeConstraint;
-    addVariable: typeof addVariable;
-    removeVariable: typeof removeVariable;
-    log: typeof log;
-    copy: typeof copy;
-    save: typeof save;
-    restore: typeof restore;
-    getMostFractionalVar: typeof getMostFractionalVar;
-    getFractionalVarWithLowestCost: typeof getFractionalVarWithLowestCost;
-
-    constructor(precision = 1e-8, branchAndCutService: BranchAndCutService = createBranchAndCutService()) {
-        this.model = null;
-
-        this.matrix = new Float64Array(0);
-        this.width = 0;
-        this.height = 0;
-
-        this.costRowIndex = 0;
-        this.rhsColumn = 0;
-
-        this.variablesPerIndex = [];
-        this.unrestrictedVars = {};
-
-        // Solution attributes
-        this.feasible = true; // until proven guilty
-        this.evaluation = 0;
-        this.simplexIters = 0;
-
-        this.varIndexByRow = [];
-        this.varIndexByCol = [];
-
-        this.rowByVarIndex = [];
-        this.colByVarIndex = [];
-
+    constructor(precision = 1e-8, branchAndCutService?: BranchAndCutService) {
         this.precision = precision;
-
-        this.optionalObjectives = [];
-        this.objectivesByPriority = {};
-        this.optionalObjectivePerPriority = {};
-
-        this.savedState = null;
-
-        this.availableIndexes = [];
-        this.lastElementIndex = 0;
-
-        this.variables = [];
-        this.nVars = 0;
-
-        this.bounded = true;
-        this.unboundedVarIndex = null;
-
-        this.branchAndCutIterations = 0;
-        this.bestPossibleEval = 0;
-        this.branchAndCutService = branchAndCutService;
-
-        this.simplex = simplex;
-        this.phase1 = phase1;
-        this.phase2 = phase2;
-        this.pivot = pivot;
-        this.checkForCycles = checkForCycles;
-        this.countIntegerValues = countIntegerValues;
-        this.isIntegral = isIntegral;
-        this.computeFractionalVolume = computeFractionalVolume;
-        this.addCutConstraints = addCutConstraints;
-        this.applyMIRCuts = applyMIRCuts;
-        this.putInBase = putInBase;
-        this.takeOutOfBase = takeOutOfBase;
-        this.addLowerBoundMIRCut = addLowerBoundMIRCut;
-        this.addUpperBoundMIRCut = addUpperBoundMIRCut;
-        this.updateVariableValues = updateVariableValues;
-        this.updateRightHandSide = updateRightHandSide;
-        this.updateConstraintCoefficient = updateConstraintCoefficient;
-        this.updateCost = updateCost;
-        this.addConstraint = addConstraint;
-        this.removeConstraint = removeConstraint;
-        this.addVariable = addVariable;
-        this.removeVariable = removeVariable;
-        this.log = log;
-        this.copy = copy;
-        this.save = save;
-        this.restore = restore;
-        this.getMostFractionalVar = getMostFractionalVar;
-        this.getFractionalVarWithLowestCost = getFractionalVarWithLowestCost;
+        this.branchAndCutService = branchAndCutService ?? createBranchAndCutService();
     }
 
+    // ========== Core Simplex Operations ==========
+
+    simplex(): this {
+        simplexOps.simplex.call(this);
+        return this;
+    }
+
+    phase1(): number {
+        return simplexOps.phase1.call(this);
+    }
+
+    phase2(): number {
+        return simplexOps.phase2.call(this);
+    }
+
+    pivot(pivotRowIndex: number, pivotColumnIndex: number): void {
+        simplexOps.pivot.call(this, pivotRowIndex, pivotColumnIndex);
+    }
+
+    checkForCycles(varIndexes: Array<[number, number]>): number[] {
+        return simplexOps.checkForCycles.call(this, varIndexes);
+    }
+
+    // ========== Integer/MIP Properties ==========
+
+    countIntegerValues(): number {
+        return mipOps.countIntegerValues.call(this);
+    }
+
+    isIntegral(): boolean {
+        return mipOps.isIntegral.call(this);
+    }
+
+    computeFractionalVolume(ignoreIntegerValues?: boolean): number {
+        return mipOps.computeFractionalVolume.call(this, ignoreIntegerValues);
+    }
+
+    // ========== Cutting Strategies ==========
+
+    addCutConstraints(branchingCuts: BranchCut[]): void {
+        cuttingOps.addCutConstraints.call(this, branchingCuts);
+    }
+
+    applyMIRCuts(): void {
+        cuttingOps.applyMIRCuts.call(this);
+    }
+
+    addLowerBoundMIRCut(rowIndex: number): boolean {
+        return cuttingOps.addLowerBoundMIRCut.call(this, rowIndex);
+    }
+
+    addUpperBoundMIRCut(rowIndex: number): boolean {
+        return cuttingOps.addUpperBoundMIRCut.call(this, rowIndex);
+    }
+
+    // ========== Branching Strategies ==========
+
+    getMostFractionalVar(): VariableValue {
+        return mipOps.getMostFractionalVar.call(this);
+    }
+
+    getFractionalVarWithLowestCost(): VariableValue {
+        return mipOps.getFractionalVarWithLowestCost.call(this);
+    }
+
+    // ========== Dynamic Modification ==========
+
+    putInBase(varIndex: number): number {
+        return dynamicOps.putInBase.call(this, varIndex);
+    }
+
+    takeOutOfBase(varIndex: number): number {
+        return dynamicOps.takeOutOfBase.call(this, varIndex);
+    }
+
+    updateVariableValues(): void {
+        dynamicOps.updateVariableValues.call(this);
+    }
+
+    updateRightHandSide(constraint: Constraint, difference: number): void {
+        dynamicOps.updateRightHandSide.call(this, constraint, difference);
+    }
+
+    updateConstraintCoefficient(constraint: Constraint, variable: Variable, difference: number): void {
+        dynamicOps.updateConstraintCoefficient.call(this, constraint, variable, difference);
+    }
+
+    updateCost(variable: Variable, difference: number): void {
+        dynamicOps.updateCost.call(this, variable, difference);
+    }
+
+    addConstraint(constraint: Constraint): void {
+        dynamicOps.addConstraint.call(this, constraint);
+    }
+
+    removeConstraint(constraint: Constraint): void {
+        dynamicOps.removeConstraint.call(this, constraint);
+    }
+
+    addVariable(variable: Variable): void {
+        dynamicOps.addVariable.call(this, variable);
+    }
+
+    removeVariable(variable: Variable): void {
+        dynamicOps.removeVariable.call(this, variable);
+    }
+
+    // ========== Backup/Restore ==========
+
+    copy(): Tableau {
+        return backupOps.copy.call(this);
+    }
+
+    save(): void {
+        backupOps.save.call(this);
+    }
+
+    restore(): void {
+        backupOps.restore.call(this);
+    }
+
+    // ========== Debug ==========
+
+    log(message: unknown): this {
+        logImpl.call(this, message);
+        return this;
+    }
+
+    // ========== Branch and Cut ==========
+
+    applyCuts(branchingCuts: BranchCut[]): void {
+        this.branchAndCutService.applyCuts(this, branchingCuts);
+    }
+
+    branchAndCut(): void {
+        this.branchAndCutService.branchAndCut(this);
+    }
+
+    // ========== Solution ==========
+
     solve(): TableauSolution {
-        if (this.model?.getNumberOfIntegerVariables() ?? 0 > 0) {
+        if ((this.model?.getNumberOfIntegerVariables() ?? 0) > 0) {
             this.branchAndCut();
         } else {
             this.simplex();
@@ -200,6 +227,24 @@ export default class Tableau {
         this.updateVariableValues();
         return this.getSolution();
     }
+
+    getSolution(): TableauSolution {
+        const evaluation = this.model?.isMinimization === true ? this.evaluation : -this.evaluation;
+
+        if ((this.model?.getNumberOfIntegerVariables() ?? 0) > 0) {
+            return new MilpSolution(
+                this,
+                evaluation,
+                this.feasible,
+                this.bounded,
+                this.branchAndCutIterations
+            );
+        } else {
+            return new Solution(this, evaluation, this.feasible, this.bounded);
+        }
+    }
+
+    // ========== Initialization ==========
 
     setOptionalObjective(priority: number, column: number, cost: number): void {
         let objectiveForPriority = this.objectivesByPriority[priority];
@@ -209,20 +254,10 @@ export default class Tableau {
             this.objectivesByPriority[priority] = objectiveForPriority;
             this.optionalObjectivePerPriority[priority] = objectiveForPriority;
             this.optionalObjectives.push(objectiveForPriority);
-            this.optionalObjectives.sort(function (a, b) {
-                return a.priority - b.priority;
-            });
+            this.optionalObjectives.sort((a, b) => a.priority - b.priority);
         }
 
         objectiveForPriority.reducedCosts[column] = cost;
-    }
-
-    applyCuts(branchingCuts: BranchCut[]): void {
-        this.branchAndCutService.applyCuts(this, branchingCuts);
-    }
-
-    branchAndCut(): void {
-        this.branchAndCutService.branchAndCut(this);
     }
 
     initialize(
@@ -237,7 +272,6 @@ export default class Tableau {
         this.width = width;
         this.height = height;
 
-        // BUILD AN EMPTY TABLEAU (flat Float64Array, row-major order)
         this.matrix = new Float64Array(width * height);
 
         this.varIndexByRow = new Array<number>(this.height);
@@ -266,21 +300,19 @@ export default class Tableau {
         const nVars = variables.length;
         const nConstraints = constraints.length;
 
-        let v: number;
-        let varIndex: number;
         const coeff = this.model.isMinimization === true ? -1 : 1;
-        // Cost row is row 0
-        for (v = 0; v < nVars; v += 1) {
+
+        for (let v = 0; v < nVars; v += 1) {
             const variable = variables[v];
             const priority = variable.priority;
             const cost = coeff * variable.cost;
             if (priority === 0) {
-                matrix[v + 1] = cost; // row 0, col v+1
+                matrix[v + 1] = cost;
             } else {
                 this.setOptionalObjective(priority, v + 1, cost);
             }
 
-            varIndex = variables[v].index;
+            const varIndex = variables[v].index;
             this.rowByVarIndex[varIndex] = -1;
             this.colByVarIndex[varIndex] = v + 1;
             this.varIndexByCol[v + 1] = varIndex;
@@ -299,22 +331,21 @@ export default class Tableau {
             const nTerms = terms.length;
             const rowOffset = rowIndex * width;
             rowIndex++;
+
             if (constraint.isUpperBound) {
                 for (let t = 0; t < nTerms; t += 1) {
                     const term = terms[t];
                     const column = this.colByVarIndex[term.variable.index];
                     matrix[rowOffset + column] = term.coefficient;
                 }
-
-                matrix[rowOffset] = constraint.rhs; // column 0
+                matrix[rowOffset] = constraint.rhs;
             } else {
                 for (let t = 0; t < nTerms; t += 1) {
                     const term = terms[t];
                     const column = this.colByVarIndex[term.variable.index];
                     matrix[rowOffset + column] = -term.coefficient;
                 }
-
-                matrix[rowOffset] = -constraint.rhs; // column 0
+                matrix[rowOffset] = -constraint.rhs;
             }
         }
     }
@@ -366,22 +397,6 @@ export default class Tableau {
         this.evaluation = roundedEvaluation;
         if (this.simplexIters === 0) {
             this.bestPossibleEval = roundedEvaluation;
-        }
-    }
-
-    getSolution(): TableauSolution {
-        const evaluation = this.model?.isMinimization === true ? this.evaluation : -this.evaluation;
-
-        if ((this.model?.getNumberOfIntegerVariables() ?? 0) > 0) {
-            return new MilpSolution(
-                this,
-                evaluation,
-                this.feasible,
-                this.bounded,
-                this.branchAndCutIterations
-            );
-        } else {
-            return new Solution(this, evaluation, this.feasible, this.bounded);
         }
     }
 }
