@@ -1,3 +1,14 @@
+/**
+ * @file src/tableau/tableau.ts
+ * @description Core Tableau class for the simplex algorithm
+ *
+ * The Tableau represents the LP problem in matrix form and provides:
+ * - Matrix storage using Float64Array for numerical precision
+ * - Variable and constraint index management
+ * - Simplex operations (via bound function imports)
+ * - Branch-and-cut integration for MIP solving
+ * - Save/restore for backtracking during B&B
+ */
 import { Solution, MilpSolution } from "./solution";
 import type Model from "../model";
 import type { Constraint, Variable } from "../expressions";
@@ -23,7 +34,11 @@ function createOptionalObjective(
         priority,
         reducedCosts: reducedCosts ? reducedCosts.slice() : new Array<number>(nColumns).fill(0),
         copy(): OptionalObjective {
-            return createOptionalObjective(this.priority, this.reducedCosts.length, this.reducedCosts);
+            return createOptionalObjective(
+                this.priority,
+                this.reducedCosts.length,
+                this.reducedCosts
+            );
         },
     };
 }
@@ -171,7 +186,11 @@ export default class Tableau {
         dynamicOps.updateRightHandSide.call(this, constraint, difference);
     }
 
-    updateConstraintCoefficient(constraint: Constraint, variable: Variable, difference: number): void {
+    updateConstraintCoefficient(
+        constraint: Constraint,
+        variable: Variable,
+        difference: number
+    ): void {
         dynamicOps.updateConstraintCoefficient.call(this, constraint, variable, difference);
     }
 

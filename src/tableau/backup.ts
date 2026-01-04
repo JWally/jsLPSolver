@@ -1,3 +1,13 @@
+/**
+ * @file src/tableau/backup.ts
+ * @description Tableau state backup and restoration
+ *
+ * Provides functions to snapshot and restore tableau state during
+ * branch-and-bound exploration. Essential for backtracking when
+ * a branch is pruned or found infeasible.
+ *
+ * Functions are designed to be bound to a Tableau instance via `this`.
+ */
 import type Tableau from "./tableau";
 
 export function copy(this: Tableau): Tableau {
@@ -87,7 +97,8 @@ export function restore(this: Tableau): void {
         for (let o = 0; o < save.optionalObjectives.length; o++) {
             const optionalObjectiveCopy = save.optionalObjectives[o].copy();
             this.optionalObjectives[o] = optionalObjectiveCopy;
-            this.optionalObjectivePerPriority[optionalObjectiveCopy.priority] = optionalObjectiveCopy;
+            this.optionalObjectivePerPriority[optionalObjectiveCopy.priority] =
+                optionalObjectiveCopy;
             this.objectivesByPriority[optionalObjectiveCopy.priority] = optionalObjectiveCopy;
         }
     }

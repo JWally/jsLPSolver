@@ -1,0 +1,17 @@
+{
+    "$schema": "https://typedoc.org/schema.json",
+    "entryPoints": ["./src/solver.ts"],
+    "out": "./docs",
+    "name": "jsLPSolver API Documentation",
+    "readme": "none",
+    "includeVersion": true,
+    "excludePrivate": true,
+    "excludeInternal": true,
+    "excludeExternals": true,
+    "plugin": [],
+    "categorizeByGroup": true,
+    "navigationLinks": {
+        "GitHub": "https://github.com/JWally/jsLPSolver",
+        "npm": "https://www.npmjs.com/package/javascript-lp-solver"
+    }
+}

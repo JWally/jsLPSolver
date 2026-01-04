@@ -1,7 +1,20 @@
+/**
+ * @file src/tableau/log.ts
+ * @description Debug logging for tableau state
+ *
+ * Provides console output of the current tableau state including:
+ * - Matrix dimensions
+ * - Basic and non-basic variable indices
+ * - Formatted matrix contents
+ *
+ * Primarily used during development and debugging.
+ */
 import type Tableau from "./tableau";
 
+const DEBUG_ENABLED = false;
+
 export function log(this: Tableau, message: unknown, force?: boolean): Tableau {
-    if (false && !force) {
+    if (!DEBUG_ENABLED && !force) {
         return this;
     }
 
@@ -83,7 +96,8 @@ export function log(this: Tableau, message: unknown, force?: boolean): Tableau {
 
         for (c = 1; c < this.width; c += 1) {
             signSpace = "\t";
-            rowString += signSpace + spacePerColumn[c] + matrix[rowOffset + c].toFixed(digitPrecision);
+            rowString +=
+                signSpace + spacePerColumn[c] + matrix[rowOffset + c].toFixed(digitPrecision);
         }
         signSpace = "\t";
         rowString += signSpace + spacePerColumn[0] + matrix[rowOffset].toFixed(digitPrecision);
@@ -115,7 +129,8 @@ export function log(this: Tableau, message: unknown, force?: boolean): Tableau {
                 reducedCostsString += reducedCosts[j].toFixed(digitPrecision);
             }
             signSpace = reducedCosts[0] < 0 ? "" : " ";
-            reducedCostsString += signSpace + spacePerColumn[0] + reducedCosts[0].toFixed(digitPrecision);
+            reducedCostsString +=
+                signSpace + spacePerColumn[0] + reducedCosts[0].toFixed(digitPrecision);
             // eslint-disable-next-line no-console
             console.log(reducedCostsString + " z" + o);
         }

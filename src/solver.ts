@@ -1,8 +1,13 @@
 /**
- * jsLPSolver - Linear Programming and Mixed Integer Programming Solver
+ * @file src/solver.ts
+ * @description Main entry point for jsLPSolver library
  *
- * Entry point for the solver library. Re-exports the main solver instance
- * and all public types for use by consumers.
+ * Re-exports the solver instance and all public types. This is the primary
+ * import target for library consumers.
+ *
+ * @example
+ * import solver from "javascript-lp-solver";
+ * const result = solver.Solve(model);
  */
 import solver from "./main";
 
@@ -25,5 +30,5 @@ export type {
     SolverAPI,
     Term,
     Variable,
-    VariableCoefficients
+    VariableCoefficients,
 } from "./types/solver";

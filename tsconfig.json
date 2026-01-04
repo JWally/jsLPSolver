@@ -1,25 +1,17 @@
 {
-  "compilerOptions": {
-    "target": "es2019",
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "rootDir": ".",
-    "outDir": "dist",
-    "allowJs": true,
-    "checkJs": false,
-    "esModuleInterop": true,
-    "isolatedDeclarations": false,
-    "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
-  },
-  "include": [
-    "src/**/*",
-    "scripts/**/*",
-    "test/**/*"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    "prod"
-  ]
+    "compilerOptions": {
+        "target": "es2019",
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "rootDir": ".",
+        "outDir": "dist",
+        "allowJs": true,
+        "checkJs": false,
+        "esModuleInterop": true,
+        "isolatedDeclarations": false,
+        "forceConsistentCasingInFileNames": true,
+        "skipLibCheck": true
+    },
+    "include": ["src/**/*", "scripts/**/*", "test/**/*"],
+    "exclude": ["dist", "node_modules", "prod"]
 }

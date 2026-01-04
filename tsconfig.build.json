@@ -1,17 +1,17 @@
 {
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "allowJs": true,
-    "checkJs": false,
-    "declaration": true,
-    "declarationDir": "dist/types",
-    "emitDeclarationOnly": false,
-    "module": "ESNext",
-    "moduleResolution": "node",
-    "noEmit": false,
-    "outDir": "dist",
-    "rootDir": "src",
-    "target": "es2019"
-  },
-  "include": ["src/**/*"]
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "allowJs": true,
+        "checkJs": false,
+        "declaration": true,
+        "declarationDir": "dist/types",
+        "emitDeclarationOnly": false,
+        "module": "ESNext",
+        "moduleResolution": "node",
+        "noEmit": false,
+        "outDir": "dist",
+        "rootDir": "src",
+        "target": "es2019"
+    },
+    "include": ["src/**/*"]
 }

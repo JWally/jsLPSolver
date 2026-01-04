@@ -1,7 +1,9 @@
 /**
- * Tableau module - Core data structure for the simplex algorithm.
+ * @file src/tableau/index.ts
+ * @description Tableau module entry point
  *
- * The Tableau class represents the simplex tableau and provides methods for:
+ * Exports the Tableau class and related types. The Tableau is the core
+ * data structure representing the simplex tableau, providing methods for:
  * - LP solving via the simplex algorithm
  * - MIP solving via branch-and-cut
  * - Dynamic model modification

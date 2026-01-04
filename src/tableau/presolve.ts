@@ -1,3 +1,15 @@
+/**
+ * @file src/tableau/presolve.ts
+ * @description Problem preprocessing for LP/MIP
+ *
+ * Applies reductions before solving to simplify the problem:
+ * - Fix variables with equal bounds
+ * - Detect singleton rows (single-variable constraints)
+ * - Tighten variable bounds from constraint coefficients
+ * - Remove redundant constraints
+ *
+ * Based on techniques from COIN-OR CBC, CPLEX, and Gurobi.
+ */
 import type Model from "../model";
 import type { Variable, Constraint } from "../expressions";
 
@@ -32,8 +44,8 @@ export function presolve(model: Model): PresolveResult {
         stats: {
             variablesFixed: 0,
             constraintsRemoved: 0,
-            boundsTightened: 0
-        }
+            boundsTightened: 0,
+        },
     };
 
     // Multiple passes for propagation
@@ -50,7 +62,7 @@ export function presolve(model: Model): PresolveResult {
             if (result.removedConstraints.has(constraint)) continue;
 
             const activeTerms = constraint.terms.filter(
-                t => !result.fixedVariables.has(t.variable)
+                (t) => !result.fixedVariables.has(t.variable)
             );
 
             if (activeTerms.length === 0) {
@@ -102,7 +114,7 @@ export function presolve(model: Model): PresolveResult {
                         if (!current?.upper || bound < current.upper) {
                             result.tightenedBounds.set(variable, {
                                 ...current,
-                                upper: bound
+                                upper: bound,
                             });
                             result.stats.boundsTightened++;
                             changed = true;
@@ -113,7 +125,7 @@ export function presolve(model: Model): PresolveResult {
                         if (!current?.lower || bound > current.lower) {
                             result.tightenedBounds.set(variable, {
                                 ...current,
-                                lower: bound
+                                lower: bound,
                             });
                             result.stats.boundsTightened++;
                             changed = true;
@@ -180,7 +192,7 @@ export function presolve(model: Model): PresolveResult {
  * Detect problem structure for specialized handling.
  */
 export interface ProblemStructure {
-    type: 'general' | 'set-covering' | 'set-partitioning' | 'assignment' | 'knapsack';
+    type: "general" | "set-covering" | "set-partitioning" | "assignment" | "knapsack";
     hasAllBinaryVars: boolean;
     hasEqualityConstraints: boolean;
     avgConstraintDensity: number;
@@ -204,7 +216,7 @@ export function detectProblemStructure(model: Model): ProblemStructure {
 
         // Check if this looks like a covering/partitioning constraint
         // (all coefficients are 1, RHS is 1, >= or =)
-        const allOnes = constraint.terms.every(t => Math.abs(t.coefficient - 1) < 1e-6);
+        const allOnes = constraint.terms.every((t) => Math.abs(t.coefficient - 1) < 1e-6);
         const rhsIsOne = Math.abs(constraint.rhs - 1) < 1e-6;
 
         if (allOnes && rhsIsOne) {
@@ -219,26 +231,26 @@ export function detectProblemStructure(model: Model): ProblemStructure {
     const hasEqualityConstraints = equalityCount > 0;
 
     // Determine problem type
-    let type: ProblemStructure['type'] = 'general';
+    let type: ProblemStructure["type"] = "general";
 
     if (hasAllBinaryVars && coveringLike > nConstraints * 0.5) {
         // Most constraints are covering-like
         if (equalityCount > nConstraints * 0.8) {
-            type = 'set-partitioning';
+            type = "set-partitioning";
         } else {
-            type = 'set-covering';
+            type = "set-covering";
         }
     }
 
     // Assignment problem: n equality constraints, each with same # of variables
     if (hasAllBinaryVars && equalityCount === nConstraints && avgConstraintDensity > 2) {
-        type = 'assignment';
+        type = "assignment";
     }
 
     return {
         type,
         hasAllBinaryVars,
         hasEqualityConstraints,
-        avgConstraintDensity
+        avgConstraintDensity,
     };
 }

@@ -28,10 +28,14 @@ try {
             const baseOptions = {
                 module: ts.ModuleKind.CommonJS,
                 target: ts.ScriptTarget.ES2019,
-                esModuleInterop: true
+                esModuleInterop: true,
             };
 
-            const tsconfigPath = ts.findConfigFile(process.cwd(), ts.sys.fileExists, "tsconfig.json");
+            const tsconfigPath = ts.findConfigFile(
+                process.cwd(),
+                ts.sys.fileExists,
+                "tsconfig.json"
+            );
             if (!tsconfigPath) {
                 return baseOptions;
             }
@@ -51,7 +55,8 @@ try {
                 ...baseOptions,
                 module: parsedConfig.options.module ?? baseOptions.module,
                 target: parsedConfig.options.target ?? baseOptions.target,
-                esModuleInterop: parsedConfig.options.esModuleInterop ?? baseOptions.esModuleInterop
+                esModuleInterop:
+                    parsedConfig.options.esModuleInterop ?? baseOptions.esModuleInterop,
             };
         })();
 
@@ -59,7 +64,7 @@ try {
             const source = fs.readFileSync(filename, "utf8");
             const { outputText } = ts.transpileModule(source, {
                 compilerOptions,
-                fileName: filename
+                fileName: filename,
             });
 
             // eslint-disable-next-line no-underscore-dangle

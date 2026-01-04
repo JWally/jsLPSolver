@@ -1,12 +1,13 @@
 /**
- * jsLPSolver - Linear Programming and Mixed Integer Programming Solver
+ * @file src/main.ts
+ * @description Core Solver class implementation
  *
- * Main solver implementation that orchestrates:
+ * Orchestrates the complete solving pipeline:
  * - Model parsing and validation
- * - Simplex algorithm for LP
- * - Branch-and-cut for MIP
- * - Multi-objective optimization
- * - External solver integration
+ * - Simplex algorithm for linear programming
+ * - Branch-and-cut for mixed-integer programming
+ * - Multi-objective optimization via Polyopt
+ * - External solver delegation (e.g., lp_solve)
  */
 import Tableau from "./tableau";
 import Model from "./model";
@@ -62,9 +63,9 @@ class Solver {
 
         if (useEnhanced) {
             return createEnhancedBranchAndCutService({
-                nodeSelection: options?.nodeSelection ?? 'hybrid',
-                branching: options?.branching ?? 'pseudocost',
-                useDiving: true
+                nodeSelection: options?.nodeSelection ?? "hybrid",
+                branching: options?.branching ?? "pseudocost",
+                useDiving: true,
             });
         }
 
@@ -116,7 +117,9 @@ class Solver {
         let modelInstance: Model;
         if (!(model instanceof Model)) {
             const branchAndCutService = this.selectBranchAndCutService(model as ModelDefinition);
-            modelInstance = new Model(precision, undefined, branchAndCutService).loadJson(model as ModelDefinition);
+            modelInstance = new Model(precision, undefined, branchAndCutService).loadJson(
+                model as ModelDefinition
+            );
         } else {
             modelInstance = model;
         }
@@ -148,9 +151,7 @@ class Solver {
 
         const requestedSolver = model.external.solver;
         if (!External[requestedSolver]) {
-            throw new Error(
-                `Solver '${requestedSolver}' not supported. Available: ${solverList}`
-            );
+            throw new Error(`Solver '${requestedSolver}' not supported. Available: ${solverList}`);
         }
 
         return External[requestedSolver].solve(model);
@@ -163,7 +164,7 @@ class Solver {
         const result: SolveResult = {
             feasible: solution.feasible,
             result: solution.evaluation,
-            bounded: solution.bounded
+            bounded: solution.bounded,
         };
 
         if (solution._tableau.__isIntegral) {

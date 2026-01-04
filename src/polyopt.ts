@@ -1,13 +1,18 @@
+/**
+ * @file src/polyopt.ts
+ * @description Multi-objective optimization via compromise programming
+ *
+ * Solves problems with multiple objective functions by:
+ * 1. Optimizing each objective independently to find Pareto vertices
+ * 2. Computing the midpoint of the feasible region across all objectives
+ * 3. Solving for a compromise solution at that midpoint
+ *
+ * Returns the midpoint solution along with all Pareto vertices and
+ * the min/max ranges for each objective.
+ */
 import type { Model as ModelDefinition, ObjectiveDirection, SolveResult } from "./types/solver";
-
-// The solver only calls the `Solve` method here, so we only type the portion we need.
 interface SolverLike {
-    Solve(
-        model: ModelDefinition,
-        precision?: number,
-        full?: boolean,
-        validate?: boolean
-    ): unknown;
+    Solve(model: ModelDefinition, precision?: number, full?: boolean, validate?: boolean): unknown;
 }
 
 // Multi-objective solutions are still shaped like regular solve results but may
@@ -103,10 +108,13 @@ function computeRanges(vertices: Vertex[]): Record<string, { min: number; max: n
                 continue;
             }
 
-            const current = ranges[key] ?? { min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY };
+            const current = ranges[key] ?? {
+                min: Number.POSITIVE_INFINITY,
+                max: Number.NEGATIVE_INFINITY,
+            };
             ranges[key] = {
                 min: Math.min(current.min, value),
-                max: Math.max(current.max, value)
+                max: Math.max(current.max, value),
             };
         }
     }
@@ -210,6 +218,6 @@ export default function Polyopt(solver: SolverLike, model: ModelDefinition): Pol
     return {
         midpoint,
         vertices: paretoVertices,
-        ranges
+        ranges,
     };
 }

@@ -1,8 +1,13 @@
 /**
- * Sparse Simplex Implementation
+ * @file src/tableau/sparse-simplex.ts
+ * @description Sparse simplex algorithm for large LP problems
  *
- * Optimized simplex algorithm that operates directly on SparseMatrix
- * for large, sparse LP problems.
+ * Optimized simplex implementation that operates directly on SparseMatrix
+ * storage. Converts the dense tableau to CSC format, solves, and converts
+ * back for solution extraction.
+ *
+ * Provides significant speedup for large, sparse problems where most
+ * coefficients are zero.
  */
 
 import type Tableau from "./tableau";
@@ -111,7 +116,10 @@ function sparsePhase1(this: Tableau, sparse: SparseMatrix): number {
         }
 
         if (debugCheckForCycles) {
-            varIndexesCycle.push([this.varIndexByRow[leavingRowIndex], this.varIndexByCol[enteringColumn]]);
+            varIndexesCycle.push([
+                this.varIndexByRow[leavingRowIndex],
+                this.varIndexByCol[enteringColumn],
+            ]);
             const cycleData = this.checkForCycles(varIndexesCycle);
             if (cycleData.length > 0) {
                 this.model.messages.push("Cycle in phase 1");
@@ -231,7 +239,10 @@ function sparsePhase2(this: Tableau, sparse: SparseMatrix): number {
         }
 
         if (debugCheckForCycles) {
-            varIndexesCycle.push([this.varIndexByRow[leavingRow], this.varIndexByCol[enteringColumn]]);
+            varIndexesCycle.push([
+                this.varIndexByRow[leavingRow],
+                this.varIndexByCol[enteringColumn],
+            ]);
             const cycleData = this.checkForCycles(varIndexesCycle);
             if (cycleData.length > 0) {
                 this.model.messages.push("Cycle in phase 2");

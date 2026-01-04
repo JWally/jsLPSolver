@@ -1,3 +1,17 @@
+/**
+ * @file src/expressions.ts
+ * @description Core expression classes for building optimization models
+ *
+ * Defines the building blocks for programmatic model construction:
+ * - Variable: Decision variable with cost and bounds
+ * - IntegerVariable: Variable restricted to integer values
+ * - SlackVariable: Internal variable for constraint conversion
+ * - Term: Variable-coefficient pair in a constraint
+ * - Constraint: Linear inequality (<=, >=) with terms
+ * - Equality: Equality constraint (=) represented as two inequalities
+ *
+ * These classes support the fluent API: model.smallerThan(10).addTerm(2, x)
+ */
 import type Model from "./model";
 
 export type Priority = number | "required" | "strong" | "medium" | "weak";

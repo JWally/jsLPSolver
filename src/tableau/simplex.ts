@@ -1,3 +1,14 @@
+/**
+ * @file src/tableau/simplex.ts
+ * @description Simplex algorithm implementation
+ *
+ * Implements the two-phase simplex method for solving linear programs:
+ * - Phase 1: Find an initial basic feasible solution (or prove infeasibility)
+ * - Phase 2: Optimize the objective function (or prove unboundedness)
+ *
+ * Functions are designed to be bound to a Tableau instance via `this`.
+ * Uses partial pricing for large problems to improve performance.
+ */
 import type Tableau from "./tableau";
 
 export function simplex(this: Tableau): Tableau {
@@ -65,7 +76,10 @@ export function phase1(this: Tableau): number {
         }
 
         if (debugCheckForCycles) {
-            varIndexesCycle.push([this.varIndexByRow[leavingRowIndex], this.varIndexByCol[enteringColumn]]);
+            varIndexesCycle.push([
+                this.varIndexByRow[leavingRowIndex],
+                this.varIndexByCol[enteringColumn],
+            ]);
 
             const cycleData = this.checkForCycles(varIndexesCycle);
             if (cycleData.length > 0) {
@@ -138,7 +152,11 @@ export function phase2(this: Tableau): number {
                     reducedCost = matrix[costRowOffset + c];
                     unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
 
-                    if (nOptionalObjectives > 0 && -precision < reducedCost && reducedCost < precision) {
+                    if (
+                        nOptionalObjectives > 0 &&
+                        -precision < reducedCost &&
+                        reducedCost < precision
+                    ) {
                         optionalCostsColumns?.push(c);
                         continue;
                     }
@@ -174,7 +192,11 @@ export function phase2(this: Tableau): number {
                 reducedCost = matrix[costRowOffset + c];
                 unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
 
-                if (nOptionalObjectives > 0 && -precision < reducedCost && reducedCost < precision) {
+                if (
+                    nOptionalObjectives > 0 &&
+                    -precision < reducedCost &&
+                    reducedCost < precision
+                ) {
                     optionalCostsColumns?.push(c);
                     continue;
                 }
@@ -198,7 +220,12 @@ export function phase2(this: Tableau): number {
 
         if (nOptionalObjectives > 0) {
             let o = 0;
-            while (enteringColumn === 0 && optionalCostsColumns && optionalCostsColumns.length > 0 && o < nOptionalObjectives) {
+            while (
+                enteringColumn === 0 &&
+                optionalCostsColumns &&
+                optionalCostsColumns.length > 0 &&
+                o < nOptionalObjectives
+            ) {
                 const optionalCostsColumns2: number[] = [];
                 const reducedCosts = this.optionalObjectives[o].reducedCosts;
 
@@ -276,7 +303,10 @@ export function phase2(this: Tableau): number {
         }
 
         if (debugCheckForCycles) {
-            varIndexesCycle.push([this.varIndexByRow[leavingRow], this.varIndexByCol[enteringColumn]]);
+            varIndexesCycle.push([
+                this.varIndexByRow[leavingRow],
+                this.varIndexByCol[enteringColumn],
+            ]);
 
             const cycleData = this.checkForCycles(varIndexesCycle);
             if (cycleData.length > 0) {

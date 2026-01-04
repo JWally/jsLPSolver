@@ -3,7 +3,7 @@
     "optimize": "constraintA",
     "opType": "min",
     "options": {
-        "tolerance": 0.10,
+        "tolerance": 0.1,
         "timeout": 1500
     },
     "constraints": {
@@ -111,7 +111,7 @@
             "constraintK": 0
         }
     },
-    "expects": { 
+    "expects": {
         "feasible": false,
         "result": 0,
         "bounded": true,

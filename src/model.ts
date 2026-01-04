@@ -1,3 +1,16 @@
+/**
+ * @file src/model.ts
+ * @description Model class for LP/MIP problem representation
+ *
+ * Provides the programmatic API for building optimization problems:
+ * - Add variables with costs and integer constraints
+ * - Define constraints (<=, >=, =) with coefficients
+ * - Load problems from JSON model definitions
+ * - Dynamic model modification after initialization
+ *
+ * The Model converts high-level problem definitions into the internal
+ * Tableau representation used by the simplex algorithm.
+ */
 import Tableau from "./tableau/tableau";
 import { Constraint, Equality, IntegerVariable, Variable } from "./expressions";
 import type { Priority } from "./expressions";
@@ -6,7 +19,7 @@ import type { ConstraintBound, Model as JsonModel } from "./types/solver";
 import type { TableauSolution, TableauSolutionSet } from "./tableau";
 import { presolve, type PresolveResult } from "./tableau/presolve";
 
-type ConstraintDefinition = ConstraintBound | ConstraintBound & { equal?: number };
+type ConstraintDefinition = ConstraintBound | (ConstraintBound & { equal?: number });
 
 class Model {
     tableau: Tableau;
@@ -59,11 +72,7 @@ class Model {
 
         this.checkForCycles = true;
 
-        //
-        // Quick and dirty way to leave useful information
-        // for the end user without hitting the console
-        // or modifying the primary return object...
-        //
+        // Collect diagnostic messages for debugging without console output
         this.messages = [];
 
         this.availableIndexes = [];
@@ -81,13 +90,6 @@ class Model {
         this.isMinimization = false;
         return this;
     }
-
-    // Model.prototype.addConstraint = function (constraint) {
-    //     // TODO: make sure that the constraint does not belong do another model
-    //     // and make
-    //     this.constraints.push(constraint);
-    //     return this;
-    // };
 
     _getNewElementIndex(): number {
         if (this.availableIndexes.length > 0) {
@@ -140,21 +142,21 @@ class Model {
     ): Variable {
         if (typeof priority === "string") {
             switch (priority) {
-            case "required":
-                priority = 0;
-                break;
-            case "strong":
-                priority = 1;
-                break;
-            case "medium":
-                priority = 2;
-                break;
-            case "weak":
-                priority = 3;
-                break;
-            default:
-                priority = 0;
-                break;
+                case "required":
+                    priority = 0;
+                    break;
+                case "strong":
+                    priority = 1;
+                    break;
+                case "medium":
+                    priority = 2;
+                    break;
+                case "weak":
+                    priority = 3;
+                    break;
+                default:
+                    priority = 0;
+                    break;
             }
         }
 
@@ -249,7 +251,11 @@ class Model {
         return this;
     }
 
-    updateConstraintCoefficient(constraint: Constraint, variable: Variable, difference: number): this {
+    updateConstraintCoefficient(
+        constraint: Constraint,
+        variable: Variable,
+        difference: number
+    ): this {
         if (this.tableauInitialized === true) {
             this.tableau.updateConstraintCoefficient(constraint, variable, difference);
         }
@@ -328,84 +334,44 @@ class Model {
         const variableIds = Object.keys(variables);
         const nVariables = variableIds.length;
 
-        //
-        //
-        // *** OPTIONS ***
-        //
-        //
-
+        // Parse solver options
         this.tolerance = jsonModel.tolerance || 0;
 
         if (jsonModel.timeout) {
             this.timeout = jsonModel.timeout;
         }
 
-        //
-        //
-        // The model is getting too sloppy with options added to it...
-        // mebe it needs an "options" option...?
-        //
-        // YES! IT DOES!
-        // DO IT!
-        // NOW!
-        // HERE!!!
-        //
+        // Options object takes precedence over top-level properties
         if (jsonModel.options) {
-            //
-            // TIMEOUT
-            //
             if (jsonModel.options.timeout) {
                 this.timeout = jsonModel.options.timeout;
             }
 
-            //
-            // TOLERANCE
-            //
             if (this.tolerance === 0) {
                 this.tolerance = jsonModel.options.tolerance || 0;
             }
 
-            //
-            // MIR CUTS - (NOT WORKING)
-            //
             if (jsonModel.options.useMIRCuts) {
                 this.useMIRCuts = jsonModel.options.useMIRCuts;
             }
 
-            //
-            // CYCLE CHECK...tricky because it defaults to false
-            //
-            //
-            // This should maybe be on by default...
-            //
+            // Cycle detection defaults to true
             if (typeof jsonModel.options.exitOnCycles === "undefined") {
                 this.checkForCycles = true;
             } else {
                 this.checkForCycles = jsonModel.options.exitOnCycles;
             }
 
-            //
-            // STORE MILP MODELS
-            //
             if (jsonModel.options.keep_solutions) {
                 this.keep_solutions = jsonModel.options.keep_solutions;
             } else {
                 this.keep_solutions = false;
             }
 
-            //
-            // PRESOLVE
-            //
             if (jsonModel.options.presolve !== undefined) {
                 this.usePresolve = jsonModel.options.presolve;
             }
         }
-
-        //
-        //
-        // /// OPTIONS \\\
-        //
-        //
 
         const integerVarIds = jsonModel.ints || {};
         const binaryVarIds = jsonModel.binaries || {};

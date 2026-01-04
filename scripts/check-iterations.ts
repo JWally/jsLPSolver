@@ -1,12 +1,12 @@
-import fs from 'fs';
-import path from 'path';
-import solver from '../src/main';
+import fs from "fs";
+import path from "path";
+import solver from "../src/main";
 
-const testFiles = ['Vendor Selection.json', 'Monster_II.json', 'LargeFarmMIP.json'];
+const testFiles = ["Vendor Selection.json", "Monster_II.json", "LargeFarmMIP.json"];
 
 for (const file of testFiles) {
-    const testPath = path.join(__dirname, '../test/test-sanity', file);
-    const model = JSON.parse(fs.readFileSync(testPath, 'utf-8'));
+    const testPath = path.join(__dirname, "../test/test-sanity", file);
+    const model = JSON.parse(fs.readFileSync(testPath, "utf-8"));
 
     const start = performance.now();
     solver.Solve(model);

@@ -1,17 +1,20 @@
+/**
+ * @file src/tableau/min-heap.ts
+ * @description Priority queue for branch-and-bound node selection
+ *
+ * Implements a binary min-heap optimized for extracting the most
+ * promising branch (lowest relaxed objective). Uses a flat array
+ * for cache efficiency and LIFO tie-breaking.
+ *
+ * This replaces sorting the branch list on every iteration,
+ * reducing complexity from O(n log n) to O(log n) per operation.
+ */
 import type { Branch } from "./types";
 
 interface HeapEntry {
     branch: Branch;
     seq: number;
 }
-
-/**
- * Min-heap implementation for branch-and-bound priority queue.
- * Optimized for the common case of extracting the minimum evaluation branch.
- * Uses a binary heap stored in a flat array for cache efficiency.
- * Tie-breaking uses LIFO order (higher seq = inserted later = extracted first on tie)
- * to match the original array.sort + pop behavior.
- */
 export class BranchMinHeap {
     private heap: HeapEntry[];
     private size: number;

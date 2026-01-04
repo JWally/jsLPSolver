@@ -1,3 +1,15 @@
+/**
+ * @file src/tableau/enhanced-branch-and-cut.ts
+ * @description Advanced branch-and-cut with configurable strategies
+ *
+ * Extends the basic branch-and-cut with:
+ * - Node selection: best-first, depth-first, or hybrid
+ * - Variable selection: most-fractional, pseudocost, or strong branching
+ * - Diving heuristic for faster feasible solution discovery
+ *
+ * These advanced strategies can significantly improve performance on
+ * large MIP instances compared to the basic implementation.
+ */
 import type Tableau from "./tableau";
 import type { Branch, BranchCut } from "./types";
 import { BranchMinHeap } from "./min-heap";
@@ -9,9 +21,9 @@ export interface EnhancedBranchAndCutService {
 
 export interface BranchAndCutOptions {
     // Node selection: 'best-first' | 'depth-first' | 'hybrid'
-    nodeSelection?: 'best-first' | 'depth-first' | 'hybrid';
+    nodeSelection?: "best-first" | "depth-first" | "hybrid";
     // Branching: 'most-fractional' | 'pseudocost' | 'strong'
-    branching?: 'most-fractional' | 'pseudocost' | 'strong';
+    branching?: "most-fractional" | "pseudocost" | "strong";
     // Enable diving heuristic to find feasible solutions faster
     useDiving?: boolean;
     // Maximum strong branching candidates
@@ -29,7 +41,11 @@ function createCut(type: BranchCut["type"], varIndex: number, value: number): Br
     return { type, varIndex, value };
 }
 
-function createBranch(relaxedEvaluation: number, cuts: BranchCut[], depth: number): Branch & { depth: number } {
+function createBranch(
+    relaxedEvaluation: number,
+    cuts: BranchCut[],
+    depth: number
+): Branch & { depth: number } {
     return { relaxedEvaluation, cuts, depth };
 }
 
@@ -43,10 +59,10 @@ export function createEnhancedBranchAndCutService(
     options: BranchAndCutOptions = {}
 ): EnhancedBranchAndCutService {
     const {
-        nodeSelection = 'hybrid',
-        branching = 'pseudocost',
+        nodeSelection = "hybrid",
+        branching = "pseudocost",
         useDiving = true,
-        strongBranchingCandidates = 5
+        strongBranchingCandidates = 5,
     } = options;
 
     // Pseudocost data per variable index
@@ -63,14 +79,14 @@ export function createEnhancedBranchAndCutService(
 
     const updatePseudoCost = (
         varIndex: number,
-        direction: 'up' | 'down',
+        direction: "up" | "down",
         improvement: number,
         fraction: number
     ): void => {
         const data = getPseudoCost(varIndex);
-        const normalizedImprovement = improvement / (direction === 'up' ? (1 - fraction) : fraction);
+        const normalizedImprovement = improvement / (direction === "up" ? 1 - fraction : fraction);
 
-        if (direction === 'up') {
+        if (direction === "up") {
             data.upSum += normalizedImprovement;
             data.upCount++;
         } else {
@@ -93,7 +109,10 @@ export function createEnhancedBranchAndCutService(
         return Math.max(upEstimate, 1e-6) * Math.max(downEstimate, 1e-6);
     };
 
-    const selectBranchingVariable = (tableau: Tableau, currentEval: number): { index: number; value: number } | null => {
+    const selectBranchingVariable = (
+        tableau: Tableau,
+        currentEval: number
+    ): { index: number; value: number } | null => {
         const width = tableau.width;
         const matrix = tableau.matrix;
         const rhsColumn = tableau.rhsColumn;
@@ -117,13 +136,13 @@ export function createEnhancedBranchAndCutService(
 
         if (candidates.length === 0) return null;
 
-        if (branching === 'most-fractional') {
+        if (branching === "most-fractional") {
             // Original strategy - pick most fractional
             candidates.sort((a, b) => b.fraction - a.fraction);
             return { index: candidates[0].index, value: candidates[0].value };
         }
 
-        if (branching === 'pseudocost') {
+        if (branching === "pseudocost") {
             // Score by pseudocosts
             let bestScore = -Infinity;
             let bestCandidate = candidates[0];
@@ -139,7 +158,7 @@ export function createEnhancedBranchAndCutService(
             return { index: bestCandidate.index, value: bestCandidate.value };
         }
 
-        if (branching === 'strong') {
+        if (branching === "strong") {
             // Strong branching on top candidates
             // Sort by most fractional first
             candidates.sort((a, b) => b.fraction - a.fraction);
@@ -224,7 +243,7 @@ export function createEnhancedBranchAndCutService(
         // Configuration for hybrid node selection
         const switchTobestFirstAfterSolutions = 1;
         let solutionsFound = 0;
-        let useDepthFirst = nodeSelection === 'depth-first' || nodeSelection === 'hybrid';
+        let useDepthFirst = nodeSelection === "depth-first" || nodeSelection === "hybrid";
 
         const branch = createBranch(-Infinity, [], 0);
         let acceptableThreshold: number;
@@ -288,7 +307,7 @@ export function createEnhancedBranchAndCutService(
                 const fraction = 0.5;
                 updatePseudoCost(
                     lastCut.varIndex,
-                    lastCut.type === 'min' ? 'up' : 'down',
+                    lastCut.type === "min" ? "up" : "down",
                     improvement,
                     fraction
                 );
@@ -297,7 +316,10 @@ export function createEnhancedBranchAndCutService(
             if (evaluation === bestEvaluation) {
                 let isCurrentEvaluationWorse = true;
                 for (let o = 0; o < tableau.optionalObjectives.length; o++) {
-                    if (tableau.optionalObjectives[o].reducedCosts[0] > bestOptionalObjectivesEvaluations[o]) {
+                    if (
+                        tableau.optionalObjectives[o].reducedCosts[0] >
+                        bestOptionalObjectivesEvaluations[o]
+                    ) {
                         break;
                     } else if (
                         tableau.optionalObjectives[o].reducedCosts[0] <
@@ -342,7 +364,10 @@ export function createEnhancedBranchAndCutService(
                 }
 
                 // Switch to best-first after finding solutions
-                if (nodeSelection === 'hybrid' && solutionsFound >= switchTobestFirstAfterSolutions) {
+                if (
+                    nodeSelection === "hybrid" &&
+                    solutionsFound >= switchTobestFirstAfterSolutions
+                ) {
                     useDepthFirst = false;
                     // Move remaining depth-first nodes to priority queue
                     while (depthFirstStack.length > 0) {

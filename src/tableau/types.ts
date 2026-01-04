@@ -1,3 +1,13 @@
+/**
+ * @file src/tableau/types.ts
+ * @description Internal type definitions for the tableau module
+ *
+ * Defines types used within the tableau implementation:
+ * - BranchCut: Bound constraint for MIP branching
+ * - Branch: Node in the branch-and-bound tree
+ * - SavedState: Tableau snapshot for backtracking
+ * - OptionalObjective: Secondary objective for hierarchical optimization
+ */
 import type { Solution, MilpSolution } from "./solution";
 import type { Variable } from "../expressions";
 import type Model from "../model";

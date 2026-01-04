@@ -4,29 +4,29 @@
     "opType": "min",
     "constraints": {
         "people_served": {
-          "min": 25 
+            "min": 25
         }
     },
     "variables": {
         "nachos": {
-          "nachos": 1,
-          "people_served": 21,
-          "cost": 75
+            "nachos": 1,
+            "people_served": 21,
+            "cost": 75
         },
         "tacos": {
-          "tacos": 1,
-          "people_served": 26,
-          "cost": 90
+            "tacos": 1,
+            "people_served": 26,
+            "cost": 90
         },
         "burritos": {
-          "burritos": 1,
-          "people_served": 31,
-          "cost": 105
+            "burritos": 1,
+            "people_served": 31,
+            "cost": 105
         },
         "fajitas": {
-          "fajitas": 1,
-          "people_served": 36,
-          "cost": 120
+            "fajitas": 1,
+            "people_served": 36,
+            "cost": 120
         }
     },
     "ints": {

@@ -1,3 +1,15 @@
+/**
+ * @file src/tableau/dynamic-modification.ts
+ * @description Runtime tableau modification operations
+ *
+ * Supports modifying the LP after initial solve:
+ * - Add/remove constraints
+ * - Add/remove variables
+ * - Update constraint coefficients and RHS values
+ * - Update objective function costs
+ *
+ * Functions are designed to be bound to a Tableau instance via `this`.
+ */
 import type Tableau from "./tableau";
 import type { Constraint, Variable } from "../expressions";
 
@@ -57,7 +69,8 @@ export function updateVariableValues(this: Tableau): void {
             variable.value = 0;
         } else {
             const varValue = matrix[r * width + rhsColumn];
-            variable.value = Math.round((varValue + Number.EPSILON) * roundingCoeff) / roundingCoeff;
+            variable.value =
+                Math.round((varValue + Number.EPSILON) * roundingCoeff) / roundingCoeff;
         }
     }
 }

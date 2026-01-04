@@ -1,8 +1,12 @@
 /**
- * Solution classes for LP and MIP problems.
+ * @file src/tableau/solution.ts
+ * @description Solution classes for LP and MIP results
  *
- * Solution: Base solution class for continuous LP problems
- * MilpSolution: Extended solution class for mixed-integer problems
+ * Provides solution containers for optimization results:
+ * - Solution: Base class for continuous LP problems
+ * - MilpSolution: Extended class for mixed-integer problems
+ *
+ * Solutions include feasibility status, objective value, and variable values.
  */
 import type Tableau from "./tableau";
 import type { TableauSolutionSet } from "./types";

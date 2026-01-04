@@ -2,7 +2,7 @@ import type {
     ConstraintBound,
     ConstraintRelation,
     Model as ModelDefinition,
-    VariableCoefficients
+    VariableCoefficients,
 } from "../src/types/solver";
 
 export type ConstraintShape = ConstraintBound | ConstraintRelation;

@@ -1,3 +1,14 @@
+/**
+ * @file src/tableau/cutting-strategies.ts
+ * @description Cutting plane strategies for MIP solving
+ *
+ * Implements various cutting plane methods to tighten LP relaxations:
+ * - Gomory mixed-integer cuts from the simplex tableau
+ * - Bound cuts for variable branching
+ *
+ * These cuts are dynamically added to the tableau during branch-and-cut
+ * to eliminate fractional solutions without cutting off integer solutions.
+ */
 import type Tableau from "./tableau";
 import { SlackVariable } from "../expressions";
 import type { BranchCut } from "./types";
@@ -106,7 +117,10 @@ export function addLowerBoundMIRCut(this: Tableau, rowIndex: number): boolean {
         const variable = this.variablesPerIndex[this.varIndexByCol[colIndex]];
         const coefficient = mat[cutRowOffset + colIndex];
         if (variable !== undefined && variable.isInteger) {
-            const termCoeff = Math.floor(coefficient) + Math.max(0, coefficient - Math.floor(coefficient) - fractionalPart) / (1 - fractionalPart);
+            const termCoeff =
+                Math.floor(coefficient) +
+                Math.max(0, coefficient - Math.floor(coefficient) - fractionalPart) /
+                    (1 - fractionalPart);
             mat[newRowOffset + colIndex] = termCoeff;
         } else {
             mat[newRowOffset + colIndex] = Math.min(0, coefficient / (1 - fractionalPart));
@@ -167,9 +181,15 @@ export function addUpperBoundMIRCut(this: Tableau, rowIndex: number): boolean {
         const coefficient = mat[cutRowOffset + colIndex];
         const termCoeff = coefficient - Math.floor(coefficient);
         if (variable !== undefined && variable.isInteger) {
-            mat[newRowOffset + colIndex] = termCoeff <= fractionalPart ? -termCoeff : -(1 - termCoeff) * fractionalPart / termCoeff;
+            mat[newRowOffset + colIndex] =
+                termCoeff <= fractionalPart
+                    ? -termCoeff
+                    : (-(1 - termCoeff) * fractionalPart) / termCoeff;
         } else {
-            mat[newRowOffset + colIndex] = coefficient >= 0 ? -coefficient : coefficient * fractionalPart / (1 - fractionalPart);
+            mat[newRowOffset + colIndex] =
+                coefficient >= 0
+                    ? -coefficient
+                    : (coefficient * fractionalPart) / (1 - fractionalPart);
         }
     }
 

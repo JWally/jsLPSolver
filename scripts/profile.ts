@@ -32,7 +32,8 @@ function padLeft(str: string, len: number): string {
 }
 
 function main(): void {
-    const jsonFiles = fs.readdirSync(SUITE_PATH)
+    const jsonFiles = fs
+        .readdirSync(SUITE_PATH)
         .filter((file) => /\.json$/.test(file))
         .sort();
 
@@ -72,7 +73,7 @@ function main(): void {
             name: problem.name,
             timeNs,
             timeMs: Number(timeNs) / 1_000_000,
-            feasible
+            feasible,
         });
     }
 
@@ -88,9 +89,10 @@ function main(): void {
     console.log("─".repeat(maxNameLen + 25));
 
     for (const result of sorted) {
-        const name = result.name.length > maxNameLen
-            ? result.name.substring(0, maxNameLen - 3) + "..."
-            : result.name;
+        const name =
+            result.name.length > maxNameLen
+                ? result.name.substring(0, maxNameLen - 3) + "..."
+                : result.name;
         const status = result.feasible ? "✓" : "✗";
         console.log(
             `${padRight(name, maxNameLen)}  ${padLeft(formatTime(result.timeNs), 12)}  ${status}`
@@ -99,7 +101,9 @@ function main(): void {
 
     console.log("─".repeat(maxNameLen + 25));
     console.log(`${padRight("TOTAL", maxNameLen)}  ${padLeft(formatTime(totalNs), 12)}`);
-    console.log(`${padRight("AVERAGE", maxNameLen)}  ${padLeft(formatTime(totalNs / BigInt(results.length)), 12)}`);
+    console.log(
+        `${padRight("AVERAGE", maxNameLen)}  ${padLeft(formatTime(totalNs / BigInt(results.length)), 12)}`
+    );
     console.log();
 
     // Stats summary

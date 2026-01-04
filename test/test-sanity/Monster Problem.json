@@ -3,7 +3,6 @@
     "optimize": "cost",
     "opType": "min",
     "constraints": {
-
         "Norway -> UK capacity": {
             "max": 114
         },
@@ -1806,8 +1805,6 @@
         "Albania demand": {
             "equal": 130
         }
-        
-
     },
     "variables": {
         "Norway -> UK": {

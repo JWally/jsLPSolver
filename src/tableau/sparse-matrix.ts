@@ -1,9 +1,11 @@
 /**
- * Compressed Sparse Column (CSC) Matrix implementation
+ * @file src/tableau/sparse-matrix.ts
+ * @description Compressed Sparse Column (CSC) matrix implementation
  *
- * Optimized for column operations which are frequent in simplex algorithm.
+ * Optimized for column operations which are frequent in the simplex algorithm.
+ * Provides O(nnz) pivot operations instead of O(n*m) for dense matrices.
  *
- * Storage:
+ * CSC Storage Format:
  * - values: non-zero values stored column by column
  * - rowIndices: row index for each value
  * - colPointers: starting index in values/rowIndices for each column
@@ -185,7 +187,7 @@ export class SparseMatrix {
         return {
             indices: this.rowIndices.slice(start, end),
             values: this.values.slice(start, end),
-            length: len
+            length: len,
         };
     }
 

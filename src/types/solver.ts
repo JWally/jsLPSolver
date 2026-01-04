@@ -1,3 +1,14 @@
+/**
+ * @file src/types/solver.ts
+ * @description Public API type definitions
+ *
+ * Defines the types exposed to library consumers:
+ * - Model: JSON model definition format
+ * - SolveResult: Solution output format
+ * - SolveOptions: Solver configuration options
+ * - ConstraintBound: Constraint specification
+ * - Variable, Term, Constraint: Expression types
+ */
 export type ObjectiveDirection = "max" | "min";
 
 export type ConstraintRelation = "min" | "max" | "equal";
@@ -9,8 +20,8 @@ export interface SolveOptions {
     exitOnCycles?: boolean;
     keep_solutions?: boolean;
     // Enhanced solver options
-    nodeSelection?: 'best-first' | 'depth-first' | 'hybrid';
-    branching?: 'most-fractional' | 'pseudocost' | 'strong';
+    nodeSelection?: "best-first" | "depth-first" | "hybrid";
+    branching?: "most-fractional" | "pseudocost" | "strong";
     presolve?: boolean;
 }
 
@@ -86,7 +97,8 @@ export interface SolveResult {
 export type { ExternalSolvers, ExternalSolverModule } from "../external/main";
 
 // Convenience type for typed solution access
-export type Solution<TVariable extends string = string> = SolveResult & Record<TVariable, number | undefined>;
+export type Solution<TVariable extends string = string> = SolveResult &
+    Record<TVariable, number | undefined>;
 
 // Full solver API type
 export type SolverAPI = typeof import("../main").default;

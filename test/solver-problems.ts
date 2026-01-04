@@ -21,11 +21,15 @@ function getSuiteName(): string {
         return process.env.JSLP_TEST_SUITE;
     }
 
-    const positionalArgs = process.argv.slice(2)
-        .filter((arg) => arg &&
+    const positionalArgs = process.argv
+        .slice(2)
+        .filter(
+            (arg) =>
+                arg &&
                 arg[0] !== "-" &&
                 !/\.ts$/.test(arg) &&
-                arg.indexOf("solver-problems.ts") === -1);
+                arg.indexOf("solver-problems.ts") === -1
+        );
 
     if (positionalArgs.length > 0) {
         return positionalArgs[0];
@@ -173,27 +177,22 @@ describe("Branch-and-cut service", () => {
     });
 });
 
-describe("Test Suite of EXPECTED results to ACTUAL results:",
-    function () {
-        const solverInstance = solver;
+describe("Test Suite of EXPECTED results to ACTUAL results:", function () {
+    const solverInstance = solver;
 
-        problems.forEach((jsonModel) => {
-            it("Model Name: " + jsonModel.name,
-                function () {
-                    const expectations: ProblemExpectations = { ...jsonModel.expects };
+    problems.forEach((jsonModel) => {
+        it("Model Name: " + jsonModel.name, function () {
+            const expectations: ProblemExpectations = { ...jsonModel.expects };
 
-                    if (expectations._timeout) {
-                        this.timeout(expectations._timeout);
-                        delete expectations._timeout;
-                    }
+            if (expectations._timeout) {
+                this.timeout(expectations._timeout);
+                delete expectations._timeout;
+            }
 
-                    const expectedResult = expectations;
-                    const obtainedResult = solverInstance.Solve(jsonModel) as ProblemExpectations;
+            const expectedResult = expectations;
+            const obtainedResult = solverInstance.Solve(jsonModel) as ProblemExpectations;
 
-                    assertSolution(
-                        obtainedResult,
-                        expectedResult
-                    );
-                });
+            assertSolution(obtainedResult, expectedResult);
         });
     });
+});

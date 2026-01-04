@@ -1,77 +1,84 @@
 {
-  "name": "javascript-lp-solver",
-  "description": "Easy to use, JSON oriented Linear Programming and Mixed Int. Programming Solver",
-  "version": "0.4.24",
-  "private": false,
-  "authors": [
-    "Justin W. Wolcott <justin.w.wolcott@gmail.com>"
-  ],
-  "contributors": [
-    "Brice Chevalier <bchevalier@wizcorp.jp>",
-    "Loïc Venerosy <lvenerosy@wizcorp.jp>"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/JWally/jsLPSolver"
-  },
-  "files": [
-    "dist/**/*",
-    "scripts/ts-node-register.js",
-    "README.md",
-    "LICENSE"
-  ],
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
-  "browser": "./dist/index.browser.mjs",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "browser": "./dist/index.browser.mjs",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs",
-      "default": "./dist/index.cjs"
+    "name": "javascript-lp-solver",
+    "description": "Easy to use, JSON oriented Linear Programming and Mixed Int. Programming Solver",
+    "version": "0.4.24",
+    "private": false,
+    "authors": [
+        "Justin W. Wolcott <justin.w.wolcott@gmail.com>"
+    ],
+    "contributors": [
+        "Brice Chevalier <bchevalier@wizcorp.jp>",
+        "Loïc Venerosy <lvenerosy@wizcorp.jp>"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/JWally/jsLPSolver"
     },
-    "./package.json": "./package.json"
-  },
-  "devDependencies": {
-    "@rollup/plugin-alias": "5.1.1",
-    "@rollup/plugin-commonjs": "26.0.1",
-    "@rollup/plugin-node-resolve": "15.3.0",
-    "@rollup/plugin-typescript": "11.1.6",
-    "@typescript-eslint/eslint-plugin": "8.2.0",
-    "@typescript-eslint/parser": "8.2.0",
-    "benchmark": "2.1.4",
-    "eslint": "9.6.0",
-    "eslint-plugin-unicorn": "55.0.0",
-    "mocha": "10.7.3",
-    "rollup": "4.22.4",
-    "rollup-plugin-dts": "6.1.1",
-    "ts-node": "10.9.2",
-    "typescript": "5.5.4"
-  },
-  "scripts": {
-    "build": "tsc -p tsconfig.build.json --declaration --emitDeclarationOnly --outDir dist/types && rollup -c",
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build",
-    "test": "npm run test:sanity",
-    "profile": "node -r ./scripts/ts-node-register.js scripts/profile.ts",
-    "test:sanity": "JSLP_TEST_SUITE=test-sanity mocha -r ./scripts/ts-node-register.js test/solver-problems.ts",
-    "test:speed": "JSLP_TEST_SUITE=test-speed mocha -r ./scripts/ts-node-register.js test/solver-problems.ts -- test-speed",
-    "release": "npm run lint && npm test && npm run build"
-  },
-  "keywords": [
-    "Linear",
-    "Programming",
-    "Integer",
-    "Programming",
-    "Solver",
-    "Linear Programming",
-    "Linear Optimization",
-    "Simplex",
-    "Mixed Integer Optimization",
-    "Mixed Integer Programming"
-  ],
-  "license": "Unlicense"
+    "files": [
+        "dist/**/*",
+        "scripts/ts-node-register.js",
+        "README.md",
+        "LICENSE"
+    ],
+    "main": "./dist/index.cjs",
+    "module": "./dist/index.mjs",
+    "browser": "./dist/index.browser.mjs",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "browser": "./dist/index.browser.mjs",
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.cjs",
+            "default": "./dist/index.cjs"
+        },
+        "./package.json": "./package.json"
+    },
+    "devDependencies": {
+        "@rollup/plugin-alias": "5.1.1",
+        "@rollup/plugin-commonjs": "26.0.1",
+        "@rollup/plugin-node-resolve": "15.3.0",
+        "@rollup/plugin-typescript": "11.1.6",
+        "@typescript-eslint/eslint-plugin": "8.2.0",
+        "@typescript-eslint/parser": "8.2.0",
+        "benchmark": "2.1.4",
+        "eslint": "9.6.0",
+        "eslint-config-prettier": "9.1.0",
+        "eslint-plugin-unicorn": "55.0.0",
+        "mocha": "10.7.3",
+        "prettier": "3.4.2",
+        "rollup": "4.22.4",
+        "rollup-plugin-dts": "6.1.1",
+        "ts-node": "10.9.2",
+        "typedoc": "0.27.6",
+        "typescript": "5.5.4"
+    },
+    "scripts": {
+        "build": "tsc -p tsconfig.build.json --declaration --emitDeclarationOnly --outDir dist/types && rollup -c",
+        "lint": "ESLINT_USE_FLAT_CONFIG=false eslint .",
+        "lint:fix": "ESLINT_USE_FLAT_CONFIG=false eslint . --fix",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "typecheck": "tsc --noEmit",
+        "docs": "typedoc",
+        "prepublishOnly": "npm run build",
+        "test": "npm run test:sanity",
+        "profile": "node -r ./scripts/ts-node-register.js scripts/profile.ts",
+        "test:sanity": "JSLP_TEST_SUITE=test-sanity mocha -r ./scripts/ts-node-register.js test/solver-problems.ts",
+        "test:speed": "JSLP_TEST_SUITE=test-speed mocha -r ./scripts/ts-node-register.js test/solver-problems.ts -- test-speed",
+        "release": "npm run format:check && npm run lint && npm test && npm run build"
+    },
+    "keywords": [
+        "Linear",
+        "Programming",
+        "Integer",
+        "Programming",
+        "Solver",
+        "Linear Programming",
+        "Linear Optimization",
+        "Simplex",
+        "Mixed Integer Optimization",
+        "Mixed Integer Programming"
+    ],
+    "license": "Unlicense"
 }

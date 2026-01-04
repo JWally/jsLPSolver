@@ -1,3 +1,17 @@
+/**
+ * @file src/tableau/branch-and-cut.ts
+ * @description Branch-and-cut algorithm for mixed-integer programming
+ *
+ * Implements the branch-and-bound algorithm with cutting planes to find
+ * integer-optimal solutions. Uses a priority queue (min-heap) to explore
+ * promising branches first based on relaxed objective values.
+ *
+ * Key features:
+ * - Branching on fractional integer variables
+ * - Gomory cuts to tighten LP relaxation
+ * - Best-first node selection
+ * - Early termination via tolerance
+ */
 import type Tableau from "./tableau";
 import type { Branch, BranchCut } from "./types";
 import { BranchMinHeap } from "./min-heap";
@@ -93,7 +107,10 @@ export function createBranchAndCutService(): BranchAndCutService {
             if (evaluation === bestEvaluation) {
                 let isCurrentEvaluationWorse = true;
                 for (let o = 0; o < tableau.optionalObjectives.length; o += 1) {
-                    if (tableau.optionalObjectives[o].reducedCosts[0] > bestOptionalObjectivesEvaluations[o]) {
+                    if (
+                        tableau.optionalObjectives[o].reducedCosts[0] >
+                        bestOptionalObjectivesEvaluations[o]
+                    ) {
                         break;
                     } else if (
                         tableau.optionalObjectives[o].reducedCosts[0] <

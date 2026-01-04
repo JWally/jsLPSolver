@@ -1,9 +1,13 @@
 /**
- * Mixed Integer Programming (MIP) utility functions for the Tableau class.
+ * @file src/tableau/mip-utils.ts
+ * @description Mixed-integer programming utility functions
  *
- * This module contains functions for:
- * - Checking integer properties of solutions
- * - Variable selection strategies for branching
+ * Provides helper functions for MIP solving:
+ * - Checking integrality of current solution
+ * - Variable selection for branching (most fractional, etc.)
+ * - Fractional volume computation
+ *
+ * Functions are designed to be bound to a Tableau instance via `this`.
  */
 import type Tableau from "./tableau";
 import type { VariableValue } from "./types";
@@ -71,7 +75,9 @@ export function computeFractionalVolume(this: Tableau, ignoreIntegerValues?: boo
         if (variable !== undefined && variable.isInteger) {
             const value = matrix[r * width + rhsColumn];
             const distance = Math.abs(value);
-            if (Math.min(distance - Math.floor(distance), Math.floor(distance + 1)) < this.precision) {
+            if (
+                Math.min(distance - Math.floor(distance), Math.floor(distance + 1)) < this.precision
+            ) {
                 if (ignoreIntegerValues !== true) {
                     return 0;
                 }
@@ -140,7 +146,10 @@ export function getFractionalVarWithLowestCost(this: Tableau): VariableValue {
         const varRow = this.rowByVarIndex[varIndex];
         if (varRow !== -1) {
             const varValue = matrix[varRow * width + rhsColumn];
-            if (Math.abs(varValue - Math.round(varValue)) > this.precision && variable.cost < highestCost) {
+            if (
+                Math.abs(varValue - Math.round(varValue)) > this.precision &&
+                variable.cost < highestCost
+            ) {
                 highestCost = variable.cost;
                 selectedVarIndex = varIndex;
                 selectedVarValue = varValue;
