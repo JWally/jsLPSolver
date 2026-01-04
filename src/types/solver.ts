@@ -23,6 +23,8 @@ export interface SolveOptions {
     nodeSelection?: "best-first" | "depth-first" | "hybrid";
     branching?: "most-fractional" | "pseudocost" | "strong";
     presolve?: boolean;
+    // Use incremental state management for B&B (default: true)
+    useIncremental?: boolean;
 }
 
 export interface ConstraintBound {

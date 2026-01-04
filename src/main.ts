@@ -18,6 +18,7 @@ import Polyopt from "./polyopt";
 import ReformatLP from "./external/lpsolve/reformat";
 import { createBranchAndCutService } from "./tableau/branch-and-cut";
 import { createEnhancedBranchAndCutService } from "./tableau/enhanced-branch-and-cut";
+import { createIncrementalBranchAndCutService } from "./tableau/incremental-branch-and-cut";
 import type { Model as ModelDefinition, SolveResult } from "./types/solver";
 
 // Global environment declarations for UMD compatibility
@@ -56,10 +57,19 @@ class Solver {
      * Enhanced strategies can be enabled via model.options:
      * - nodeSelection: 'best-first' | 'depth-first' | 'hybrid'
      * - branching: 'most-fractional' | 'pseudocost' | 'strong'
+     * - useIncremental: true to use incremental state management (experimental)
      */
     private selectBranchAndCutService(model: ModelDefinition) {
         const options = model.options;
         const useEnhanced = options?.nodeSelection || options?.branching;
+        const useIncremental = options?.useIncremental === true; // Must explicitly enable
+
+        if (useIncremental) {
+            return createIncrementalBranchAndCutService({
+                nodeSelection: options?.nodeSelection ?? "hybrid",
+                branching: options?.branching ?? "pseudocost",
+            });
+        }
 
         if (useEnhanced) {
             return createEnhancedBranchAndCutService({
