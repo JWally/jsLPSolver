@@ -152,13 +152,17 @@ export function addConstraint(this: Tableau, constraint: Constraint): void {
     const width = this.width;
     const lastColumn = width - 1;
 
-    // Need to grow the matrix to add a new row
-    const oldMatrix = this.matrix;
-    const newSize = (lastRow + 1) * width;
+    // Check if we need to grow the matrix capacity (using exponential growth)
+    const newRowCount = lastRow + 1;
+    const requiredSize = newRowCount * width;
+    if (this.matrix.length < requiredSize) {
+        // Use exponential growth strategy (1.5x) with minimum increment
+        const currentCapacity = this.matrix.length;
+        const minGrowth = Math.max(width * 16, Math.floor(currentCapacity * 0.5));
+        const newCapacity = currentCapacity + minGrowth;
 
-    // Create new larger matrix if needed
-    if (oldMatrix.length < newSize) {
-        const newMatrix = new Float64Array(newSize);
+        const oldMatrix = this.matrix;
+        const newMatrix = new Float64Array(newCapacity);
         newMatrix.set(oldMatrix);
         this.matrix = newMatrix;
     }
@@ -237,6 +241,8 @@ export function addVariable(this: Tableau, variable: Variable): void {
 
     // Need to expand the matrix to add a new column
     // This requires reallocating and copying with new layout
+    // Note: Column capacity optimization would require changing all matrix access
+    // to use capacity as stride, which is too invasive. Keep simple reallocation.
     const oldMatrix = this.matrix;
     const newMatrix = new Float64Array(height * newWidth);
 

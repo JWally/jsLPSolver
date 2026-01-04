@@ -71,6 +71,10 @@ export default class Tableau {
     bestPossibleEval = 0;
     __isIntegral?: boolean;
 
+    // Partial pricing state for phase2 optimization
+    pricingBatchStart = 1;
+    pricingBatchSize = 0; // 0 means auto-compute based on problem size
+
     readonly branchAndCutService: BranchAndCutService;
 
     constructor(precision = 1e-8, branchAndCutService?: BranchAndCutService) {

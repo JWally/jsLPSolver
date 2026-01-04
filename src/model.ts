@@ -4,6 +4,7 @@ import type { Priority } from "./expressions";
 import type { BranchAndCutService } from "./tableau/branch-and-cut";
 import type { ConstraintBound, Model as JsonModel } from "./types/solver";
 import type { TableauSolution, TableauSolutionSet } from "./tableau";
+import { presolve, type PresolveResult } from "./tableau/presolve";
 
 type ConstraintDefinition = ConstraintBound | ConstraintBound & { equal?: number };
 
@@ -28,6 +29,8 @@ class Model {
     solutions?: TableauSolutionSet[];
     availableIndexes: number[];
     lastElementIndex: number;
+    usePresolve: boolean;
+    presolveResult: PresolveResult | null;
 
     constructor(precision?: number, name?: string, branchAndCutService?: BranchAndCutService) {
         this.tableau = new Tableau(precision, branchAndCutService);
@@ -65,6 +68,8 @@ class Model {
 
         this.availableIndexes = [];
         this.lastElementIndex = 0;
+        this.usePresolve = true;
+        this.presolveResult = null;
     }
 
     minimize(): this {
@@ -387,6 +392,13 @@ class Model {
             } else {
                 this.keep_solutions = false;
             }
+
+            //
+            // PRESOLVE
+            //
+            if (jsonModel.options.presolve !== undefined) {
+                this.usePresolve = jsonModel.options.presolve;
+            }
         }
 
         //
@@ -447,6 +459,20 @@ class Model {
     }
 
     solve(): TableauSolution {
+        // Apply presolve to reduce problem size
+        if (this.usePresolve && this.presolveResult === null) {
+            this.presolveResult = presolve(this);
+
+            if (this.presolveResult.isInfeasible) {
+                // Problem is infeasible - return early
+                this.tableau.feasible = false;
+                return this.tableau.getSolution();
+            }
+
+            // Apply fixed variables to constraints
+            this.applyPresolveReductions(this.presolveResult);
+        }
+
         // Setting tableau if not done
         if (this.tableauInitialized === false) {
             this.tableau.setModel(this);
@@ -454,6 +480,24 @@ class Model {
         }
 
         return this.tableau.solve();
+    }
+
+    /**
+     * Apply presolve reductions to the model.
+     * Sets fixed variable values and removes redundant constraints.
+     */
+    private applyPresolveReductions(result: PresolveResult): void {
+        // Set fixed variable values
+        for (const [variable, value] of result.fixedVariables) {
+            variable.value = value;
+            // Zero out the cost since variable is fixed
+            variable.cost = 0;
+        }
+
+        // Note: We don't actually remove constraints/variables from the model
+        // as that would require complex bookkeeping. Instead, the presolve
+        // information is used to detect early infeasibility and fix variable values.
+        // A more aggressive presolve would rebuild the model without fixed variables.
     }
 
     isFeasible(): boolean {

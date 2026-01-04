@@ -101,6 +101,17 @@ export function phase2(this: Tableau): number {
     let reducedCost: number;
     let unrestricted: boolean;
 
+    // Partial pricing setup
+    // Batch size: use configured value or auto-compute (sqrt of columns, min 50, max 500)
+    const nColumns = lastColumn;
+    const batchSize =
+        this.pricingBatchSize > 0
+            ? this.pricingBatchSize
+            : Math.min(500, Math.max(50, Math.floor(Math.sqrt(nColumns))));
+
+    // For small problems, just scan everything (no benefit from partial pricing)
+    const usePartialPricing = nColumns > batchSize * 2;
+
     while (true) {
         const costRowOffset = this.costRowIndex * width;
 
@@ -111,28 +122,77 @@ export function phase2(this: Tableau): number {
         let enteringColumn = 0;
         let enteringValue = precision;
         let isReducedCostNegative = false;
-        for (let c = 1; c <= lastColumn; c++) {
-            reducedCost = matrix[costRowOffset + c];
-            unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
 
-            if (nOptionalObjectives > 0 && -precision < reducedCost && reducedCost < precision) {
-                optionalCostsColumns?.push(c);
-                continue;
-            }
+        if (usePartialPricing) {
+            // Partial pricing: scan columns in batches
+            const startBatch = this.pricingBatchStart;
+            let batchesScanned = 0;
+            const totalBatches = Math.ceil(nColumns / batchSize);
 
-            if (unrestricted && reducedCost < 0) {
-                if (-reducedCost > enteringValue) {
-                    enteringValue = -reducedCost;
-                    enteringColumn = c;
-                    isReducedCostNegative = true;
+            // Scan batches until we find an improving column or exhaust all batches
+            while (enteringColumn === 0 && batchesScanned < totalBatches) {
+                const batchStart = this.pricingBatchStart;
+                const batchEnd = Math.min(batchStart + batchSize - 1, lastColumn);
+
+                for (let c = batchStart; c <= batchEnd; c++) {
+                    reducedCost = matrix[costRowOffset + c];
+                    unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
+
+                    if (nOptionalObjectives > 0 && -precision < reducedCost && reducedCost < precision) {
+                        optionalCostsColumns?.push(c);
+                        continue;
+                    }
+
+                    if (unrestricted && reducedCost < 0) {
+                        if (-reducedCost > enteringValue) {
+                            enteringValue = -reducedCost;
+                            enteringColumn = c;
+                            isReducedCostNegative = true;
+                        }
+                        continue;
+                    }
+
+                    if (reducedCost > enteringValue) {
+                        enteringValue = reducedCost;
+                        enteringColumn = c;
+                        isReducedCostNegative = false;
+                    }
                 }
-                continue;
+
+                // Move to next batch (wrap around)
+                this.pricingBatchStart = batchEnd >= lastColumn ? 1 : batchEnd + 1;
+                batchesScanned++;
             }
 
-            if (reducedCost > enteringValue) {
-                enteringValue = reducedCost;
-                enteringColumn = c;
-                isReducedCostNegative = false;
+            // Reset batch start if we found an improving column
+            if (enteringColumn !== 0) {
+                this.pricingBatchStart = startBatch;
+            }
+        } else {
+            // Full pricing for small problems
+            for (let c = 1; c <= lastColumn; c++) {
+                reducedCost = matrix[costRowOffset + c];
+                unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
+
+                if (nOptionalObjectives > 0 && -precision < reducedCost && reducedCost < precision) {
+                    optionalCostsColumns?.push(c);
+                    continue;
+                }
+
+                if (unrestricted && reducedCost < 0) {
+                    if (-reducedCost > enteringValue) {
+                        enteringValue = -reducedCost;
+                        enteringColumn = c;
+                        isReducedCostNegative = true;
+                    }
+                    continue;
+                }
+
+                if (reducedCost > enteringValue) {
+                    enteringValue = reducedCost;
+                    enteringColumn = c;
+                    isReducedCostNegative = false;
+                }
             }
         }
 
