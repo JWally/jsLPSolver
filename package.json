@@ -63,13 +63,12 @@
         "typecheck": "tsc --noEmit",
         "docs": "typedoc",
         "prepublishOnly": "npm run build",
-        "test": "npm run test:sanity",
+        "test": "vitest run",
         "test:unit": "vitest run",
         "test:watch": "vitest",
         "test:coverage": "vitest run --coverage",
+        "test:stress": "vitest run src/solver.stress.test.ts",
         "profile": "node -r ./scripts/ts-node-register.js scripts/profile.ts",
-        "test:sanity": "JSLP_TEST_SUITE=test-sanity mocha -r ./scripts/ts-node-register.js test/solver-problems.ts",
-        "test:speed": "JSLP_TEST_SUITE=test-speed mocha -r ./scripts/ts-node-register.js test/solver-problems.ts -- test-speed",
         "release": "npm run format:check && npm run lint && npm test && npm run build"
     },
     "keywords": [
