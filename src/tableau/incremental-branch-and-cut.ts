@@ -21,7 +21,7 @@ export interface IncrementalBranchAndCutService {
 
 export interface IncrementalBranchAndCutOptions {
     nodeSelection?: "best-first" | "depth-first" | "hybrid";
-    branching?: "most-fractional" | "pseudocost";
+    branching?: "most-fractional" | "pseudocost" | "strong";
     maxCheckpoints?: number; // Limit memory usage
 }
 
