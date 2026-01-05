@@ -26,6 +26,17 @@ npm install javascript-lp-solver
 
 ```html
 <script src="https://unpkg.com/javascript-lp-solver/dist/solver.global.js"></script>
+<script>
+    // The solver is available as a global variable
+    var model = {
+        optimize: "profit",
+        opType: "max",
+        constraints: { capacity: { max: 100 } },
+        variables: { x: { capacity: 10, profit: 5 } }
+    };
+    var result = solver.Solve(model);
+    console.log(result); // { feasible: true, result: 50, x: 10 }
+</script>
 ```
 
 **ES Modules:**
@@ -60,6 +71,57 @@ const model = {
 const result = solver.Solve(model);
 console.log(result);
 // { feasible: true, result: 1080000, brit: 24, yank: 20 }
+```
+
+## Constraint Types
+
+Constraints support three bound types:
+
+```javascript
+constraints: {
+    resource_a: { max: 100 },      // resource_a <= 100
+    resource_b: { min: 10 },       // resource_b >= 10
+    resource_c: { equal: 50 },     // resource_c == 50
+    resource_d: { min: 20, max: 80 }, // 20 <= resource_d <= 80
+}
+```
+
+## Variable Bounds
+
+By default, all variables are **non-negative** (≥ 0). This is standard LP solver behavior.
+
+To allow negative values, use the `unrestricted` property:
+
+```javascript
+const model = {
+    optimize: "profit",
+    opType: "max",
+    constraints: {
+        balance: { equal: 0 },
+    },
+    variables: {
+        income: { profit: 1, balance: 1 },
+        expense: { profit: -1, balance: -1 },
+    },
+    unrestricted: { income: 1, expense: 1 }, // Allow negative values
+};
+```
+
+To set upper bounds on variables, add them as constraints:
+
+```javascript
+const model = {
+    optimize: "output",
+    opType: "max",
+    constraints: {
+        x_upper: { max: 100 }, // x <= 100
+        y_upper: { max: 50 },  // y <= 50
+    },
+    variables: {
+        x: { output: 10, x_upper: 1 },
+        y: { output: 15, y_upper: 1 },
+    },
+};
 ```
 
 ## Integer Programming
