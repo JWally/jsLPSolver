@@ -136,11 +136,23 @@ npm install
 # Run tests
 npm test
 
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+
+# Run stress tests (generated problems)
+npm run test:stress
+
 # Run linter
 npm run lint
 
 # Format code
 npm run format
+
+# Type check
+npm run typecheck
 
 # Build distribution
 npm run build
@@ -148,6 +160,16 @@ npm run build
 # Generate API docs
 npm run docs
 ```
+
+### Testing
+
+The test suite uses [Vitest](https://vitest.dev/) and includes:
+
+- **Unit tests**: Cover utilities, data structures, and isolated components
+- **Integration tests**: Run the solver against 47 real-world problems (Berlin Airlift, Knapsack, Farm MIP, etc.)
+- **Stress tests**: Use seeded random problem generation (LP, MIP, knapsack, set cover, transportation) to test solver robustness without large static test files
+
+Coverage thresholds are enforced: 60% statements/lines/functions, 45% branches.
 
 ## Contributing
 
