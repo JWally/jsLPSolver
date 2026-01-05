@@ -30,11 +30,7 @@ export interface PresolveResult {
  * If fixing x=0 causes infeasibility, then x must be 1 (and vice versa).
  * If both x=0 and x=1 imply y has same bound, that bound is valid.
  */
-function probe(
-    model: Model,
-    result: PresolveResult,
-    maxProbes: number = 100
-): boolean {
+function probe(model: Model, result: PresolveResult, maxProbes: number = 100): boolean {
     let changed = false;
     let probeCount = 0;
 

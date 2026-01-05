@@ -36,7 +36,9 @@ function createMockTableau(options?: {
         colByVarIndex: Array.from({ length: width + height }, (_, i) =>
             i < height ? -1 : i - height + 1
         ),
-        variablesPerIndex: [] as Array<{ id: string; isInteger?: boolean; isSlack?: boolean } | undefined>,
+        variablesPerIndex: [] as Array<
+            { id: string; isInteger?: boolean; isSlack?: boolean } | undefined
+        >,
         getNewElementIndex: vi.fn(() => elementIndex++),
         addLowerBoundMIRCut: vi.fn(),
     };

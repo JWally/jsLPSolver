@@ -422,9 +422,7 @@ describe("WarnOnTypos", () => {
             expect(warnSpy).toHaveBeenCalledWith(
                 expect.stringContaining("'optype' but expected 'opType'")
             );
-            expect(warnSpy).not.toHaveBeenCalledWith(
-                expect.stringContaining("missing 'opType'")
-            );
+            expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining("missing 'opType'"));
         });
     });
 

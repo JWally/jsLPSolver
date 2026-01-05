@@ -13,13 +13,13 @@ import { createBranchAndCutService } from "./tableau/branch-and-cut";
 
 interface TestModel {
     name: string;
-    optimize: string | Record<string, string>;
+    optimize: string | Record<string, "max" | "min">;
     opType: "max" | "min";
     constraints: Record<string, unknown>;
     variables: Record<string, Record<string, number>>;
-    ints?: Record<string, number>;
-    binaries?: Record<string, number>;
-    unrestricted?: Record<string, number>;
+    ints?: Record<string, 1>;
+    binaries?: Record<string, 1>;
+    unrestricted?: Record<string, 1>;
     expects: {
         feasible: boolean;
         result?: number;
@@ -102,10 +102,12 @@ function compareSolutions(actual: SolveResult, expected: TestModel["expects"]): 
 describe("Solver Integration Tests", () => {
     describe("Branch-and-cut service", () => {
         it("does not mutate the Tableau prototype when created", () => {
+            // eslint-disable-next-line no-restricted-syntax
             const prototypeBefore = Object.getOwnPropertyNames(Tableau.prototype).sort();
 
             createBranchAndCutService();
 
+            // eslint-disable-next-line no-restricted-syntax
             const prototypeAfter = Object.getOwnPropertyNames(Tableau.prototype).sort();
             expect(prototypeAfter).toEqual(prototypeBefore);
         });

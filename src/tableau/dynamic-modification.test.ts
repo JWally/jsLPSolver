@@ -385,7 +385,12 @@ describe("addConstraint", () => {
     it("grows matrix if capacity exceeded", () => {
         const tableau = createMockTableau({ width: 4, height: 3 });
         tableau.matrix = new Float64Array(12); // Exactly 3 rows
-        const constraint = createMockConstraint({ index: 10, rhs: 5, isUpperBound: true, terms: [] });
+        const constraint = createMockConstraint({
+            index: 10,
+            rhs: 5,
+            isUpperBound: true,
+            terms: [],
+        });
 
         addConstraint.call(tableau as never, constraint);
 
@@ -394,7 +399,12 @@ describe("addConstraint", () => {
 
     it("updates varIndexByRow and rowByVarIndex", () => {
         const tableau = createMockTableau();
-        const constraint = createMockConstraint({ index: 10, rhs: 5, isUpperBound: true, terms: [] });
+        const constraint = createMockConstraint({
+            index: 10,
+            rhs: 5,
+            isUpperBound: true,
+            terms: [],
+        });
 
         addConstraint.call(tableau as never, constraint);
 

@@ -244,11 +244,7 @@ describe("Constraint", () => {
 
             constraint.addTerm(3, variable);
 
-            expect(model.updateConstraintCoefficient).toHaveBeenCalledWith(
-                constraint,
-                variable,
-                3
-            );
+            expect(model.updateConstraintCoefficient).toHaveBeenCalledWith(constraint, variable, 3);
         });
 
         it("updates existing term coefficient when variable already has a term", () => {

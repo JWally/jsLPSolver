@@ -120,9 +120,7 @@ describe("log", () => {
         const tableau = createMockTableau({
             width: 4,
             height: 3,
-            optionalObjectives: [
-                { reducedCosts: [1, 2, 3, 4], priority: 1 },
-            ],
+            optionalObjectives: [{ reducedCosts: [1, 2, 3, 4], priority: 1 }],
         });
 
         log.call(tableau as never, "test", true);
@@ -169,9 +167,7 @@ describe("log", () => {
         const tableau = createMockTableau({
             width: 3,
             height: 2,
-            optionalObjectives: [
-                { reducedCosts: [-1, -2, -3], priority: 1 },
-            ],
+            optionalObjectives: [{ reducedCosts: [-1, -2, -3], priority: 1 }],
         });
 
         log.call(tableau as never, "test", true);

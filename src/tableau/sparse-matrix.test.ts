@@ -37,11 +37,7 @@ describe("SparseMatrix", () => {
 
     describe("fromDense", () => {
         it("creates sparse matrix from dense array", () => {
-            const dense = new Float64Array([
-                1, 0, 2,
-                0, 3, 0,
-                4, 0, 5,
-            ]);
+            const dense = new Float64Array([1, 0, 2, 0, 3, 0, 4, 0, 5]);
 
             const sparse = SparseMatrix.fromDense(dense, 3, 3);
 
@@ -51,11 +47,7 @@ describe("SparseMatrix", () => {
         });
 
         it("correctly stores non-zero values", () => {
-            const dense = new Float64Array([
-                1, 0, 2,
-                0, 3, 0,
-                4, 0, 5,
-            ]);
+            const dense = new Float64Array([1, 0, 2, 0, 3, 0, 4, 0, 5]);
 
             const sparse = SparseMatrix.fromDense(dense, 3, 3);
 
@@ -68,11 +60,7 @@ describe("SparseMatrix", () => {
         });
 
         it("treats values within precision as zero", () => {
-            const dense = new Float64Array([
-                1, 1e-15, 0,
-                0, 0, 0,
-                0, 0, 1,
-            ]);
+            const dense = new Float64Array([1, 1e-15, 0, 0, 0, 0, 0, 0, 1]);
 
             const sparse = SparseMatrix.fromDense(dense, 3, 3);
 
@@ -98,11 +86,7 @@ describe("SparseMatrix", () => {
 
     describe("toDense", () => {
         it("converts sparse matrix back to dense array", () => {
-            const original = new Float64Array([
-                1, 0, 2,
-                0, 3, 0,
-                4, 0, 5,
-            ]);
+            const original = new Float64Array([1, 0, 2, 0, 3, 0, 4, 0, 5]);
 
             const sparse = SparseMatrix.fromDense(original, 3, 3);
             const dense = sparse.toDense();
@@ -120,10 +104,7 @@ describe("SparseMatrix", () => {
 
     describe("get", () => {
         it("returns value at specified position", () => {
-            const dense = new Float64Array([
-                1, 2, 3,
-                4, 5, 6,
-            ]);
+            const dense = new Float64Array([1, 2, 3, 4, 5, 6]);
 
             const sparse = SparseMatrix.fromDense(dense, 3, 2);
 
@@ -133,11 +114,7 @@ describe("SparseMatrix", () => {
         });
 
         it("returns 0 for positions with no stored value", () => {
-            const dense = new Float64Array([
-                1, 0, 0,
-                0, 0, 0,
-                0, 0, 2,
-            ]);
+            const dense = new Float64Array([1, 0, 0, 0, 0, 0, 0, 0, 2]);
 
             const sparse = SparseMatrix.fromDense(dense, 3, 3);
 
@@ -250,11 +227,7 @@ describe("SparseMatrix", () => {
 
     describe("getColumn", () => {
         it("returns sparse vector for column", () => {
-            const dense = new Float64Array([
-                1, 0, 0,
-                2, 0, 0,
-                3, 0, 0,
-            ]);
+            const dense = new Float64Array([1, 0, 0, 2, 0, 0, 3, 0, 0]);
 
             const sparse = SparseMatrix.fromDense(dense, 3, 3);
             const col = sparse.getColumn(0);
@@ -265,11 +238,7 @@ describe("SparseMatrix", () => {
         });
 
         it("returns empty sparse vector for zero column", () => {
-            const dense = new Float64Array([
-                1, 0, 0,
-                0, 0, 0,
-                0, 0, 2,
-            ]);
+            const dense = new Float64Array([1, 0, 0, 0, 0, 0, 0, 0, 2]);
 
             const sparse = SparseMatrix.fromDense(dense, 3, 3);
             const col = sparse.getColumn(1);
@@ -282,11 +251,7 @@ describe("SparseMatrix", () => {
 
     describe("getRow", () => {
         it("returns sparse vector for row", () => {
-            const dense = new Float64Array([
-                1, 2, 3,
-                0, 0, 0,
-                0, 0, 0,
-            ]);
+            const dense = new Float64Array([1, 2, 3, 0, 0, 0, 0, 0, 0]);
 
             const sparse = SparseMatrix.fromDense(dense, 3, 3);
             const row = sparse.getRow(0);
@@ -297,11 +262,7 @@ describe("SparseMatrix", () => {
         });
 
         it("returns empty sparse vector for zero row", () => {
-            const dense = new Float64Array([
-                1, 0, 0,
-                0, 0, 0,
-                0, 0, 2,
-            ]);
+            const dense = new Float64Array([1, 0, 0, 0, 0, 0, 0, 0, 2]);
 
             const sparse = SparseMatrix.fromDense(dense, 3, 3);
             const row = sparse.getRow(1);
@@ -314,11 +275,7 @@ describe("SparseMatrix", () => {
 
     describe("getRowDense", () => {
         it("fills output array with row values and returns non-zero columns", () => {
-            const dense = new Float64Array([
-                1, 0, 3,
-                0, 0, 0,
-                0, 0, 0,
-            ]);
+            const dense = new Float64Array([1, 0, 3, 0, 0, 0, 0, 0, 0]);
 
             const sparse = SparseMatrix.fromDense(dense, 3, 3);
             const output = new Float64Array(3);
@@ -494,11 +451,7 @@ describe("SparseMatrix", () => {
 
     describe("scaleRow", () => {
         it("scales all values in a row by factor", () => {
-            const dense = new Float64Array([
-                1, 2, 3,
-                4, 5, 6,
-                7, 8, 9,
-            ]);
+            const dense = new Float64Array([1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
             const sparse = SparseMatrix.fromDense(dense, 3, 3);
             sparse.scaleRow(1, 2);
@@ -509,11 +462,7 @@ describe("SparseMatrix", () => {
         });
 
         it("does not affect other rows", () => {
-            const dense = new Float64Array([
-                1, 2, 3,
-                4, 5, 6,
-                7, 8, 9,
-            ]);
+            const dense = new Float64Array([1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
             const sparse = SparseMatrix.fromDense(dense, 3, 3);
             sparse.scaleRow(1, 2);
@@ -525,11 +474,7 @@ describe("SparseMatrix", () => {
 
     describe("addScaledRow", () => {
         it("adds scaled source row to target row", () => {
-            const dense = new Float64Array([
-                1, 2, 3,
-                4, 5, 6,
-                0, 0, 0,
-            ]);
+            const dense = new Float64Array([1, 2, 3, 4, 5, 6, 0, 0, 0]);
 
             const sparse = SparseMatrix.fromDense(dense, 3, 3);
             sparse.addScaledRow(2, 0, 2); // row2 += 2 * row0

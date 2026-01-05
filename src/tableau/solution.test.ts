@@ -88,9 +88,15 @@ describe("Solution", () => {
                 width: 3,
                 height: 3,
                 matrix: new Float64Array([
-                    0, 0, 100, // row 0: objective
-                    0, 0, 5, // row 1: x = 5
-                    0, 0, 3, // row 2: y = 3
+                    0,
+                    0,
+                    100, // row 0: objective
+                    0,
+                    0,
+                    5, // row 1: x = 5
+                    0,
+                    0,
+                    3, // row 2: y = 3
                 ]),
                 rhsColumn: 2,
                 precision: 1e-9,
@@ -108,11 +114,7 @@ describe("Solution", () => {
             const tableau = createMockTableau({
                 width: 3,
                 height: 3,
-                matrix: new Float64Array([
-                    0, 0, 100,
-                    0, 0, 5,
-                    0, 0, 3,
-                ]),
+                matrix: new Float64Array([0, 0, 100, 0, 0, 5, 0, 0, 3]),
                 rhsColumn: 2,
                 precision: 1e-9,
                 varIndexByRow: [0, 1, 2],
@@ -130,9 +132,15 @@ describe("Solution", () => {
                 width: 3,
                 height: 3,
                 matrix: new Float64Array([
-                    0, 0, 100,
-                    0, 0, 5, // slack variable
-                    0, 0, 3, // regular variable
+                    0,
+                    0,
+                    100,
+                    0,
+                    0,
+                    5, // slack variable
+                    0,
+                    0,
+                    3, // regular variable
                 ]),
                 rhsColumn: 2,
                 precision: 1e-9,
@@ -156,8 +164,12 @@ describe("Solution", () => {
                 width: 3,
                 height: 2,
                 matrix: new Float64Array([
-                    0, 0, 100,
-                    0, 0, 5.0000001, // Should round to 5
+                    0,
+                    0,
+                    100,
+                    0,
+                    0,
+                    5.0000001, // Should round to 5
                 ]),
                 rhsColumn: 2,
                 precision,
@@ -176,10 +188,7 @@ describe("Solution", () => {
             const tableau = createMockTableau({
                 width: 3,
                 height: 2,
-                matrix: new Float64Array([
-                    0, 0, 100,
-                    0, 0, 2.5,
-                ]),
+                matrix: new Float64Array([0, 0, 100, 0, 0, 2.5]),
                 rhsColumn: 2,
                 precision,
                 varIndexByRow: [0, 1],
@@ -196,10 +205,7 @@ describe("Solution", () => {
             const tableau = createMockTableau({
                 width: 3,
                 height: 2,
-                matrix: new Float64Array([
-                    0, 0, 100,
-                    0, 0, 0,
-                ]),
+                matrix: new Float64Array([0, 0, 100, 0, 0, 0]),
                 rhsColumn: 2,
                 precision: 1e-9,
                 varIndexByRow: [0, 1],
@@ -216,10 +222,7 @@ describe("Solution", () => {
             const tableau = createMockTableau({
                 width: 3,
                 height: 2,
-                matrix: new Float64Array([
-                    0, 0, 100,
-                    0, 0, -7.5,
-                ]),
+                matrix: new Float64Array([0, 0, 100, 0, 0, -7.5]),
                 rhsColumn: 2,
                 precision: 1e-9,
                 varIndexByRow: [0, 1],
@@ -254,22 +257,36 @@ describe("Solution", () => {
                 width: 5,
                 height: 5,
                 matrix: new Float64Array([
-                    0, 0, 0, 0, 500, // objective
-                    0, 0, 0, 0, 10, // a = 10
-                    0, 0, 0, 0, 20, // b = 20
-                    0, 0, 0, 0, 30, // c = 30
-                    0, 0, 0, 0, 40, // d = 40
+                    0,
+                    0,
+                    0,
+                    0,
+                    500, // objective
+                    0,
+                    0,
+                    0,
+                    0,
+                    10, // a = 10
+                    0,
+                    0,
+                    0,
+                    0,
+                    20, // b = 20
+                    0,
+                    0,
+                    0,
+                    0,
+                    30, // c = 30
+                    0,
+                    0,
+                    0,
+                    0,
+                    40, // d = 40
                 ]),
                 rhsColumn: 4,
                 precision: 1e-9,
                 varIndexByRow: [0, 1, 2, 3, 4],
-                variablesPerIndex: [
-                    undefined,
-                    { id: "a" },
-                    { id: "b" },
-                    { id: "c" },
-                    { id: "d" },
-                ],
+                variablesPerIndex: [undefined, { id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }],
             });
 
             const solution = new Solution(tableau, 500, true, true);
@@ -306,11 +323,7 @@ describe("MilpSolution", () => {
             const tableau = createMockTableau({
                 width: 3,
                 height: 3,
-                matrix: new Float64Array([
-                    0, 0, 100,
-                    0, 0, 5,
-                    0, 0, 3,
-                ]),
+                matrix: new Float64Array([0, 0, 100, 0, 0, 5, 0, 0, 3]),
                 rhsColumn: 2,
                 precision: 1e-9,
                 varIndexByRow: [0, 1, 2],

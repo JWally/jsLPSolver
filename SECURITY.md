@@ -7,6 +7,7 @@ If you discover a security vulnerability in jsLPSolver, please report it respons
 **justin.w.wolcott@gmail.com**
 
 Please include:
+
 - A description of the vulnerability
 - Steps to reproduce the issue
 - Potential impact

@@ -153,8 +153,7 @@ export function generateKnapsack(options: GeneratorOptions = {}): GeneratedProbl
     } = options;
 
     const rng = createRng(seed);
-    const randomInt = (min: number, max: number) =>
-        Math.floor(min + rng() * (max - min + 1));
+    const randomInt = (min: number, max: number) => Math.floor(min + rng() * (max - min + 1));
 
     const variables: Record<string, Record<string, number>> = {};
     const binaries: Record<string, number> = {};
@@ -196,8 +195,7 @@ export function generateSetCover(options: GeneratorOptions = {}): GeneratedProbl
     } = options;
 
     const rng = createRng(seed);
-    const randomInt = (min: number, max: number) =>
-        Math.floor(min + rng() * (max - min + 1));
+    const randomInt = (min: number, max: number) => Math.floor(min + rng() * (max - min + 1));
 
     const variables: Record<string, Record<string, number>> = {};
     const binaries: Record<string, number> = {};
@@ -250,8 +248,7 @@ export function generateTransportation(options: GeneratorOptions = {}): Generate
     const numDestinations = numConstraints;
 
     const rng = createRng(seed);
-    const randomInt = (min: number, max: number) =>
-        Math.floor(min + rng() * (max - min + 1));
+    const randomInt = (min: number, max: number) => Math.floor(min + rng() * (max - min + 1));
 
     const variables: Record<string, Record<string, number>> = {};
     const constraints: Record<string, { min?: number; max?: number; equal?: number }> = {};
@@ -308,8 +305,7 @@ export function generateResourceAllocation(options: GeneratorOptions = {}): Gene
     } = options;
 
     const rng = createRng(seed);
-    const randomInt = (min: number, max: number) =>
-        Math.floor(min + rng() * (max - min + 1));
+    const randomInt = (min: number, max: number) => Math.floor(min + rng() * (max - min + 1));
 
     const variables: Record<string, Record<string, number>> = {};
     const constraints: Record<string, { max: number }> = {};
@@ -346,10 +342,7 @@ export function generateResourceAllocation(options: GeneratorOptions = {}): Gene
 /**
  * Generate a batch of problems of various types and sizes
  */
-export function generateProblemBatch(
-    count: number,
-    baseSeed = Date.now()
-): GeneratedProblem[] {
+export function generateProblemBatch(count: number, baseSeed = Date.now()): GeneratedProblem[] {
     const problems: GeneratedProblem[] = [];
     const generators = [
         generateRandomLP,

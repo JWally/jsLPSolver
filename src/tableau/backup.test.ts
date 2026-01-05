@@ -68,7 +68,10 @@ describe("copy", () => {
 
         const result = copy.call(tableau as never);
 
-        expect(tableau.constructor).toHaveBeenCalledWith(tableau.precision, tableau.branchAndCutService);
+        expect(tableau.constructor).toHaveBeenCalledWith(
+            tableau.precision,
+            tableau.branchAndCutService
+        );
         expect(result).toBeDefined();
     });
 

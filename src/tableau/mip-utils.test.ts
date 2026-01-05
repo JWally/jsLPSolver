@@ -59,9 +59,15 @@ describe("countIntegerValues", () => {
             width: 3,
             height: 3,
             matrix: new Float64Array([
-                0, 0, 0, // row 0: objective
-                0, 0, 5.0, // row 1: var 1 = 5.0 (integral)
-                0, 0, 3.0, // row 2: var 2 = 3.0 (integral)
+                0,
+                0,
+                0, // row 0: objective
+                0,
+                0,
+                5.0, // row 1: var 1 = 5.0 (integral)
+                0,
+                0,
+                3.0, // row 2: var 2 = 3.0 (integral)
             ]),
             rhsColumn: 2,
             precision: 1e-9,
@@ -83,9 +89,15 @@ describe("countIntegerValues", () => {
             width: 3,
             height: 3,
             matrix: new Float64Array([
-                0, 0, 0, // row 0
-                0, 0, 5.0, // row 1: integral
-                0, 0, 3.5, // row 2: fractional
+                0,
+                0,
+                0, // row 0
+                0,
+                0,
+                5.0, // row 1: integral
+                0,
+                0,
+                3.5, // row 2: fractional
             ]),
             rhsColumn: 2,
             precision: 1e-9,
@@ -108,8 +120,12 @@ describe("countIntegerValues", () => {
             width: 3,
             height: 2,
             matrix: new Float64Array([
-                0, 0, 0,
-                0, 0, 5.0000001, // Very close to 5, within precision
+                0,
+                0,
+                0,
+                0,
+                0,
+                5.0000001, // Very close to 5, within precision
             ]),
             rhsColumn: 2,
             precision,
@@ -127,9 +143,15 @@ describe("countIntegerValues", () => {
             width: 3,
             height: 3,
             matrix: new Float64Array([
-                0, 0, 0,
-                0, 0, 5.0, // var 1: continuous, integral value
-                0, 0, 3.0, // var 2: integer, integral value
+                0,
+                0,
+                0,
+                0,
+                0,
+                5.0, // var 1: continuous, integral value
+                0,
+                0,
+                3.0, // var 2: integer, integral value
             ]),
             rhsColumn: 2,
             precision: 1e-9,
@@ -152,11 +174,7 @@ describe("isIntegral", () => {
         const tableau = createMockTableau({
             width: 3,
             height: 3,
-            matrix: new Float64Array([
-                0, 0, 0,
-                0, 0, 5.0,
-                0, 0, 3.0,
-            ]),
+            matrix: new Float64Array([0, 0, 0, 0, 0, 5.0, 0, 0, 3.0]),
             rhsColumn: 2,
             precision: 1e-9,
             variablesPerIndex: [
@@ -183,9 +201,15 @@ describe("isIntegral", () => {
             width: 3,
             height: 3,
             matrix: new Float64Array([
-                0, 0, 0,
-                0, 0, 5.0, // integral
-                0, 0, 3.7, // fractional
+                0,
+                0,
+                0,
+                0,
+                0,
+                5.0, // integral
+                0,
+                0,
+                3.7, // fractional
             ]),
             rhsColumn: 2,
             precision: 1e-9,
@@ -257,8 +281,12 @@ describe("isIntegral", () => {
             width: 3,
             height: 2,
             matrix: new Float64Array([
-                0, 0, 0,
-                0, 0, 4.9999999, // Very close to 5
+                0,
+                0,
+                0,
+                0,
+                0,
+                4.9999999, // Very close to 5
             ]),
             rhsColumn: 2,
             precision,
@@ -327,9 +355,15 @@ describe("computeFractionalVolume", () => {
             width: 3,
             height: 3,
             matrix: new Float64Array([
-                0, 0, 0,
-                0, 0, 2.5, // var 1
-                0, 0, 3.5, // var 2
+                0,
+                0,
+                0,
+                0,
+                0,
+                2.5, // var 1
+                0,
+                0,
+                3.5, // var 2
             ]),
             rhsColumn: 2,
             precision: 1e-9,
@@ -351,9 +385,15 @@ describe("computeFractionalVolume", () => {
             width: 3,
             height: 3,
             matrix: new Float64Array([
-                0, 0, 0,
-                0, 0, 5.0, // integral
-                0, 0, 3.5, // fractional
+                0,
+                0,
+                0,
+                0,
+                0,
+                5.0, // integral
+                0,
+                0,
+                3.5, // fractional
             ]),
             rhsColumn: 2,
             precision: 1e-9,
@@ -410,9 +450,15 @@ describe("getMostFractionalVar", () => {
             width: 3,
             height: 3,
             matrix: new Float64Array([
-                0, 0, 0,
-                0, 0, 5.3, // fraction = 0.3
-                0, 0, 3.7, // fraction = 0.3 (from 4)
+                0,
+                0,
+                0,
+                0,
+                0,
+                5.3, // fraction = 0.3
+                0,
+                0,
+                3.7, // fraction = 0.3 (from 4)
             ]),
             rhsColumn: 2,
             precision: 1e-9,
@@ -443,9 +489,15 @@ describe("getMostFractionalVar", () => {
             width: 3,
             height: 3,
             matrix: new Float64Array([
-                0, 0, 0,
-                0, 0, 5.1, // fraction = 0.1
-                0, 0, 3.5, // fraction = 0.5 (most fractional)
+                0,
+                0,
+                0,
+                0,
+                0,
+                5.1, // fraction = 0.1
+                0,
+                0,
+                3.5, // fraction = 0.5 (most fractional)
             ]),
             rhsColumn: 2,
             precision: 1e-9,
@@ -538,9 +590,15 @@ describe("getFractionalVarWithLowestCost", () => {
             width: 3,
             height: 3,
             matrix: new Float64Array([
-                0, 0, 0,
-                0, 0, 5.5, // var 1: fractional, cost 10
-                0, 0, 3.5, // var 2: fractional, cost 2 (lowest)
+                0,
+                0,
+                0,
+                0,
+                0,
+                5.5, // var 1: fractional, cost 10
+                0,
+                0,
+                3.5, // var 2: fractional, cost 2 (lowest)
             ]),
             rhsColumn: 2,
             precision: 1e-9,
@@ -569,9 +627,15 @@ describe("getFractionalVarWithLowestCost", () => {
             width: 3,
             height: 3,
             matrix: new Float64Array([
-                0, 0, 0,
-                0, 0, 5.0, // var 1: integral, cost 1 (lowest but integral)
-                0, 0, 3.5, // var 2: fractional, cost 10
+                0,
+                0,
+                0,
+                0,
+                0,
+                5.0, // var 1: integral, cost 1 (lowest but integral)
+                0,
+                0,
+                3.5, // var 2: fractional, cost 10
             ]),
             rhsColumn: 2,
             precision: 1e-9,

@@ -32,7 +32,7 @@ npm install javascript-lp-solver
         optimize: "profit",
         opType: "max",
         constraints: { capacity: { max: 100 } },
-        variables: { x: { capacity: 10, profit: 5 } }
+        variables: { x: { capacity: 10, profit: 5 } },
     };
     var result = solver.Solve(model);
     console.log(result); // { feasible: true, result: 50, x: 10 }
@@ -115,7 +115,7 @@ const model = {
     opType: "max",
     constraints: {
         x_upper: { max: 100 }, // x <= 100
-        y_upper: { max: 50 },  // y <= 50
+        y_upper: { max: 50 }, // y <= 50
     },
     variables: {
         x: { output: 10, x_upper: 1 },

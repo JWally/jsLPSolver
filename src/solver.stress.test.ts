@@ -9,6 +9,7 @@
  */
 import { describe, it, expect } from "vitest";
 import solver from "./solver";
+import type { SolveResult, Model } from "./types/solver";
 import {
     generateRandomLP,
     generateRandomMIP,
@@ -19,11 +20,20 @@ import {
     generateProblemBatch,
 } from "./test-utils/problem-generator";
 
+type GeneratedProblem = ReturnType<typeof generateRandomLP>;
+
+/**
+ * Solve a generated problem with proper typing
+ */
+function solve(problem: GeneratedProblem): SolveResult {
+    return solver.Solve(problem as Model) as SolveResult;
+}
+
 /**
  * Run solver and verify it completes without error
  */
-function verifySolverCompletes(problem: ReturnType<typeof generateRandomLP>): void {
-    const result = solver.Solve(problem);
+function verifySolverCompletes(problem: GeneratedProblem): void {
+    const result = solve(problem);
     expect(result).toBeDefined();
     expect(typeof result.feasible).toBe("boolean");
 }
@@ -52,7 +62,7 @@ describe("Stress Tests - LP Problems", () => {
                 numVariables: vars,
                 numConstraints: constraints,
             });
-            const result = solver.Solve(problem);
+            const result = solve(problem);
             expect(result.feasible).toBe(true);
         });
 
@@ -64,7 +74,7 @@ describe("Stress Tests - LP Problems", () => {
                 numVariables: sources,
                 numConstraints: destinations,
             });
-            const result = solver.Solve(problem);
+            const result = solve(problem);
             expect(result.feasible).toBe(true);
         });
     }
@@ -78,27 +88,23 @@ describe("Stress Tests - MIP Problems", () => {
     ];
 
     for (const { vars, constraints } of sizes) {
-        it(
-            `solves ${vars}x${constraints} random MIP (30% integer)`,
-            { timeout: 30000 },
-            () => {
-                const problem = generateRandomMIP({
-                    seed: 12345,
-                    numVariables: vars,
-                    numConstraints: constraints,
-                    integerFraction: 0.3,
-                    density: 0.5,
-                });
-                verifySolverCompletes(problem);
-            }
-        );
+        it(`solves ${vars}x${constraints} random MIP (30% integer)`, { timeout: 30000 }, () => {
+            const problem = generateRandomMIP({
+                seed: 12345,
+                numVariables: vars,
+                numConstraints: constraints,
+                integerFraction: 0.3,
+                density: 0.5,
+            });
+            verifySolverCompletes(problem);
+        });
 
         it(`solves ${vars}-item knapsack`, { timeout: 30000 }, () => {
             const problem = generateKnapsack({
                 seed: 12345,
                 numVariables: vars,
             });
-            const result = solver.Solve(problem);
+            const result = solve(problem);
             expect(result.feasible).toBe(true);
             expect(result.result).toBeGreaterThan(0);
         });
@@ -120,7 +126,7 @@ describe("Stress Tests - Set Cover", () => {
                 numConstraints: elements,
                 density: 0.4, // Higher density for feasibility
             });
-            const result = solver.Solve(problem);
+            const result = solve(problem);
             // Set cover may be infeasible if density is too low
             expect(result).toBeDefined();
         });
@@ -133,7 +139,7 @@ describe("Stress Tests - Batch Diversity", () => {
         let feasibleCount = 0;
 
         for (const problem of problems) {
-            const result = solver.Solve(problem);
+            const result = solve(problem);
             expect(result).toBeDefined();
             if (result.feasible) {
                 feasibleCount++;
@@ -157,7 +163,7 @@ describe("Stress Tests - Reproducibility", () => {
                 numConstraints: 10,
                 integerFraction: 0.4,
             });
-            const result = solver.Solve(problem);
+            const result = solve(problem);
             results.push({ feasible: result.feasible, result: result.result });
         }
 

@@ -11,7 +11,12 @@
  */
 import { describe, it, expect } from "vitest";
 import solver from "./solver";
-import type { Model } from "./types/solver";
+import type { Model, SolveResult } from "./types/solver";
+
+// Helper to solve with proper typing
+function solve(model: Model): SolveResult {
+    return solver.Solve(model) as SolveResult;
+}
 
 /**
  * Creates a MIP problem that takes a non-trivial amount of time to solve.
@@ -19,7 +24,7 @@ import type { Model } from "./types/solver";
  */
 function createSlowMIP(size: number): Model {
     const variables: Record<string, Record<string, number>> = {};
-    const ints: Record<string, number> = {};
+    const ints: Record<string, 1> = {};
 
     for (let i = 0; i < size; i++) {
         variables[`x${i}`] = {
@@ -50,7 +55,7 @@ describe("Solver Options", () => {
             };
 
             const startTime = Date.now();
-            const result = solver.Solve(model);
+            const result = solve(model);
             const elapsed = Date.now() - startTime;
 
             // Should return within reasonable time of timeout
@@ -75,7 +80,7 @@ describe("Solver Options", () => {
             };
 
             const startTime = Date.now();
-            const result = solver.Solve(model);
+            const result = solve(model);
             const elapsed = Date.now() - startTime;
 
             expect(elapsed).toBeLessThan(100); // Should solve quickly
@@ -102,7 +107,7 @@ describe("Solver Options", () => {
                 tolerance: 0.1, // Accept within 10% of optimal
             };
 
-            const result = solver.Solve(model);
+            const result = solve(model);
 
             expect(result.feasible).toBe(true);
             // Optimal is 100 (10*10), tolerance allows >= 90
@@ -124,7 +129,7 @@ describe("Solver Options", () => {
                 tolerance: 0,
             };
 
-            const result = solver.Solve(model);
+            const result = solve(model);
 
             expect(result.feasible).toBe(true);
             expect(result.result).toBe(100); // Optimal: 10 units of a
@@ -152,7 +157,7 @@ describe("Solver Options", () => {
                 options: { nodeSelection: "best-first" },
             };
 
-            const result = solver.Solve(model);
+            const result = solve(model);
 
             expect(result.feasible).toBe(true);
             expect(result.result).toBeGreaterThan(0);
@@ -164,7 +169,7 @@ describe("Solver Options", () => {
                 options: { nodeSelection: "depth-first" },
             };
 
-            const result = solver.Solve(model);
+            const result = solve(model);
 
             expect(result.feasible).toBe(true);
             expect(result.result).toBeGreaterThan(0);
@@ -176,7 +181,7 @@ describe("Solver Options", () => {
                 options: { nodeSelection: "hybrid" },
             };
 
-            const result = solver.Solve(model);
+            const result = solve(model);
 
             expect(result.feasible).toBe(true);
             expect(result.result).toBeGreaterThan(0);
@@ -186,7 +191,7 @@ describe("Solver Options", () => {
             const strategies = ["best-first", "depth-first", "hybrid"] as const;
             const results = strategies.map((nodeSelection) => {
                 const model: Model = { ...baseModel, options: { nodeSelection } };
-                return solver.Solve(model);
+                return solve(model);
             });
 
             // All should find the same optimal value
@@ -216,7 +221,7 @@ describe("Solver Options", () => {
                 options: { branching: "most-fractional" },
             };
 
-            const result = solver.Solve(model);
+            const result = solve(model);
 
             expect(result.feasible).toBe(true);
         });
@@ -227,7 +232,7 @@ describe("Solver Options", () => {
                 options: { branching: "pseudocost" },
             };
 
-            const result = solver.Solve(model);
+            const result = solve(model);
 
             expect(result.feasible).toBe(true);
         });
@@ -238,7 +243,7 @@ describe("Solver Options", () => {
                 options: { branching: "strong" },
             };
 
-            const result = solver.Solve(model);
+            const result = solve(model);
 
             expect(result.feasible).toBe(true);
         });
@@ -260,7 +265,7 @@ describe("Solver Options", () => {
                 options: { useMIRCuts: true },
             };
 
-            const result = solver.Solve(model);
+            const result = solve(model);
 
             expect(result.feasible).toBe(true);
             expect(result.result).toBeGreaterThan(0);
@@ -281,7 +286,7 @@ describe("Solver Options", () => {
                 options: { useMIRCuts: false },
             };
 
-            const result = solver.Solve(model);
+            const result = solve(model);
 
             expect(result.feasible).toBe(true);
         });
@@ -303,7 +308,7 @@ describe("Solver Options", () => {
         };
 
         it("solves with incremental B&B enabled", () => {
-            const result = solver.Solve({
+            const result = solve({
                 ...model,
                 options: { useIncremental: true },
             });
@@ -313,7 +318,7 @@ describe("Solver Options", () => {
         });
 
         it("solves with incremental B&B disabled", () => {
-            const result = solver.Solve({
+            const result = solve({
                 ...model,
                 options: { useIncremental: false },
             });
@@ -323,11 +328,11 @@ describe("Solver Options", () => {
         });
 
         it("both modes produce same result", () => {
-            const resultIncremental = solver.Solve({
+            const resultIncremental = solve({
                 ...model,
                 options: { useIncremental: true },
             });
-            const resultStandard = solver.Solve({
+            const resultStandard = solve({
                 ...model,
                 options: { useIncremental: false },
             });
@@ -360,7 +365,7 @@ describe("Solver Options", () => {
                 },
             };
 
-            const result = solver.Solve(model);
+            const result = solve(model);
 
             expect(result.feasible).toBe(true);
             expect(result.result).toBeGreaterThan(0);
@@ -384,7 +389,7 @@ describe("LP Options (non-MIP)", () => {
                 },
             };
 
-            const result = solver.Solve(model);
+            const result = solve(model);
 
             expect(result.feasible).toBe(true);
             expect(result.result).toBeGreaterThan(0);
@@ -409,7 +414,7 @@ describe("Edge Cases", () => {
             },
         };
 
-        const result = solver.Solve(model);
+        const result = solve(model);
 
         expect(result.feasible).toBe(false);
     });
@@ -427,7 +432,7 @@ describe("Edge Cases", () => {
             },
         };
 
-        const result = solver.Solve(model);
+        const result = solve(model);
 
         // Should either be unbounded or find a solution
         expect(result).toBeDefined();
@@ -441,7 +446,7 @@ describe("Edge Cases", () => {
             variables: {},
         };
 
-        const result = solver.Solve(model);
+        const result = solve(model);
 
         expect(result.feasible).toBe(true);
         // Result can be 0 or -0, both are valid

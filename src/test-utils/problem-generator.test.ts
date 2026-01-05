@@ -9,6 +9,12 @@ import {
     generateProblemBatch,
 } from "./problem-generator";
 import solver from "../solver";
+import type { SolveResult, Model } from "../types/solver";
+
+// Helper to solve generated problems with proper typing
+function solve(problem: ReturnType<typeof generateRandomLP>): SolveResult {
+    return solver.Solve(problem as Model) as SolveResult;
+}
 
 describe("Problem Generator", () => {
     describe("generateRandomLP", () => {
@@ -39,7 +45,7 @@ describe("Problem Generator", () => {
 
         it("generates solvable problems", () => {
             const problem = generateRandomLP({ seed: 42, numVariables: 5, numConstraints: 3 });
-            const result = solver.Solve(problem);
+            const result = solve(problem);
 
             // Should complete without error (may be feasible or infeasible)
             expect(result).toBeDefined();
@@ -80,7 +86,7 @@ describe("Problem Generator", () => {
                 numConstraints: 3,
                 integerFraction: 0.3,
             });
-            const result = solver.Solve(problem);
+            const result = solve(problem);
 
             expect(result).toBeDefined();
             expect(typeof result.feasible).toBe("boolean");
@@ -108,7 +114,7 @@ describe("Problem Generator", () => {
 
         it("generates solvable knapsack problems", () => {
             const problem = generateKnapsack({ seed: 42, numVariables: 8 });
-            const result = solver.Solve(problem);
+            const result = solve(problem);
 
             expect(result.feasible).toBe(true);
             expect(result.result).toBeGreaterThan(0);
@@ -144,7 +150,7 @@ describe("Problem Generator", () => {
                 numConstraints: 5,
                 density: 0.5,
             });
-            const result = solver.Solve(problem);
+            const result = solve(problem);
 
             expect(result.feasible).toBe(true);
         });
@@ -178,7 +184,7 @@ describe("Problem Generator", () => {
                 numVariables: 3,
                 numConstraints: 3,
             });
-            const result = solver.Solve(problem);
+            const result = solve(problem);
 
             expect(result.feasible).toBe(true);
         });
@@ -209,7 +215,7 @@ describe("Problem Generator", () => {
                 numVariables: 5,
                 numConstraints: 3,
             });
-            const result = solver.Solve(problem);
+            const result = solve(problem);
 
             expect(result.feasible).toBe(true);
             expect(result.result).toBeGreaterThan(0);
@@ -256,7 +262,7 @@ describe("Generated Problem Stress Tests", () => {
                     numVariables: vars,
                     numConstraints: constraints,
                 });
-                const result = solver.Solve(problem);
+                const result = solve(problem);
                 expect(result).toBeDefined();
             });
 
@@ -267,7 +273,7 @@ describe("Generated Problem Stress Tests", () => {
                     numConstraints: constraints,
                     integerFraction: 0.3,
                 });
-                const result = solver.Solve(problem);
+                const result = solve(problem);
                 expect(result).toBeDefined();
             });
 
@@ -276,7 +282,7 @@ describe("Generated Problem Stress Tests", () => {
                     seed: 42,
                     numVariables: vars,
                 });
-                const result = solver.Solve(problem);
+                const result = solve(problem);
                 expect(result.feasible).toBe(true);
             });
         });
@@ -288,8 +294,8 @@ describe("Seed Reproducibility", () => {
         const problem1 = generateRandomMIP({ seed: 999, numVariables: 15, numConstraints: 8 });
         const problem2 = generateRandomMIP({ seed: 999, numVariables: 15, numConstraints: 8 });
 
-        const result1 = solver.Solve(problem1);
-        const result2 = solver.Solve(problem2);
+        const result1 = solve(problem1);
+        const result2 = solve(problem2);
 
         expect(result1.feasible).toBe(result2.feasible);
         if (result1.feasible && result2.feasible) {
