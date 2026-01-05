@@ -1,253 +1,207 @@
-<!DOCTYPE html>
-<html lang="en" class=" is-copy-enabled">
+<!doctype html>
+<html lang="en" class="is-copy-enabled">
     <head>
-        <meta charset='utf-8'>
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta http-equiv="Content-Language" content="en">
-        <meta name="viewport" content="width=1020">
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta http-equiv="Content-Language" content="en" />
+        <meta name="viewport" content="width=1020" />
         <script src="https://cdn.rawgit.com/mochajs/mocha/2.2.5/mocha.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/chai/4.2.0/chai.min.js"></script>
-        
+
         <link rel="stylesheet" href="https://unpkg.com/mocha/mocha.css" />
-        <script src="/prod/solver.js"></script>
+        <script src="/dist/solver.global.js"></script>
         <script src="https://code.jquery.com/jquery-2.1.4.min.js" charset="utf-8"></script>
         <script type="text/javascript">
             window.models = [];
-        
-        
-            $(document).ready(function(){
-            
-                mocha.setup('bdd');
+
+            $(document).ready(function () {
+                mocha.setup("bdd");
                 mocha.reporter("html");
-                
+
                 let assert = chai.assert;
-            
-                $.getJSON("/test/test-sanity/", function(problems){
-                    for(var problem in problems){
-                        $.getJSON("/test/test-sanity/" + problems[problem], function(model){
+
+                $.getJSON("/test/test-sanity/", function (problems) {
+                    for (var problem in problems) {
+                        $.getJSON("/test/test-sanity/" + problems[problem], function (model) {
                             window.models.push(model);
                             //result = solver.Solve(model);
                         });
                     }
                 });
-                
-                
-                setTimeout(function(){
+
+                setTimeout(function () {
                     console.log("KABOOM!");
-                
+
                     // Build out our test suite
-                    describe("Test Suite of EXPECTED results to ACTUAL results:",
-                        function () {
-                            //var solver = require("../src/solver");
-                            // Iterate over each problem in the suite
-                            models.forEach(function (jsonModel) {
-                                // Generic "Should" Statement
-                                // (should come up with a better test scheme and description...)
-                                
-                                // Also...
-                                // How big are you?
-                                var _variables = Object.keys(jsonModel.variables).length;
-                                var _constraints = Object.keys(jsonModel.constraints).length;
-                                var _ints = Object.keys(jsonModel.ints || {}).length;
-                                
-                                it("Model Name: " + jsonModel.name + "[ " + _variables +" variables | " + _constraints + " constraints | " + _ints + " integers] => ",
-                                    function () {
-                                        
-                                        
-                                        
-                                        // Look to see if the JSON Model's "expects"
-                                        // has a "_timeout". If so, set it and delete it (to not
-                                        // interfere with any test expectations)
-                                        if(jsonModel.expects._timeout){
-                                            this.timeout(jsonModel.expects._timeout);
-                                            delete jsonModel.expects._timeout;
-                                        }
+                    describe("Test Suite of EXPECTED results to ACTUAL results:", function () {
+                        //var solver = require("../src/solver");
+                        // Iterate over each problem in the suite
+                        models.forEach(function (jsonModel) {
+                            // Generic "Should" Statement
+                            // (should come up with a better test scheme and description...)
 
+                            // Also...
+                            // How big are you?
+                            var _variables = Object.keys(jsonModel.variables).length;
+                            var _constraints = Object.keys(jsonModel.constraints).length;
+                            var _ints = Object.keys(jsonModel.ints || {}).length;
 
-                                        // Each problem has its correct answer attached to its
-                                        // JSON as an "expects" object
-                                        
-                                        //
-                                        // TODO: This is where you can handle the type
-                                        // of solver used.
-                                        //
-                                        // Say if the model has an "external" attribute,
-                                        // use whatever the external attribute tells it to
-                                        // do...
-                                        
-                                        var expectedResult = jsonModel.expects,
-                                            obtainedResult = solver.Solve(jsonModel);
+                            it(
+                                "Model Name: " +
+                                    jsonModel.name +
+                                    "[ " +
+                                    _variables +
+                                    " variables | " +
+                                    _constraints +
+                                    " constraints | " +
+                                    _ints +
+                                    " integers] => ",
+                                function () {
+                                    // Look to see if the JSON Model's "expects"
+                                    // has a "_timeout". If so, set it and delete it (to not
+                                    // interfere with any test expectations)
+                                    if (jsonModel.expects._timeout) {
+                                        this.timeout(jsonModel.expects._timeout);
+                                        delete jsonModel.expects._timeout;
+                                    }
 
-                                        // Compare what we expect the problem to be
-                                        // to what solver comes up with
-                                        
-                                        
-                                        
-                                        
-                                        assertSolution(
-                                            obtainedResult,
-                                            expectedResult
-                                        );
-                                    });
-                            });
+                                    // Each problem has its correct answer attached to its
+                                    // JSON as an "expects" object
+
+                                    //
+                                    // TODO: This is where you can handle the type
+                                    // of solver used.
+                                    //
+                                    // Say if the model has an "external" attribute,
+                                    // use whatever the external attribute tells it to
+                                    // do...
+
+                                    var expectedResult = jsonModel.expects,
+                                        obtainedResult = solver.Solve(jsonModel);
+
+                                    // Compare what we expect the problem to be
+                                    // to what solver comes up with
+
+                                    assertSolution(obtainedResult, expectedResult);
+                                }
+                            );
                         });
-            
-            
-            
-            
+                    });
+
                     mocha.run();
-            
-                },3000);
-            
-            
-            
+                }, 3000);
             });
-            
-            
-            
-            
-            
-            
-            
-            
-            
 
-// Step 3. [kind of]) Build a function to evaluate the results of the model
-//                      and its expected results..
-//
-//
-function assertSolution(solutionA, solutionB) {
-
-    let assert = chai.assert;
-    
-    //
-    // Quick and dirty way to compare 2 objects
-    // Excluding other crap we throw in the solution
-    // for sake of legacy or ease...
-    //
-    
-    // 0.) Check Feasibility as to not burn cycles needlessly...
-    //     Also...all models must have a "feasible" attribute...
-    //
-    //     TODO: Enforce that all 'solve' methods return a 'feasible'
-    //           attribute
-    //
-    if(solutionA.feasible === false && solutionB.feasible === false){
-        // Skip work, and return that the model couldn't solve it...
-        //
-        return assert.deepEqual(true, true);
-    } else {
-        
-        
-        // 1.) Remove aforementioned noise...
-        ["isIntegral","bounded"].forEach(function(noise){
-            delete solutionA[noise];
-            delete solutionB[noise];
-        });
-        
-        // 2.) To keep track of what we've already hit...
-        var keys = {},
-            fail_actual = {},
-            fail_expects = {};
-        
-        // 3.) Build an object with the keys from the 'expected' results
-        //     and the actual results...
-
-        Object.keys(solutionA)
-            .forEach(function(key){
-                keys[key] = 1;
-            });
-        
-        Object.keys(solutionB)
-            .forEach(function(key){
-                    keys[key] = 1;
-            });
-        
-        // 4.) Loop through each UNIQUE key the models provided,
-        Object.keys(keys).forEach(function(key){
-            
-            // 5.) Format the result provided
+            // Step 3. [kind of]) Build a function to evaluate the results of the model
+            //                      and its expected results..
             //
-            // n.b. for all intents and purposes, an attribute being 0
-            //      is essentially the same as it not being there ('undefined')
-            //      thus, here, undefined *IS* 0...
             //
+            function assertSolution(solutionA, solutionB) {
+                let assert = chai.assert;
 
-            var temp_a = {},
-                temp_b = {};
-                
-
-            if(typeof solutionB[key] === "undefined"){
-
-                temp_a[key] = solutionA[key];
-                temp_b[key] = 0;
-
-            } else if(typeof solutionA[key] === "undefined"){
-
-                temp_b[key] = solutionB[key];
-                temp_a[key] = 0;
-
-            } else if(key === "feasible"){
                 //
-                // Clean this crap up. 
-                // This is lazy.
-                // *sigh*
-                // ...
-                // Do Nothing...
-                var fake = true;
-            } else {
-
-                temp_a[key] = solutionA[key].toFixed(6);
-                // Need to be able to handle "Infinity"
+                // Quick and dirty way to compare 2 objects
+                // Excluding other crap we throw in the solution
+                // for sake of legacy or ease...
                 //
-                temp_b[key] = parseFloat(solutionB[key]).toFixed(6);
 
-            }
-
-            try{
-                assert.deepEqual(temp_a, temp_b);
-            } catch(e){
-                fail_actual[key] = solutionA[key];
-                fail_expects[key] = solutionB[key];
-            }
-
-        });
-
-        // Lets be a little more liberal with this, no?
-        // Given numeric instability and all...
-        if(Object.keys(fail_actual).length > 0 || Object.keys(fail_expects).length){
-            // If the results are the same (more or less; its ok)
-            //
-            if(typeof fail_actual["results"] === "undefined" || typeof fail_expects["results"] === "undefined"){
-                // Warn the user...
+                // 0.) Check Feasibility as to not burn cycles needlessly...
+                //     Also...all models must have a "feasible" attribute...
                 //
-                console.warn("THESE ARE DIFFERENT!!!",fail_actual, fail_expects);
-                return assert.deepEqual(1,1);
-            } else {
-            
-                // This is a bad fail, log and bomb...
-                console.warn("THESE ARE FAILURES!!!",fail_actual, fail_expects);
-                return assert.deepEqual(fail_actual, fail_expects);
+                //     TODO: Enforce that all 'solve' methods return a 'feasible'
+                //           attribute
+                //
+                if (solutionA.feasible === false && solutionB.feasible === false) {
+                    // Skip work, and return that the model couldn't solve it...
+                    //
+                    return assert.deepEqual(true, true);
+                } else {
+                    // 1.) Remove aforementioned noise...
+                    ["isIntegral", "bounded"].forEach(function (noise) {
+                        delete solutionA[noise];
+                        delete solutionB[noise];
+                    });
+
+                    // 2.) To keep track of what we've already hit...
+                    var keys = {},
+                        fail_actual = {},
+                        fail_expects = {};
+
+                    // 3.) Build an object with the keys from the 'expected' results
+                    //     and the actual results...
+
+                    Object.keys(solutionA).forEach(function (key) {
+                        keys[key] = 1;
+                    });
+
+                    Object.keys(solutionB).forEach(function (key) {
+                        keys[key] = 1;
+                    });
+
+                    // 4.) Loop through each UNIQUE key the models provided,
+                    Object.keys(keys).forEach(function (key) {
+                        // 5.) Format the result provided
+                        //
+                        // n.b. for all intents and purposes, an attribute being 0
+                        //      is essentially the same as it not being there ('undefined')
+                        //      thus, here, undefined *IS* 0...
+                        //
+
+                        var temp_a = {},
+                            temp_b = {};
+
+                        if (typeof solutionB[key] === "undefined") {
+                            temp_a[key] = solutionA[key];
+                            temp_b[key] = 0;
+                        } else if (typeof solutionA[key] === "undefined") {
+                            temp_b[key] = solutionB[key];
+                            temp_a[key] = 0;
+                        } else if (key === "feasible") {
+                            //
+                            // Clean this crap up.
+                            // This is lazy.
+                            // *sigh*
+                            // ...
+                            // Do Nothing...
+                            var fake = true;
+                        } else {
+                            temp_a[key] = solutionA[key].toFixed(6);
+                            // Need to be able to handle "Infinity"
+                            //
+                            temp_b[key] = parseFloat(solutionB[key]).toFixed(6);
+                        }
+
+                        try {
+                            assert.deepEqual(temp_a, temp_b);
+                        } catch (e) {
+                            fail_actual[key] = solutionA[key];
+                            fail_expects[key] = solutionB[key];
+                        }
+                    });
+
+                    // Lets be a little more liberal with this, no?
+                    // Given numeric instability and all...
+                    if (Object.keys(fail_actual).length > 0 || Object.keys(fail_expects).length) {
+                        // If the results are the same (more or less; its ok)
+                        //
+                        if (
+                            typeof fail_actual["results"] === "undefined" ||
+                            typeof fail_expects["results"] === "undefined"
+                        ) {
+                            // Warn the user...
+                            //
+                            console.warn("THESE ARE DIFFERENT!!!", fail_actual, fail_expects);
+                            return assert.deepEqual(1, 1);
+                        } else {
+                            // This is a bad fail, log and bomb...
+                            console.warn("THESE ARE FAILURES!!!", fail_actual, fail_expects);
+                            return assert.deepEqual(fail_actual, fail_expects);
+                        }
+                    } else {
+                        return assert.deepEqual(fail_actual, fail_expects);
+                    }
+                }
             }
-        } else {
-            return assert.deepEqual(fail_actual, fail_expects);
-        }
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-            
         </script>
     </head>
     <body>

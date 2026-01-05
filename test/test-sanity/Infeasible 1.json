@@ -1,11 +1,11 @@
 {
     "name": "Infeasible 1",
-    "constraints" : {
+    "constraints": {
         "cst1": { "max": 2 },
         "cst2": { "min": 1 },
         "cst3": { "min": 1 }
     },
-    "variables" : {
+    "variables": {
         "x": { "cst1": 1, "cst2": 1, "cst3": -0.5 },
         "y": { "cst1": 1, "cst2": -0.5, "cst3": 1 }
     },

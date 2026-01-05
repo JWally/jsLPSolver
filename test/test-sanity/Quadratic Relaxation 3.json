@@ -1,13 +1,13 @@
 {
     "name": "Quadratic Relaxation 3",
     "background": "Quadratic relaxation of problem Infeasible 3",
-    "constraints" : {
+    "constraints": {
         "fritzJohn1": { "equal": 5 },
         "fritzJohn2": { "equal": 5 }
     },
-    "variables" : {
-        "x": { "fritzJohn1" : 2, "fritzJohn2" : 1 },
-        "y": { "fritzJohn1" : 1, "fritzJohn2" : 2 }
+    "variables": {
+        "x": { "fritzJohn1": 2, "fritzJohn2": 1 },
+        "y": { "fritzJohn1": 1, "fritzJohn2": 2 }
     },
     "expects": {
         "feasible": true,

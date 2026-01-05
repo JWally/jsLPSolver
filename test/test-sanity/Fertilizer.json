@@ -1,15 +1,15 @@
 {
     "name": "Fertilizer",
-    "constraints" : {
+    "constraints": {
         "W": { "equal": 40, "weight": 1, "priority": 2 },
         "N": { "equal": 50, "weight": 1, "priority": 1 },
         "P": { "equal": 20, "weight": 2, "priority": 1 },
         "K": { "equal": 30, "weight": 1, "priority": 1 }
     },
-    "variables" : {
-        "Fertilizer A": { "N" : 36.00, "P" : 0.00,  "K" : 0.00,  "W" : 40 },
-        "Fertilizer B": { "N" : 15.00, "P" : 15.00, "K" : 15.00, "W" : 40 },
-        "Fertilizer C": { "N" : 5.00,  "P" : 25.00, "K" : 10.00, "W" : 40 }
+    "variables": {
+        "Fertilizer A": { "N": 36.0, "P": 0.0, "K": 0.0, "W": 40 },
+        "Fertilizer B": { "N": 15.0, "P": 15.0, "K": 15.0, "W": 40 },
+        "Fertilizer C": { "N": 5.0, "P": 25.0, "K": 10.0, "W": 40 }
     },
     "expects": {
         "feasible": true,
