@@ -7,3 +7,4 @@ test/misc/*.*
 test/test-wip/*.*
 dist/
 *.sick
+coverage/
