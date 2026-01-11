@@ -39,7 +39,33 @@ for (let c = 0; c < nNonZeroColumns; c++) {
 
 **Note**: Must still use division (not multiplication) for the pivot row normalization itself, or numerical precision issues affect MIP branching.
 
-### 3. Cached Array References Outside Loops (5-10% improvement)
+### 3. Pivot Row Cache for Large Problems (15-30% improvement on simplex)
+
+Cache normalized pivot row values in a Float64Array before updating other rows:
+
+```typescript
+// Before: read from matrix each time
+for (let i = 0; i < nNonZeroColumns; i++) {
+    const c = nonZeroColumns[i];
+    const v0 = matrix[pivotRowOffset + c];  // Cache miss!
+    matrix[rowOffset + c] -= coefficient * v0;
+}
+
+// After: read from cached array
+for (let i = 0; i < nNonZeroColumns; i++) {
+    const c = nonZeroColumns[i];
+    const v0 = pivotRowCache[i];  // Sequential access
+    matrix[rowOffset + c] -= coefficient * v0;
+}
+```
+
+Time breakdown on Vendor Selection (1641x1722 matrix):
+- Before: Initial simplex 761ms, B&C 457ms
+- After: Initial simplex 525-610ms, B&C 315-358ms
+
+**Note**: Full benchmark variance makes overall impact unclear, but time-breakdown consistently shows improvement.
+
+### 4. Cached Array References Outside Loops (5-10% improvement)
 
 Cache frequently accessed object properties before hot loops:
 
