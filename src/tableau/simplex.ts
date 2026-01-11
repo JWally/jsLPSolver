@@ -419,16 +419,18 @@ export function phase2(this: Tableau): number {
     }
 }
 
-// Pre-allocated typed array for non-zero column tracking (better cache performance)
+// Pre-allocated typed arrays for pivot optimization (better cache performance)
 let nonZeroColumns = new Int32Array(1024);
+let pivotRowCache = new Float64Array(1024);
 
 export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: number): void {
     const matrix = this.matrix;
     const width = this.width;
 
-    // Ensure work array is large enough
+    // Ensure work arrays are large enough
     if (width > nonZeroColumns.length) {
         nonZeroColumns = new Int32Array(width * 2);
+        pivotRowCache = new Float64Array(width * 2);
     }
 
     const pivotRowOffset = pivotRowIndex * width;
@@ -449,14 +451,16 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
     this.colByVarIndex[enteringBasicIndex] = -1;
     this.colByVarIndex[leavingBasicIndex] = pivotColumnIndex;
 
-    // Normalize pivot row and track non-zero columns
+    // Normalize pivot row, track non-zero columns, and cache values for locality
     let nNonZeroColumns = 0;
     for (let c = 0; c < width; c++) {
         const idx = pivotRowOffset + c;
         const val = matrix[idx];
         if (!(val >= -1e-16 && val <= 1e-16)) {
-            matrix[idx] = val / quotient;
+            const normalized = val / quotient;
+            matrix[idx] = normalized;
             nonZeroColumns[nNonZeroColumns] = c;
+            pivotRowCache[nNonZeroColumns] = normalized;
             nNonZeroColumns++;
         } else {
             matrix[idx] = 0;
@@ -464,7 +468,7 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
     }
     matrix[pivotRowOffset + pivotColumnIndex] = invQuotient;
 
-    // Update all other rows
+    // Update all other rows using cached pivot row values
     for (let r = 0; r < height; r++) {
         if (r !== pivotRowIndex) {
             const rowOffset = r * width;
@@ -473,12 +477,15 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
                 const coefficient = pivotColVal;
 
                 if (!(coefficient >= -1e-16 && coefficient <= 1e-16)) {
+                    // Use cached pivot row values for better cache locality
                     for (let i = 0; i < nNonZeroColumns; i++) {
                         const c = nonZeroColumns[i];
-                        const v0 = matrix[pivotRowOffset + c];
+                        const v0 = pivotRowCache[i];
+                        // Inner zero check is critical for numerical stability
                         if (!(v0 >= -1e-16 && v0 <= 1e-16)) {
-                            matrix[rowOffset + c] = matrix[rowOffset + c] - coefficient * v0;
+                            matrix[rowOffset + c] -= coefficient * v0;
                         } else if (v0 !== 0) {
+                            // Clean up near-zero values in pivot row
                             matrix[pivotRowOffset + c] = 0;
                         }
                     }
@@ -491,7 +498,7 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
         }
     }
 
-    // Update optional objectives
+    // Update optional objectives using cached pivot row values
     const optionalObjectives = this.optionalObjectives;
     const nOptionalObjectives = optionalObjectives.length;
     if (nOptionalObjectives > 0) {
@@ -501,13 +508,9 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
             if (coefficient !== 0) {
                 for (let i = 0; i < nNonZeroColumns; i++) {
                     const c = nonZeroColumns[i];
-                    const v0 = matrix[pivotRowOffset + c];
-                    if (v0 !== 0) {
-                        reducedCosts[c] = reducedCosts[c] - coefficient * v0;
-                    }
+                    reducedCosts[c] -= coefficient * pivotRowCache[i];
                 }
-
-                reducedCosts[pivotColumnIndex] = -coefficient / quotient;
+                reducedCosts[pivotColumnIndex] = -coefficient * invQuotient;
             }
         }
     }
