@@ -158,6 +158,7 @@ export function createBranchAndCutService(): BranchAndCutService {
                 const variable = tableau.getMostFractionalVar();
 
                 const varIndex = variable.index as number;
+                const varValue = variable.value as number;
 
                 const cutsHigh: BranchCut[] = [];
                 const cutsLow: BranchCut[] = [];
@@ -177,13 +178,10 @@ export function createBranchAndCutService(): BranchAndCutService {
                     }
                 }
 
-                const min = Math.ceil(variable.value as number);
-                const max = Math.floor(variable.value as number);
-
-                const cutHigh = createCut("min", varIndex, min);
+                const cutHigh = createCut("min", varIndex, Math.ceil(varValue));
                 cutsHigh.push(cutHigh);
 
-                const cutLow = createCut("max", varIndex, max);
+                const cutLow = createCut("max", varIndex, Math.floor(varValue));
                 cutsLow.push(cutLow);
 
                 branches.push(createBranch(evaluation, cutsHigh));

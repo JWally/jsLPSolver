@@ -230,14 +230,16 @@ MIR cuts are applied iteratively until fractional volume stops improving. The 0.
 
 ## Performance Baseline (After Optimizations)
 
-| Problem                | Time (ms) |
-| ---------------------- | --------- |
-| Small LP (20x10)       | 0.036     |
-| Medium LP (100x50)     | 3.223     |
-| Large LP (300x150)     | 62.753    |
-| Monster Problem (MIP)  | 4.736     |
-| Monster II (MIP)       | 150.081   |
-| Vendor Selection (MIP) | 827.119   |
+| Problem                | Before    | After     | Change  |
+| ---------------------- | --------- | --------- | ------- |
+| Small LP (20x10)       | 0.036 ms  | 0.035 ms  | ~same   |
+| Medium LP (100x50)     | 3.223 ms  | 3.584 ms  | ~same   |
+| Large LP (300x150)     | 62.753 ms | 64.480 ms | ~same   |
+| Monster Problem (MIP)  | 4.736 ms  | 4.677 ms  | ~same   |
+| Monster II (MIP)       | 150.081 ms| 121.0 ms  | **-20%**|
+| Vendor Selection (MIP) | 827.119 ms| 790.0 ms  | ~-5%    |
+
+Note: Monster II improvement comes from min-heap object pooling and optionalObjectives caching.
 
 ## Key Insights
 
@@ -257,6 +259,29 @@ MIR cuts are applied iteratively until fractional volume stops improving. The 0.
 
 8. **Modern JS engines are smart**: V8's GC is highly optimized for short-lived objects. Object pooling may not help and can add overhead. Similarly, `Math.round` vs `Math.floor` optimizations may be negligible.
 
+### 9. Pseudo-Cost Branching in Basic B&C
+
+Attempted to add pseudo-cost branching to the basic `branch-and-cut.ts` service:
+
+```typescript
+const pseudoCosts: PseudoCosts = createPseudoCosts();
+const PSEUDO_COST_WARMUP = 5;
+
+// After warmup, use pseudo-cost instead of most-fractional
+const variable = iterations > PSEUDO_COST_WARMUP
+    ? getPseudoCostBranchingVar(tableau, pseudoCosts)
+    : tableau.getMostFractionalVar();
+```
+
+**Results**: Tests failed because different branching decisions led to different (but valid) solutions. The change was reverted.
+
+**Why it matters**: The basic service is used when no options are specified, so it must maintain backward compatibility. Users who want pseudo-cost should use `branching: "pseudocost"` option which routes to the enhanced service.
+
+**Benchmark insight**: Strategy tests showed that "most-fractional" is actually faster than pseudo-cost for both Monster II (153ms vs 372ms) and Vendor Selection (845ms vs 1150ms). This suggests:
+1. The current pseudo-cost implementation may have overhead issues
+2. These problems happen to favor most-fractional
+3. Pseudo-cost may only help on very large MIP instances
+
 ## Future Ideas to Explore
 
 1. **Presolve improvements**: The presolve phase could eliminate more variables/constraints before solving.
@@ -268,3 +293,7 @@ MIR cuts are applied iteratively until fractional volume stops improving. The 0.
 4. **Parallel B&C**: Web Workers could explore multiple branches in parallel (requires careful state management).
 
 5. **Warm-starting from similar problems**: For problems that differ only slightly, reusing basis information could speed up re-optimization.
+
+6. **Devex Pricing**: Approximate steepest-edge pricing for simplex. Could reduce iteration count by 20-40% but adds per-iteration overhead.
+
+7. **Improved Pseudo-Cost Implementation**: The enhanced service's pseudo-cost uses simplified fraction estimation (always 0.5). Proper tracking of fractionality at branch time could improve its effectiveness.
