@@ -22,6 +22,97 @@ export function simplex(this: Tableau): Tableau {
     return this;
 }
 
+/**
+ * Dual simplex algorithm for warm-starting after adding constraints.
+ *
+ * Use when: The current solution is dual feasible (reduced costs valid) but
+ * may be primal infeasible (some RHS values negative). This is common after
+ * adding bound constraints in branch-and-cut.
+ *
+ * Algorithm:
+ * 1. Find a basic variable with negative value (leaving variable)
+ * 2. Find entering variable using dual ratio test
+ * 3. Pivot to restore primal feasibility
+ * 4. Repeat until all basic variables are non-negative
+ *
+ * @returns Number of iterations, or -1 if dual infeasible
+ */
+export function dualSimplex(this: Tableau): number {
+    const matrix = this.matrix;
+    const width = this.width;
+    const rhsColumn = this.rhsColumn;
+    const lastColumn = width - 1;
+    const lastRow = this.height - 1;
+    const precision = this.precision;
+    const negPrecision = -precision;
+
+    let iterations = 0;
+    const maxIterations = 10000; // Safety limit
+
+    while (iterations < maxIterations) {
+        // Step 1: Find leaving variable (row with most negative RHS)
+        let leavingRow = 0;
+        let minRHS = negPrecision;
+
+        for (let r = 1; r <= lastRow; r++) {
+            const rhsValue = matrix[r * width + rhsColumn];
+            if (rhsValue < minRHS) {
+                minRHS = rhsValue;
+                leavingRow = r;
+            }
+        }
+
+        // If no negative RHS, we're primal feasible - done!
+        if (leavingRow === 0) {
+            this.feasible = true;
+            this.setEvaluation();
+            return iterations;
+        }
+
+        // Step 2: Find entering variable using dual ratio test
+        // For each non-basic variable j with a_ij < 0 (negative coefficient in leaving row),
+        // compute ratio = reduced_cost[j] / |a_ij|
+        // Choose the one with minimum ratio (to maintain dual feasibility)
+        let enteringColumn = 0;
+        let minRatio = Infinity;
+        const leavingRowOffset = leavingRow * width;
+
+        for (let c = 1; c <= lastColumn; c++) {
+            const coefficient = matrix[leavingRowOffset + c];
+
+            // Only consider columns with negative coefficient in leaving row
+            if (coefficient < negPrecision) {
+                // Reduced cost is in row 0 (cost row)
+                const reducedCost = matrix[c];
+
+                // For minimization, reduced costs should be >= 0 for optimality
+                // Ratio test: reducedCost / |coefficient|
+                if (reducedCost >= negPrecision) {
+                    const ratio = reducedCost / -coefficient;
+                    if (ratio < minRatio) {
+                        minRatio = ratio;
+                        enteringColumn = c;
+                    }
+                }
+            }
+        }
+
+        // If no entering column found, the problem is dual infeasible (primal unbounded)
+        if (enteringColumn === 0) {
+            this.feasible = false;
+            return -1;
+        }
+
+        // Step 3: Pivot
+        this.pivot(leavingRow, enteringColumn);
+        iterations++;
+    }
+
+    // Hit iteration limit - something went wrong
+    this.feasible = false;
+    return iterations;
+}
+
 export function phase1(this: Tableau): number {
     const debugCheckForCycles = this.model.checkForCycles;
     const varIndexesCycle: Array<[number, number]> = [];

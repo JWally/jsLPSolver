@@ -112,7 +112,7 @@ function propagateFixing(
 
         // Calculate contribution of fixed variables
         let fixedSum = 0;
-        let unfixedTerms: Array<{ variable: Variable; coefficient: number }> = [];
+        const unfixedTerms: Array<{ variable: Variable; coefficient: number }> = [];
 
         for (const term of constraint.terms) {
             const fixed = result.fixedVariables.get(term.variable) ?? implied.get(term.variable);
