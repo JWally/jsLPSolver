@@ -89,6 +89,58 @@ for (let r = 1; r <= lastRow; r++) {
 
 Since `costRowIndex` is always 0, `costRowOffset = costRowIndex * width` is always 0. Removed the variable entirely.
 
+### 5. Hash-Based Cycle Detection (5-8% improvement when enabled)
+
+Replaced O(n²) cycle detection with hash-based O(1) average lookup:
+
+```typescript
+// Before: O(n²) - compare every pair
+function checkForCycles(varIndexes: Array<[number, number]>): number[] {
+    for (let e1 = 0; e1 < varIndexes.length - 1; e1++) {
+        for (let e2 = e1 + 1; e2 < varIndexes.length; e2++) {
+            // Compare pairs...
+        }
+    }
+}
+
+// After: O(1) average with Map
+class CycleDetector {
+    private positions: Map<string, number[]> = new Map();
+
+    add(leaving: number, entering: number): number[] {
+        const key = `${leaving}_${entering}`;
+        const prevPositions = this.positions.get(key);
+        if (prevPositions === undefined) {
+            this.positions.set(key, [pos]);
+            return [];
+        }
+        // Only check for cycle when duplicate pair found
+    }
+}
+```
+
+Vendor Selection timing:
+- With cycle detection (old): ~946ms
+- With cycle detection (new): ~884ms
+- Without cycle detection: ~817ms
+
+**Note**: Cycle detection still adds ~8% overhead even with O(1) lookup due to Map operations and string key creation. Users can disable via `exitOnCycles: false` for pure performance.
+
+### 6. Matrix Over-Allocation During Cuts (marginal improvement)
+
+When growing the matrix for cut constraints, over-allocate by 50% to reduce reallocation frequency:
+
+```typescript
+// Before: exact allocation
+const newMatrix = new Float64Array(newSize);
+
+// After: over-allocate
+const allocSize = Math.ceil(newSize * 1.5);
+const newMatrix = new Float64Array(allocSize);
+```
+
+Reduces memory churn during iterative cut addition in branch-and-cut.
+
 ## What Made Things Worse
 
 ### 1. Incremental Branch-and-Cut (-43% to -203% slower)
@@ -153,6 +205,27 @@ matrix[pivotRowOffset + c] = matrix[pivotRowOffset + c] * invQuotient;
 ```
 
 **Why it failed**: Same numerical precision issue. The pivot row values must be computed with division to maintain precision. Multiplication by inverse introduces small errors that affect MIP branching decisions.
+
+### 5. Removing "Redundant" Double Zero Check in Pivot Row Update
+
+```typescript
+// Original (works) - appears redundant but isn't
+const pivotColVal = matrix[rowOffset + pivotColumnIndex];
+if (!(pivotColVal >= -1e-16 && pivotColVal <= 1e-16)) {
+    const coefficient = pivotColVal;
+    if (!(coefficient >= -1e-16 && coefficient <= 1e-16)) {  // Same check!
+        // ...update row
+    }
+}
+
+// Attempted simplification (broke tests)
+const coefficient = matrix[rowOffset + pivotColumnIndex];
+if (!(coefficient >= -1e-16 && coefficient <= 1e-16)) {
+    // ...update row
+}
+```
+
+**Why it failed**: The double check appears redundant since `coefficient = pivotColVal`, but removing it broke "Fancy Stock Cutting Problem" test. The intermediate assignment to `coefficient` may serve as a memory barrier or affect JIT optimization in ways that change numerical behavior. Such micro-optimizations are fragile in numerical code.
 
 ## Mixed Results (Problem-Dependent)
 

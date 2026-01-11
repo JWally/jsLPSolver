@@ -11,6 +11,55 @@
  */
 import type Tableau from "./tableau";
 
+/**
+ * Optimized cycle detector using hash-based O(1) lookup.
+ * The original checkForCycles was O(n²) - comparing every pair against all others.
+ * This version uses a Map to track where each (leaving,entering) pair occurred,
+ * making duplicate detection O(1) average case.
+ */
+class CycleDetector {
+    private pairs: Array<[number, number]> = [];
+    private positions: Map<string, number[]> = new Map();
+
+    add(leaving: number, entering: number): number[] {
+        const key = `${leaving}_${entering}`;
+        const pos = this.pairs.length;
+        this.pairs.push([leaving, entering]);
+
+        const prevPositions = this.positions.get(key);
+        if (prevPositions === undefined) {
+            this.positions.set(key, [pos]);
+            return [];
+        }
+
+        // Check if any previous occurrence starts a repeating cycle
+        for (const startPos of prevPositions) {
+            const cycleLength = pos - startPos;
+            // Need at least cycleLength more elements to verify
+            if (cycleLength > this.pairs.length - pos) {
+                continue;
+            }
+
+            let cycleFound = true;
+            for (let i = 1; i < cycleLength && startPos + cycleLength + i < this.pairs.length; i++) {
+                const p1 = this.pairs[startPos + i];
+                const p2 = this.pairs[startPos + cycleLength + i];
+                if (p1[0] !== p2[0] || p1[1] !== p2[1]) {
+                    cycleFound = false;
+                    break;
+                }
+            }
+
+            if (cycleFound) {
+                return [startPos, cycleLength];
+            }
+        }
+
+        prevPositions.push(pos);
+        return [];
+    }
+}
+
 export function simplex(this: Tableau): Tableau {
     this.bounded = true;
     this.phase1();
@@ -115,7 +164,7 @@ export function dualSimplex(this: Tableau): number {
 
 export function phase1(this: Tableau): number {
     const debugCheckForCycles = this.model.checkForCycles;
-    const varIndexesCycle: Array<[number, number]> = [];
+    const cycleDetector = debugCheckForCycles ? new CycleDetector() : null;
 
     const matrix = this.matrix;
     const width = this.width;
@@ -172,10 +221,8 @@ export function phase1(this: Tableau): number {
             return iterations;
         }
 
-        if (debugCheckForCycles) {
-            varIndexesCycle.push([varIndexByRow[leavingRowIndex], varIndexByCol[enteringColumn]]);
-
-            const cycleData = this.checkForCycles(varIndexesCycle);
+        if (cycleDetector) {
+            const cycleData = cycleDetector.add(varIndexByRow[leavingRowIndex], varIndexByCol[enteringColumn]);
             if (cycleData.length > 0) {
                 this.model.messages.push("Cycle in phase 1");
                 this.model.messages.push("Start :" + cycleData[0]);
@@ -193,7 +240,7 @@ export function phase1(this: Tableau): number {
 
 export function phase2(this: Tableau): number {
     const debugCheckForCycles = this.model.checkForCycles;
-    const varIndexesCycle: Array<[number, number]> = [];
+    const cycleDetector = debugCheckForCycles ? new CycleDetector() : null;
 
     const matrix = this.matrix;
     const width = this.width;
@@ -400,10 +447,8 @@ export function phase2(this: Tableau): number {
             return iterations;
         }
 
-        if (debugCheckForCycles) {
-            varIndexesCycle.push([varIndexByRow[leavingRow], varIndexByCol[enteringColumn]]);
-
-            const cycleData = this.checkForCycles(varIndexesCycle);
+        if (cycleDetector) {
+            const cycleData = cycleDetector.add(varIndexByRow[leavingRow], varIndexByCol[enteringColumn]);
             if (cycleData.length > 0) {
                 this.model.messages.push("Cycle in phase 2");
                 this.model.messages.push("Start :" + cycleData[0]);
