@@ -31,16 +31,22 @@ export function phase1(this: Tableau): number {
     const rhsColumn = this.rhsColumn;
     const lastColumn = this.width - 1;
     const lastRow = this.height - 1;
+    const precision = this.precision;
+    const negPrecision = -precision;
+
+    // Cache arrays for faster access in hot loops
+    const unrestrictedVars = this.unrestrictedVars;
+    const varIndexByRow = this.varIndexByRow;
+    const varIndexByCol = this.varIndexByCol;
 
     let unrestricted: boolean;
     let iterations = 0;
 
     while (true) {
+        // Find leaving row (most negative RHS)
         let leavingRowIndex = 0;
-        let rhsValue = -this.precision;
+        let rhsValue = negPrecision;
         for (let r = 1; r <= lastRow; r++) {
-            unrestricted = this.unrestrictedVars[this.varIndexByRow[r]] === true;
-
             const value = matrix[r * width + rhsColumn];
             if (value < rhsValue) {
                 rhsValue = value;
@@ -53,16 +59,16 @@ export function phase1(this: Tableau): number {
             return iterations;
         }
 
+        // Find entering column
         let enteringColumn = 0;
         let maxQuotient = -Infinity;
-        const costRowOffset = 0; // row 0
         const leavingRowOffset = leavingRowIndex * width;
         for (let c = 1; c <= lastColumn; c++) {
             const coefficient = matrix[leavingRowOffset + c];
 
-            unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
-            if (unrestricted || coefficient < -this.precision) {
-                const quotient = -matrix[costRowOffset + c] / coefficient;
+            unrestricted = unrestrictedVars[varIndexByCol[c]] === true;
+            if (unrestricted || coefficient < negPrecision) {
+                const quotient = -matrix[c] / coefficient; // costRowOffset is 0
                 if (maxQuotient < quotient) {
                     maxQuotient = quotient;
                     enteringColumn = c;
@@ -76,10 +82,7 @@ export function phase1(this: Tableau): number {
         }
 
         if (debugCheckForCycles) {
-            varIndexesCycle.push([
-                this.varIndexByRow[leavingRowIndex],
-                this.varIndexByCol[enteringColumn],
-            ]);
+            varIndexesCycle.push([varIndexByRow[leavingRowIndex], varIndexByCol[enteringColumn]]);
 
             const cycleData = this.checkForCycles(varIndexesCycle);
             if (cycleData.length > 0) {
@@ -108,8 +111,16 @@ export function phase2(this: Tableau): number {
     const lastRow = this.height - 1;
 
     const precision = this.precision;
+    const negPrecision = -precision;
     const nOptionalObjectives = this.optionalObjectives.length;
     let optionalCostsColumns: number[] | null = null;
+
+    // Cache arrays for faster access in hot loops
+    const unrestrictedVars = this.unrestrictedVars;
+    const varIndexByCol = this.varIndexByCol;
+    const varIndexByRow = this.varIndexByRow;
+
+    // Note: costRowIndex is always 0, so we access matrix[c] directly
 
     let iterations = 0;
     let reducedCost: number;
@@ -127,8 +138,6 @@ export function phase2(this: Tableau): number {
     const usePartialPricing = nColumns > batchSize * 2;
 
     while (true) {
-        const costRowOffset = this.costRowIndex * width;
-
         if (nOptionalObjectives > 0) {
             optionalCostsColumns = [];
         }
@@ -149,12 +158,12 @@ export function phase2(this: Tableau): number {
                 const batchEnd = Math.min(batchStart + batchSize - 1, lastColumn);
 
                 for (let c = batchStart; c <= batchEnd; c++) {
-                    reducedCost = matrix[costRowOffset + c];
-                    unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
+                    reducedCost = matrix[c]; // costRowOffset is 0
+                    unrestricted = unrestrictedVars[varIndexByCol[c]] === true;
 
                     if (
                         nOptionalObjectives > 0 &&
-                        -precision < reducedCost &&
+                        negPrecision < reducedCost &&
                         reducedCost < precision
                     ) {
                         optionalCostsColumns?.push(c);
@@ -189,12 +198,12 @@ export function phase2(this: Tableau): number {
         } else {
             // Full pricing for small problems
             for (let c = 1; c <= lastColumn; c++) {
-                reducedCost = matrix[costRowOffset + c];
-                unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
+                reducedCost = matrix[c]; // costRowOffset is 0
+                unrestricted = unrestrictedVars[varIndexByCol[c]] === true;
 
                 if (
                     nOptionalObjectives > 0 &&
-                    -precision < reducedCost &&
+                    negPrecision < reducedCost &&
                     reducedCost < precision
                 ) {
                     optionalCostsColumns?.push(c);
@@ -235,9 +244,9 @@ export function phase2(this: Tableau): number {
                     const c = optionalCostsColumns[i];
 
                     reducedCost = reducedCosts[c];
-                    unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
+                    unrestricted = unrestrictedVars[varIndexByCol[c]] === true;
 
-                    if (-precision < reducedCost && reducedCost < precision) {
+                    if (negPrecision < reducedCost && reducedCost < precision) {
                         optionalCostsColumns2.push(c);
                         continue;
                     }
@@ -271,18 +280,16 @@ export function phase2(this: Tableau): number {
         let leavingRow = 0;
         let minQuotient = Infinity;
 
-        const varIndexByRow = this.varIndexByRow;
-
         for (let r = 1; r <= lastRow; r++) {
             const rowOffset = r * width;
             const rhsValue = matrix[rowOffset + rhsColumn];
             const colValue = matrix[rowOffset + enteringColumn];
 
-            if (-precision < colValue && colValue < precision) {
+            if (negPrecision < colValue && colValue < precision) {
                 continue;
             }
 
-            if (colValue > 0 && precision > rhsValue && rhsValue > -precision) {
+            if (colValue > 0 && precision > rhsValue && rhsValue > negPrecision) {
                 minQuotient = 0;
                 leavingRow = r;
                 break;
@@ -298,15 +305,12 @@ export function phase2(this: Tableau): number {
         if (minQuotient === Infinity) {
             this.evaluation = -Infinity;
             this.bounded = false;
-            this.unboundedVarIndex = this.varIndexByCol[enteringColumn];
+            this.unboundedVarIndex = varIndexByCol[enteringColumn];
             return iterations;
         }
 
         if (debugCheckForCycles) {
-            varIndexesCycle.push([
-                this.varIndexByRow[leavingRow],
-                this.varIndexByCol[enteringColumn],
-            ]);
+            varIndexesCycle.push([varIndexByRow[leavingRow], varIndexByCol[enteringColumn]]);
 
             const cycleData = this.checkForCycles(varIndexesCycle);
             if (cycleData.length > 0) {
@@ -324,15 +328,21 @@ export function phase2(this: Tableau): number {
     }
 }
 
-// Pre-allocated array for non-zero column tracking
-const nonZeroColumns: number[] = [];
+// Pre-allocated typed array for non-zero column tracking (better cache performance)
+let nonZeroColumns = new Int32Array(1024);
 
 export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: number): void {
     const matrix = this.matrix;
     const width = this.width;
 
+    // Ensure work array is large enough
+    if (width > nonZeroColumns.length) {
+        nonZeroColumns = new Int32Array(width * 2);
+    }
+
     const pivotRowOffset = pivotRowIndex * width;
     const quotient = matrix[pivotRowOffset + pivotColumnIndex];
+    const invQuotient = 1 / quotient;
 
     const height = this.height;
 
@@ -361,7 +371,7 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
             matrix[idx] = 0;
         }
     }
-    matrix[pivotRowOffset + pivotColumnIndex] = 1 / quotient;
+    matrix[pivotRowOffset + pivotColumnIndex] = invQuotient;
 
     // Update all other rows
     for (let r = 0; r < height; r++) {
