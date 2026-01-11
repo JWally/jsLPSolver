@@ -208,10 +208,13 @@ while (fractionalVolume > 0) {
 
 ### 1. Sparse Matrix Representation
 
-The codebase has `sparse-simplex.ts` and `sparse-matrix.ts` for sparse problems. Currently auto-selected based on density. Potential improvements:
+The codebase has `sparse-simplex.ts` and `sparse-matrix.ts` for sparse problems. **Currently disabled** (`SPARSE_THRESHOLD = Infinity`). The comment notes that a dual-indexed (CSC+CSR) approach would be needed for efficient sparse simplex.
 
-- Tune the density threshold for switching
-- Optimize sparse matrix operations
+If re-enabled, potential improvements:
+
+- The `setColumn` function uses repeated `splice()` calls in a loop - could be batched
+- `getColumn` and `getRow` allocate new arrays - could use object pooling
+- `getRow` is O(n log m) due to binary search per column - could use row index
 
 ### 2. Partial Pricing
 
