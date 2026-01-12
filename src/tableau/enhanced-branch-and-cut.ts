@@ -73,7 +73,7 @@ export function createEnhancedBranchAndCutService(
     const {
         nodeSelection = "hybrid",
         branching = "pseudocost",
-        useDiving = true,
+        useDiving: _useDiving = true, // Reserved for future diving heuristic
         strongBranchingCandidates = 5,
     } = options;
 
