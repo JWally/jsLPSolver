@@ -398,7 +398,7 @@ const variable =
 
 5. **Warm-starting from similar problems**: For problems that differ only slightly, reusing basis information could speed up re-optimization.
 
-6. **Devex Pricing**: Approximate steepest-edge pricing for simplex. Could reduce iteration count by 20-40% but adds per-iteration overhead.
+6. **~~Devex Pricing~~**: ~~Approximate steepest-edge pricing for simplex.~~ Tried - overhead too high, see section 10.
 
 7. **Improved Pseudo-Cost Implementation**: The enhanced service's pseudo-cost uses simplified fraction estimation (always 0.5). Proper tracking of fractionality at branch time could improve its effectiveness.
 
@@ -462,3 +462,26 @@ while (volume > 0) {
 ```
 
 **Results**: Marginal improvement since the MIR loop typically runs only 1-3 iterations.
+
+### 10. Devex Pricing Implementation Attempt (FAILED)
+
+Attempted to implement Devex (DEVised steepest Edge Xtension) pricing in phase2:
+
+```typescript
+// In phase2, maintain reference norms for steepest-edge approximation
+const devexNorms = new Float64Array(width);
+devexNorms.fill(1);
+
+// Pricing: select column with max |reduced_cost|^2 / norm
+const score = (reducedCost * reducedCost) / devexNorms[c];
+
+// After pivot: update norms
+const ratio_sq = (a_rc * a_rc) / (pivotElement * pivotElement);
+devexNorms[c] = Math.max(1, devexNorms[c] + ratio_sq * pivotColNorm);
+```
+
+**Results**: 42-85% slower across all benchmarks!
+
+**Why it failed**: The overhead of maintaining and updating Devex norms exceeds any benefit from reduced iterations. Each pivot requires O(width) additional work for norm updates, and the pricing scan has additional division overhead. Modern V8 JIT is very efficient at the simple Dantzig's rule pricing, making sophisticated pricing strategies counterproductive.
+
+**Key insight**: Devex pricing was designed for problems where iteration count dominates runtime. For JS-based LP solving, the per-iteration overhead matters more. Only consider Devex if benchmarks show > 1000 iterations per problem.
