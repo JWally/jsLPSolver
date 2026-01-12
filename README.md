@@ -171,13 +171,13 @@ worker.postMessage(model);
 
 Representative benchmarks on a modern laptop:
 
-| Problem          | Variables | Constraints | Integers | Time  |
-| ---------------- | --------- | ----------- | -------- | ----- |
-| Large Farm MIP   | 100       | 35          | 100      | 16ms  |
-| Monster LP       | 552       | 600         | 0        | 18ms  |
-| Monster II MIP   | 924       | 888         | 112      | 308ms |
-| Stock Cutting    | 31        | 5           | 31       | 1.4ms |
-| Vendor Selection | 1640      | 1641        | 0        | 1.2s  |
+| Problem          | Variables | Constraints | Integers | Time   |
+| ---------------- | --------- | ----------- | -------- | ------ |
+| Large Farm MIP   | 100       | 35          | 100      | ~70ms  |
+| Monster LP       | 552       | 600         | 0        | ~10ms  |
+| Monster II MIP   | 924       | 888         | 112      | ~120ms |
+| Stock Cutting    | 31        | 5           | 31       | ~8ms   |
+| Vendor Selection | 1640      | 1641        | 40       | ~600ms |
 
 ## Documentation
 
