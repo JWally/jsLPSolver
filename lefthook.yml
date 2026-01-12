@@ -1,0 +1,20 @@
+# lefthook.yml
+# Git hooks configuration for jsLPSolver
+
+pre-commit:
+    parallel: true
+    commands:
+        lint:
+            glob: "*.{ts,tsx}"
+            run: ESLINT_USE_FLAT_CONFIG=false npx eslint {staged_files} --max-warnings 0
+        format:
+            glob: "*.{ts,tsx,json,md,yml,yaml}"
+            run: npx prettier --check {staged_files}
+
+pre-push:
+    parallel: false
+    commands:
+        test:
+            run: npm test
+        typecheck:
+            run: npm run build

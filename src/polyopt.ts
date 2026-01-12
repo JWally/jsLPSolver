@@ -194,7 +194,12 @@ export default function Polyopt(solver: SolverLike, model: ModelDefinition): Pol
         }
 
         // Strip metadata so each Pareto vertex only contains value-bearing fields.
-        const { feasible, result, bounded, ...paretoPayload } = solution;
+        const {
+            feasible: _feasible,
+            result: _result,
+            bounded: _bounded,
+            ...paretoPayload
+        } = solution;
         paretoVertices.push(paretoPayload);
     }
 

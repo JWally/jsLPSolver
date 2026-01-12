@@ -123,7 +123,7 @@ export function createEnhancedBranchAndCutService(
 
     const selectBranchingVariable = (
         tableau: Tableau,
-        currentEval: number
+        _currentEval: number
     ): { index: number; value: number } | null => {
         const width = tableau.width;
         const matrix = tableau.matrix;
@@ -296,7 +296,7 @@ export function createEnhancedBranchAndCutService(
             }
 
             const cuts = activeBranch.cuts;
-            const parentEval = tableau.evaluation;
+            const _parentEval = tableau.evaluation;
 
             applyCuts(tableau, cuts);
             iterations++;

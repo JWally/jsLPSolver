@@ -23,7 +23,7 @@ export function sparseSimplex(this: Tableau): Tableau {
     this.bounded = true;
 
     // Run sparse phase 1
-    const phase1Result = sparsePhase1.call(this, sparse);
+    const _phase1Result = sparsePhase1.call(this, sparse);
 
     if (this.feasible === true) {
         // Run sparse phase 2
@@ -143,10 +143,10 @@ function sparsePhase2(this: Tableau, sparse: SparseMatrix): number {
 
     const rhsColumn = this.rhsColumn;
     const lastColumn = this.width - 1;
-    const lastRow = this.height - 1;
+    const _lastRow = this.height - 1;
     const precision = this.precision;
 
-    const nOptionalObjectives = this.optionalObjectives.length;
+    const _nOptionalObjectives = this.optionalObjectives.length;
 
     let iterations = 0;
     let reducedCost: number;

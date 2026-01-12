@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /*global importScripts*/
 /*global self*/
 /*global postMessage*/

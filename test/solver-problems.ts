@@ -128,7 +128,7 @@ function assertSolution(solutionA: ProblemExpectations, solutionB: ProblemExpect
 
         try {
             assert.deepStrictEqual(tempA, tempB);
-        } catch (error) {
+        } catch (_error) {
             failActual[key] = cleanSolutionA[key];
             failExpects[key] = cleanSolutionB[key];
         }

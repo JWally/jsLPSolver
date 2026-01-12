@@ -245,7 +245,7 @@ export function removeConstraint(this: Tableau, constraint: Constraint): void {
 }
 
 export function addVariable(this: Tableau, variable: Variable): void {
-    const lastRow = this.height - 1;
+    const _lastRow = this.height - 1;
     const oldWidth = this.width;
     const newWidth = oldWidth + 1;
     const height = this.height;

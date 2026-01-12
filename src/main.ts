@@ -91,7 +91,7 @@ class Solver {
      * @param validate - If true, run model through validation functions
      * @returns Solution object or simplified result with variable values
      */
-    Solve<TVariable extends string = string>(
+    Solve<_TVariable extends string = string>(
         model: ModelDefinition | Model,
         precision?: number,
         full?: boolean,

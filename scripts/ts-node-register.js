@@ -13,7 +13,7 @@ try {
         let ts;
         try {
             ts = require("typescript");
-        } catch (tsError) {
+        } catch (_tsError) {
             const nvmTypescriptPath = path.join(
                 path.dirname(process.execPath),
                 "..",

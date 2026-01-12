@@ -6,6 +6,7 @@
  * formatted before solving. All exported functions accept a model and return
  * a valid model (or throw an error if validation fails).
  */
+/* eslint-disable no-console */
 import type { Model as ModelDefinition } from "./types/solver";
 
 /**

@@ -198,6 +198,7 @@ class Model {
     _removeConstraint(constraint: Constraint): void {
         const idx = this.constraints.indexOf(constraint);
         if (idx === -1) {
+            // eslint-disable-next-line no-console
             console.warn("[Model.removeConstraint] Constraint not present in model");
             return;
         }
@@ -232,6 +233,7 @@ class Model {
     removeVariable(variable: Variable): this | void {
         const idx = this.variables.indexOf(variable);
         if (idx === -1) {
+            // eslint-disable-next-line no-console
             console.warn("[Model.removeVariable] Variable not present in model");
             return;
         }
