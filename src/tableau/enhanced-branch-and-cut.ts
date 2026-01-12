@@ -434,17 +434,49 @@ export function createEnhancedBranchAndCutService(
                     // Push in reverse order so 'up' branch is explored first
                     // (often better for minimization with binary vars)
                     depthFirstStack.push(
-                        createBranch(evaluation, cutsLow, newDepth, varIndex, "down", fracDown, evaluation)
+                        createBranch(
+                            evaluation,
+                            cutsLow,
+                            newDepth,
+                            varIndex,
+                            "down",
+                            fracDown,
+                            evaluation
+                        )
                     );
                     depthFirstStack.push(
-                        createBranch(evaluation, cutsHigh, newDepth, varIndex, "up", fracUp, evaluation)
+                        createBranch(
+                            evaluation,
+                            cutsHigh,
+                            newDepth,
+                            varIndex,
+                            "up",
+                            fracUp,
+                            evaluation
+                        )
                     );
                 } else {
                     branches.push(
-                        createBranch(evaluation, cutsHigh, newDepth, varIndex, "up", fracUp, evaluation)
+                        createBranch(
+                            evaluation,
+                            cutsHigh,
+                            newDepth,
+                            varIndex,
+                            "up",
+                            fracUp,
+                            evaluation
+                        )
                     );
                     branches.push(
-                        createBranch(evaluation, cutsLow, newDepth, varIndex, "down", fracDown, evaluation)
+                        createBranch(
+                            evaluation,
+                            cutsLow,
+                            newDepth,
+                            varIndex,
+                            "down",
+                            fracDown,
+                            evaluation
+                        )
                     );
                 }
             }

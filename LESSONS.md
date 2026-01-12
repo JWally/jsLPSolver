@@ -47,19 +47,20 @@ Cache normalized pivot row values in a Float64Array before updating other rows:
 // Before: read from matrix each time
 for (let i = 0; i < nNonZeroColumns; i++) {
     const c = nonZeroColumns[i];
-    const v0 = matrix[pivotRowOffset + c];  // Cache miss!
+    const v0 = matrix[pivotRowOffset + c]; // Cache miss!
     matrix[rowOffset + c] -= coefficient * v0;
 }
 
 // After: read from cached array
 for (let i = 0; i < nNonZeroColumns; i++) {
     const c = nonZeroColumns[i];
-    const v0 = pivotRowCache[i];  // Sequential access
+    const v0 = pivotRowCache[i]; // Sequential access
     matrix[rowOffset + c] -= coefficient * v0;
 }
 ```
 
 Time breakdown on Vendor Selection (1641x1722 matrix):
+
 - Before: Initial simplex 761ms, B&C 457ms
 - After: Initial simplex 525-610ms, B&C 315-358ms
 
@@ -120,6 +121,7 @@ class CycleDetector {
 ```
 
 Vendor Selection timing:
+
 - With cycle detection (old): ~946ms
 - With cycle detection (new): ~884ms
 - Without cycle detection: ~817ms
@@ -213,7 +215,8 @@ matrix[pivotRowOffset + c] = matrix[pivotRowOffset + c] * invQuotient;
 const pivotColVal = matrix[rowOffset + pivotColumnIndex];
 if (!(pivotColVal >= -1e-16 && pivotColVal <= 1e-16)) {
     const coefficient = pivotColVal;
-    if (!(coefficient >= -1e-16 && coefficient <= 1e-16)) {  // Same check!
+    if (!(coefficient >= -1e-16 && coefficient <= 1e-16)) {
+        // Same check!
         // ...update row
     }
 }
@@ -329,14 +332,14 @@ MIR cuts are applied iteratively until fractional volume stops improving. The 0.
 
 ## Performance Baseline (After Optimizations)
 
-| Problem                | Before    | After     | Change  |
-| ---------------------- | --------- | --------- | ------- |
-| Small LP (20x10)       | 0.036 ms  | 0.035 ms  | ~same   |
-| Medium LP (100x50)     | 3.223 ms  | 3.584 ms  | ~same   |
-| Large LP (300x150)     | 62.753 ms | 64.480 ms | ~same   |
-| Monster Problem (MIP)  | 4.736 ms  | 4.677 ms  | ~same   |
-| Monster II (MIP)       | 150.081 ms| 121.0 ms  | **-20%**|
-| Vendor Selection (MIP) | 827.119 ms| 790.0 ms  | ~-5%    |
+| Problem                | Before     | After     | Change   |
+| ---------------------- | ---------- | --------- | -------- |
+| Small LP (20x10)       | 0.036 ms   | 0.035 ms  | ~same    |
+| Medium LP (100x50)     | 3.223 ms   | 3.584 ms  | ~same    |
+| Large LP (300x150)     | 62.753 ms  | 64.480 ms | ~same    |
+| Monster Problem (MIP)  | 4.736 ms   | 4.677 ms  | ~same    |
+| Monster II (MIP)       | 150.081 ms | 121.0 ms  | **-20%** |
+| Vendor Selection (MIP) | 827.119 ms | 790.0 ms  | ~-5%     |
 
 Note: Monster II improvement comes from min-heap object pooling and optionalObjectives caching.
 
@@ -367,9 +370,10 @@ const pseudoCosts: PseudoCosts = createPseudoCosts();
 const PSEUDO_COST_WARMUP = 5;
 
 // After warmup, use pseudo-cost instead of most-fractional
-const variable = iterations > PSEUDO_COST_WARMUP
-    ? getPseudoCostBranchingVar(tableau, pseudoCosts)
-    : tableau.getMostFractionalVar();
+const variable =
+    iterations > PSEUDO_COST_WARMUP
+        ? getPseudoCostBranchingVar(tableau, pseudoCosts)
+        : tableau.getMostFractionalVar();
 ```
 
 **Results**: Tests failed because different branching decisions led to different (but valid) solutions. The change was reverted.
@@ -377,6 +381,7 @@ const variable = iterations > PSEUDO_COST_WARMUP
 **Why it matters**: The basic service is used when no options are specified, so it must maintain backward compatibility. Users who want pseudo-cost should use `branching: "pseudocost"` option which routes to the enhanced service.
 
 **Benchmark insight**: Strategy tests showed that "most-fractional" is actually faster than pseudo-cost for both Monster II (153ms vs 372ms) and Vendor Selection (845ms vs 1150ms). This suggests:
+
 1. The current pseudo-cost implementation may have overhead issues
 2. These problems happen to favor most-fractional
 3. Pseudo-cost may only help on very large MIP instances

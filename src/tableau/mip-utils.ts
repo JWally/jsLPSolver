@@ -68,11 +68,7 @@ export function updatePseudoCost(
 /**
  * Get the pseudo-cost for a variable in a given direction.
  */
-export function getPseudoCost(
-    pc: PseudoCosts,
-    varIndex: number,
-    direction: "up" | "down"
-): number {
+export function getPseudoCost(pc: PseudoCosts, varIndex: number, direction: "up" | "down"): number {
     const map = direction === "up" ? pc.up : pc.down;
     const data = map.get(varIndex);
     if (data && data.count > 0) {
@@ -86,10 +82,7 @@ export function getPseudoCost(
  * Uses the product scoring rule: score = f_down * pc_down * f_up * pc_up
  * This balances the improvement from both branches.
  */
-export function getPseudoCostBranchingVar(
-    tableau: Tableau,
-    pc: PseudoCosts
-): VariableValue {
+export function getPseudoCostBranchingVar(tableau: Tableau, pc: PseudoCosts): VariableValue {
     let bestScore = -Infinity;
     let selectedVarIndex: number | null = null;
     let selectedVarValue = 0;

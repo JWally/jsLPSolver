@@ -41,7 +41,11 @@ class CycleDetector {
             }
 
             let cycleFound = true;
-            for (let i = 1; i < cycleLength && startPos + cycleLength + i < this.pairs.length; i++) {
+            for (
+                let i = 1;
+                i < cycleLength && startPos + cycleLength + i < this.pairs.length;
+                i++
+            ) {
                 const p1 = this.pairs[startPos + i];
                 const p2 = this.pairs[startPos + cycleLength + i];
                 if (p1[0] !== p2[0] || p1[1] !== p2[1]) {
@@ -222,7 +226,10 @@ export function phase1(this: Tableau): number {
         }
 
         if (cycleDetector) {
-            const cycleData = cycleDetector.add(varIndexByRow[leavingRowIndex], varIndexByCol[enteringColumn]);
+            const cycleData = cycleDetector.add(
+                varIndexByRow[leavingRowIndex],
+                varIndexByCol[enteringColumn]
+            );
             if (cycleData.length > 0) {
                 this.model.messages.push("Cycle in phase 1");
                 this.model.messages.push("Start :" + cycleData[0]);
@@ -448,7 +455,10 @@ export function phase2(this: Tableau): number {
         }
 
         if (cycleDetector) {
-            const cycleData = cycleDetector.add(varIndexByRow[leavingRow], varIndexByCol[enteringColumn]);
+            const cycleData = cycleDetector.add(
+                varIndexByRow[leavingRow],
+                varIndexByCol[enteringColumn]
+            );
             if (cycleData.length > 0) {
                 this.model.messages.push("Cycle in phase 2");
                 this.model.messages.push("Start :" + cycleData[0]);

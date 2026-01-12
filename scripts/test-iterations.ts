@@ -38,5 +38,5 @@ if (lastModel?.tableau) {
         if (t.matrix[i] !== 0) nonZeros++;
     }
     console.log(`Non-zeros: ${nonZeros}`);
-    console.log(`Density: ${(nonZeros / (t.width * t.height) * 100).toFixed(2)}%`);
+    console.log(`Density: ${((nonZeros / (t.width * t.height)) * 100).toFixed(2)}%`);
 }
