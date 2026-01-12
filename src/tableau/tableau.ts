@@ -118,6 +118,15 @@ export default class Tableau {
         return simplexOps.phase2.call(this);
     }
 
+    /**
+     * Dual simplex for warm-starting after adding bound constraints.
+     * Use when solution is dual feasible but may be primal infeasible.
+     * @returns Number of iterations, or -1 if dual infeasible
+     */
+    dualSimplex(): number {
+        return simplexOps.dualSimplex.call(this);
+    }
+
     pivot(pivotRowIndex: number, pivotColumnIndex: number): void {
         simplexOps.pivot.call(this, pivotRowIndex, pivotColumnIndex);
     }

@@ -19,11 +19,32 @@ export class BranchMinHeap {
     private heap: HeapEntry[];
     private size: number;
     private seqCounter: number;
+    // Object pool to reduce GC pressure
+    private pool: HeapEntry[];
+    private poolSize: number;
 
     constructor(initialCapacity = 64) {
         this.heap = new Array(initialCapacity);
         this.size = 0;
         this.seqCounter = 0;
+        this.pool = new Array(64);
+        this.poolSize = 0;
+    }
+
+    private allocEntry(branch: Branch, seq: number): HeapEntry {
+        if (this.poolSize > 0) {
+            const entry = this.pool[--this.poolSize];
+            entry.branch = branch;
+            entry.seq = seq;
+            return entry;
+        }
+        return { branch, seq };
+    }
+
+    private freeEntry(entry: HeapEntry): void {
+        if (this.poolSize < 256) {
+            this.pool[this.poolSize++] = entry;
+        }
     }
 
     get length(): number {
@@ -58,7 +79,7 @@ export class BranchMinHeap {
             heap.length = heap.length * 2;
         }
 
-        const entry: HeapEntry = { branch, seq: this.seqCounter++ };
+        const entry = this.allocEntry(branch, this.seqCounter++);
 
         // Bubble up
         while (idx > 0) {
@@ -79,8 +100,12 @@ export class BranchMinHeap {
         }
 
         const heap = this.heap;
-        const result = heap[0].branch;
+        const poppedEntry = heap[0];
+        const result = poppedEntry.branch;
         this.size--;
+
+        // Return entry to pool
+        this.freeEntry(poppedEntry);
 
         if (this.size === 0) {
             return result;

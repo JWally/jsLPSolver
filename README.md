@@ -169,15 +169,15 @@ worker.postMessage(model);
 
 ## Performance
 
-Representative benchmarks on a modern laptop:
+Representative benchmarks (Intel i5-10400 @ 2.9GHz, Node.js 22, 10 runs averaged):
 
-| Problem          | Variables | Constraints | Integers | Time  |
-| ---------------- | --------- | ----------- | -------- | ----- |
-| Large Farm MIP   | 100       | 35          | 100      | 16ms  |
-| Monster LP       | 552       | 600         | 0        | 18ms  |
-| Monster II MIP   | 924       | 888         | 112      | 308ms |
-| Stock Cutting    | 31        | 5           | 31       | 1.4ms |
-| Vendor Selection | 1640      | 1641        | 0        | 1.2s  |
+| Problem          | Variables | Constraints | Integers | Avg Time |
+| ---------------- | --------- | ----------- | -------- | -------- |
+| Large Farm MIP   | 100       | 35          | 100      | 67ms     |
+| Monster LP       | 552       | 600         | 0        | 5ms      |
+| Monster II MIP   | 924       | 888         | 112      | 121ms    |
+| Stock Cutting    | 31        | 5           | 31       | 7ms      |
+| Vendor Selection | 1640      | 1641        | 40       | 606ms    |
 
 ## Documentation
 

@@ -23,6 +23,11 @@ export interface BranchCut {
 export interface Branch {
     relaxedEvaluation: number;
     cuts: BranchCut[];
+    // For pseudo-cost tracking (optional)
+    branchVarIndex?: number;
+    branchDirection?: "up" | "down";
+    branchFractionality?: number;
+    parentEvaluation?: number;
 }
 
 export interface OptionalObjective {

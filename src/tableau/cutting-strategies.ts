@@ -20,11 +20,13 @@ export function addCutConstraints(this: Tableau, cutConstraints: BranchCut[]): v
     const width = this.width;
     const lastColumn = width - 1;
 
-    // Grow the matrix to accommodate new rows
+    // Grow the matrix to accommodate new rows (with over-allocation to reduce reallocation frequency)
     const oldMatrix = this.matrix;
     const newSize = heightWithCuts * width;
     if (oldMatrix.length < newSize) {
-        const newMatrix = new Float64Array(newSize);
+        // Over-allocate by 50% to reduce future reallocations
+        const allocSize = Math.ceil(newSize * 1.5);
+        const newMatrix = new Float64Array(allocSize);
         newMatrix.set(oldMatrix);
         this.matrix = newMatrix;
     }
@@ -93,10 +95,12 @@ export function addLowerBoundMIRCut(this: Tableau, rowIndex: number): boolean {
     const height = this.height;
     const newRowOffset = height * width;
 
-    // Grow matrix to add new row
+    // Grow matrix to add new row (with over-allocation to reduce reallocation frequency)
     const newSize = (height + 1) * width;
     if (matrix.length < newSize) {
-        const newMatrix = new Float64Array(newSize);
+        // Over-allocate by 50% to reduce future reallocations
+        const allocSize = Math.ceil(newSize * 1.5);
+        const newMatrix = new Float64Array(allocSize);
         newMatrix.set(matrix);
         this.matrix = newMatrix;
     }
@@ -156,10 +160,12 @@ export function addUpperBoundMIRCut(this: Tableau, rowIndex: number): boolean {
     const height = this.height;
     const newRowOffset = height * width;
 
-    // Grow matrix to add new row
+    // Grow matrix to add new row (with over-allocation to reduce reallocation frequency)
     const newSize = (height + 1) * width;
     if (matrix.length < newSize) {
-        const newMatrix = new Float64Array(newSize);
+        // Over-allocate by 50% to reduce future reallocations
+        const allocSize = Math.ceil(newSize * 1.5);
+        const newMatrix = new Float64Array(allocSize);
         newMatrix.set(matrix);
         this.matrix = newMatrix;
     }

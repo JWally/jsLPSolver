@@ -30,7 +30,7 @@ export interface PresolveResult {
  * If fixing x=0 causes infeasibility, then x must be 1 (and vice versa).
  * If both x=0 and x=1 imply y has same bound, that bound is valid.
  */
-function probe(model: Model, result: PresolveResult, maxProbes: number = 100): boolean {
+function _probe(model: Model, result: PresolveResult, maxProbes: number = 100): boolean {
     let changed = false;
     let probeCount = 0;
 
@@ -112,7 +112,7 @@ function propagateFixing(
 
         // Calculate contribution of fixed variables
         let fixedSum = 0;
-        let unfixedTerms: Array<{ variable: Variable; coefficient: number }> = [];
+        const unfixedTerms: Array<{ variable: Variable; coefficient: number }> = [];
 
         for (const term of constraint.terms) {
             const fixed = result.fixedVariables.get(term.variable) ?? implied.get(term.variable);

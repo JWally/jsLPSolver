@@ -11,6 +11,59 @@
  */
 import type Tableau from "./tableau";
 
+/**
+ * Optimized cycle detector using hash-based O(1) lookup.
+ * The original checkForCycles was O(n²) - comparing every pair against all others.
+ * This version uses a Map to track where each (leaving,entering) pair occurred,
+ * making duplicate detection O(1) average case.
+ */
+class CycleDetector {
+    private pairs: Array<[number, number]> = [];
+    private positions: Map<string, number[]> = new Map();
+
+    add(leaving: number, entering: number): number[] {
+        const key = `${leaving}_${entering}`;
+        const pos = this.pairs.length;
+        this.pairs.push([leaving, entering]);
+
+        const prevPositions = this.positions.get(key);
+        if (prevPositions === undefined) {
+            this.positions.set(key, [pos]);
+            return [];
+        }
+
+        // Check if any previous occurrence starts a repeating cycle
+        for (const startPos of prevPositions) {
+            const cycleLength = pos - startPos;
+            // Need at least cycleLength more elements to verify
+            if (cycleLength > this.pairs.length - pos) {
+                continue;
+            }
+
+            let cycleFound = true;
+            for (
+                let i = 1;
+                i < cycleLength && startPos + cycleLength + i < this.pairs.length;
+                i++
+            ) {
+                const p1 = this.pairs[startPos + i];
+                const p2 = this.pairs[startPos + cycleLength + i];
+                if (p1[0] !== p2[0] || p1[1] !== p2[1]) {
+                    cycleFound = false;
+                    break;
+                }
+            }
+
+            if (cycleFound) {
+                return [startPos, cycleLength];
+            }
+        }
+
+        prevPositions.push(pos);
+        return [];
+    }
+}
+
 export function simplex(this: Tableau): Tableau {
     this.bounded = true;
     this.phase1();
@@ -22,25 +75,122 @@ export function simplex(this: Tableau): Tableau {
     return this;
 }
 
+/**
+ * Dual simplex algorithm for warm-starting after adding constraints.
+ *
+ * Use when: The current solution is dual feasible (reduced costs valid) but
+ * may be primal infeasible (some RHS values negative). This is common after
+ * adding bound constraints in branch-and-cut.
+ *
+ * Algorithm:
+ * 1. Find a basic variable with negative value (leaving variable)
+ * 2. Find entering variable using dual ratio test
+ * 3. Pivot to restore primal feasibility
+ * 4. Repeat until all basic variables are non-negative
+ *
+ * @returns Number of iterations, or -1 if dual infeasible
+ */
+export function dualSimplex(this: Tableau): number {
+    const matrix = this.matrix;
+    const width = this.width;
+    const rhsColumn = this.rhsColumn;
+    const lastColumn = width - 1;
+    const lastRow = this.height - 1;
+    const precision = this.precision;
+    const negPrecision = -precision;
+
+    let iterations = 0;
+    const maxIterations = 10000; // Safety limit
+
+    while (iterations < maxIterations) {
+        // Step 1: Find leaving variable (row with most negative RHS)
+        let leavingRow = 0;
+        let minRHS = negPrecision;
+
+        for (let r = 1; r <= lastRow; r++) {
+            const rhsValue = matrix[r * width + rhsColumn];
+            if (rhsValue < minRHS) {
+                minRHS = rhsValue;
+                leavingRow = r;
+            }
+        }
+
+        // If no negative RHS, we're primal feasible - done!
+        if (leavingRow === 0) {
+            this.feasible = true;
+            this.setEvaluation();
+            return iterations;
+        }
+
+        // Step 2: Find entering variable using dual ratio test
+        // For each non-basic variable j with a_ij < 0 (negative coefficient in leaving row),
+        // compute ratio = reduced_cost[j] / |a_ij|
+        // Choose the one with minimum ratio (to maintain dual feasibility)
+        let enteringColumn = 0;
+        let minRatio = Infinity;
+        const leavingRowOffset = leavingRow * width;
+
+        for (let c = 1; c <= lastColumn; c++) {
+            const coefficient = matrix[leavingRowOffset + c];
+
+            // Only consider columns with negative coefficient in leaving row
+            if (coefficient < negPrecision) {
+                // Reduced cost is in row 0 (cost row)
+                const reducedCost = matrix[c];
+
+                // For minimization, reduced costs should be >= 0 for optimality
+                // Ratio test: reducedCost / |coefficient|
+                if (reducedCost >= negPrecision) {
+                    const ratio = reducedCost / -coefficient;
+                    if (ratio < minRatio) {
+                        minRatio = ratio;
+                        enteringColumn = c;
+                    }
+                }
+            }
+        }
+
+        // If no entering column found, the problem is dual infeasible (primal unbounded)
+        if (enteringColumn === 0) {
+            this.feasible = false;
+            return -1;
+        }
+
+        // Step 3: Pivot
+        this.pivot(leavingRow, enteringColumn);
+        iterations++;
+    }
+
+    // Hit iteration limit - something went wrong
+    this.feasible = false;
+    return iterations;
+}
+
 export function phase1(this: Tableau): number {
     const debugCheckForCycles = this.model.checkForCycles;
-    const varIndexesCycle: Array<[number, number]> = [];
+    const cycleDetector = debugCheckForCycles ? new CycleDetector() : null;
 
     const matrix = this.matrix;
     const width = this.width;
     const rhsColumn = this.rhsColumn;
     const lastColumn = this.width - 1;
     const lastRow = this.height - 1;
+    const precision = this.precision;
+    const negPrecision = -precision;
+
+    // Cache arrays for faster access in hot loops
+    const unrestrictedVars = this.unrestrictedVars;
+    const varIndexByRow = this.varIndexByRow;
+    const varIndexByCol = this.varIndexByCol;
 
     let unrestricted: boolean;
     let iterations = 0;
 
     while (true) {
+        // Find leaving row (most negative RHS)
         let leavingRowIndex = 0;
-        let rhsValue = -this.precision;
+        let rhsValue = negPrecision;
         for (let r = 1; r <= lastRow; r++) {
-            unrestricted = this.unrestrictedVars[this.varIndexByRow[r]] === true;
-
             const value = matrix[r * width + rhsColumn];
             if (value < rhsValue) {
                 rhsValue = value;
@@ -53,16 +203,16 @@ export function phase1(this: Tableau): number {
             return iterations;
         }
 
+        // Find entering column
         let enteringColumn = 0;
         let maxQuotient = -Infinity;
-        const costRowOffset = 0; // row 0
         const leavingRowOffset = leavingRowIndex * width;
         for (let c = 1; c <= lastColumn; c++) {
             const coefficient = matrix[leavingRowOffset + c];
 
-            unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
-            if (unrestricted || coefficient < -this.precision) {
-                const quotient = -matrix[costRowOffset + c] / coefficient;
+            unrestricted = unrestrictedVars[varIndexByCol[c]] === true;
+            if (unrestricted || coefficient < negPrecision) {
+                const quotient = -matrix[c] / coefficient; // costRowOffset is 0
                 if (maxQuotient < quotient) {
                     maxQuotient = quotient;
                     enteringColumn = c;
@@ -75,13 +225,11 @@ export function phase1(this: Tableau): number {
             return iterations;
         }
 
-        if (debugCheckForCycles) {
-            varIndexesCycle.push([
-                this.varIndexByRow[leavingRowIndex],
-                this.varIndexByCol[enteringColumn],
-            ]);
-
-            const cycleData = this.checkForCycles(varIndexesCycle);
+        if (cycleDetector) {
+            const cycleData = cycleDetector.add(
+                varIndexByRow[leavingRowIndex],
+                varIndexByCol[enteringColumn]
+            );
             if (cycleData.length > 0) {
                 this.model.messages.push("Cycle in phase 1");
                 this.model.messages.push("Start :" + cycleData[0]);
@@ -99,7 +247,7 @@ export function phase1(this: Tableau): number {
 
 export function phase2(this: Tableau): number {
     const debugCheckForCycles = this.model.checkForCycles;
-    const varIndexesCycle: Array<[number, number]> = [];
+    const cycleDetector = debugCheckForCycles ? new CycleDetector() : null;
 
     const matrix = this.matrix;
     const width = this.width;
@@ -108,8 +256,16 @@ export function phase2(this: Tableau): number {
     const lastRow = this.height - 1;
 
     const precision = this.precision;
+    const negPrecision = -precision;
     const nOptionalObjectives = this.optionalObjectives.length;
     let optionalCostsColumns: number[] | null = null;
+
+    // Cache arrays for faster access in hot loops
+    const unrestrictedVars = this.unrestrictedVars;
+    const varIndexByCol = this.varIndexByCol;
+    const varIndexByRow = this.varIndexByRow;
+
+    // Note: costRowIndex is always 0, so we access matrix[c] directly
 
     let iterations = 0;
     let reducedCost: number;
@@ -127,8 +283,6 @@ export function phase2(this: Tableau): number {
     const usePartialPricing = nColumns > batchSize * 2;
 
     while (true) {
-        const costRowOffset = this.costRowIndex * width;
-
         if (nOptionalObjectives > 0) {
             optionalCostsColumns = [];
         }
@@ -149,12 +303,12 @@ export function phase2(this: Tableau): number {
                 const batchEnd = Math.min(batchStart + batchSize - 1, lastColumn);
 
                 for (let c = batchStart; c <= batchEnd; c++) {
-                    reducedCost = matrix[costRowOffset + c];
-                    unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
+                    reducedCost = matrix[c]; // costRowOffset is 0
+                    unrestricted = unrestrictedVars[varIndexByCol[c]] === true;
 
                     if (
                         nOptionalObjectives > 0 &&
-                        -precision < reducedCost &&
+                        negPrecision < reducedCost &&
                         reducedCost < precision
                     ) {
                         optionalCostsColumns?.push(c);
@@ -189,12 +343,12 @@ export function phase2(this: Tableau): number {
         } else {
             // Full pricing for small problems
             for (let c = 1; c <= lastColumn; c++) {
-                reducedCost = matrix[costRowOffset + c];
-                unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
+                reducedCost = matrix[c]; // costRowOffset is 0
+                unrestricted = unrestrictedVars[varIndexByCol[c]] === true;
 
                 if (
                     nOptionalObjectives > 0 &&
-                    -precision < reducedCost &&
+                    negPrecision < reducedCost &&
                     reducedCost < precision
                 ) {
                     optionalCostsColumns?.push(c);
@@ -235,9 +389,9 @@ export function phase2(this: Tableau): number {
                     const c = optionalCostsColumns[i];
 
                     reducedCost = reducedCosts[c];
-                    unrestricted = this.unrestrictedVars[this.varIndexByCol[c]] === true;
+                    unrestricted = unrestrictedVars[varIndexByCol[c]] === true;
 
-                    if (-precision < reducedCost && reducedCost < precision) {
+                    if (negPrecision < reducedCost && reducedCost < precision) {
                         optionalCostsColumns2.push(c);
                         continue;
                     }
@@ -271,18 +425,16 @@ export function phase2(this: Tableau): number {
         let leavingRow = 0;
         let minQuotient = Infinity;
 
-        const varIndexByRow = this.varIndexByRow;
-
         for (let r = 1; r <= lastRow; r++) {
             const rowOffset = r * width;
             const rhsValue = matrix[rowOffset + rhsColumn];
             const colValue = matrix[rowOffset + enteringColumn];
 
-            if (-precision < colValue && colValue < precision) {
+            if (negPrecision < colValue && colValue < precision) {
                 continue;
             }
 
-            if (colValue > 0 && precision > rhsValue && rhsValue > -precision) {
+            if (colValue > 0 && precision > rhsValue && rhsValue > negPrecision) {
                 minQuotient = 0;
                 leavingRow = r;
                 break;
@@ -298,17 +450,15 @@ export function phase2(this: Tableau): number {
         if (minQuotient === Infinity) {
             this.evaluation = -Infinity;
             this.bounded = false;
-            this.unboundedVarIndex = this.varIndexByCol[enteringColumn];
+            this.unboundedVarIndex = varIndexByCol[enteringColumn];
             return iterations;
         }
 
-        if (debugCheckForCycles) {
-            varIndexesCycle.push([
-                this.varIndexByRow[leavingRow],
-                this.varIndexByCol[enteringColumn],
-            ]);
-
-            const cycleData = this.checkForCycles(varIndexesCycle);
+        if (cycleDetector) {
+            const cycleData = cycleDetector.add(
+                varIndexByRow[leavingRow],
+                varIndexByCol[enteringColumn]
+            );
             if (cycleData.length > 0) {
                 this.model.messages.push("Cycle in phase 2");
                 this.model.messages.push("Start :" + cycleData[0]);
@@ -324,15 +474,23 @@ export function phase2(this: Tableau): number {
     }
 }
 
-// Pre-allocated array for non-zero column tracking
-const nonZeroColumns: number[] = [];
+// Pre-allocated typed arrays for pivot optimization (better cache performance)
+let nonZeroColumns = new Int32Array(1024);
+let pivotRowCache = new Float64Array(1024);
 
 export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: number): void {
     const matrix = this.matrix;
     const width = this.width;
 
+    // Ensure work arrays are large enough
+    if (width > nonZeroColumns.length) {
+        nonZeroColumns = new Int32Array(width * 2);
+        pivotRowCache = new Float64Array(width * 2);
+    }
+
     const pivotRowOffset = pivotRowIndex * width;
     const quotient = matrix[pivotRowOffset + pivotColumnIndex];
+    const invQuotient = 1 / quotient;
 
     const height = this.height;
 
@@ -348,22 +506,24 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
     this.colByVarIndex[enteringBasicIndex] = -1;
     this.colByVarIndex[leavingBasicIndex] = pivotColumnIndex;
 
-    // Normalize pivot row and track non-zero columns
+    // Normalize pivot row, track non-zero columns, and cache values for locality
     let nNonZeroColumns = 0;
     for (let c = 0; c < width; c++) {
         const idx = pivotRowOffset + c;
         const val = matrix[idx];
         if (!(val >= -1e-16 && val <= 1e-16)) {
-            matrix[idx] = val / quotient;
+            const normalized = val / quotient;
+            matrix[idx] = normalized;
             nonZeroColumns[nNonZeroColumns] = c;
+            pivotRowCache[nNonZeroColumns] = normalized;
             nNonZeroColumns++;
         } else {
             matrix[idx] = 0;
         }
     }
-    matrix[pivotRowOffset + pivotColumnIndex] = 1 / quotient;
+    matrix[pivotRowOffset + pivotColumnIndex] = invQuotient;
 
-    // Update all other rows
+    // Update all other rows using cached pivot row values
     for (let r = 0; r < height; r++) {
         if (r !== pivotRowIndex) {
             const rowOffset = r * width;
@@ -372,12 +532,15 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
                 const coefficient = pivotColVal;
 
                 if (!(coefficient >= -1e-16 && coefficient <= 1e-16)) {
+                    // Use cached pivot row values for better cache locality
                     for (let i = 0; i < nNonZeroColumns; i++) {
                         const c = nonZeroColumns[i];
-                        const v0 = matrix[pivotRowOffset + c];
+                        const v0 = pivotRowCache[i];
+                        // Inner zero check is critical for numerical stability
                         if (!(v0 >= -1e-16 && v0 <= 1e-16)) {
-                            matrix[rowOffset + c] = matrix[rowOffset + c] - coefficient * v0;
+                            matrix[rowOffset + c] -= coefficient * v0;
                         } else if (v0 !== 0) {
+                            // Clean up near-zero values in pivot row
                             matrix[pivotRowOffset + c] = 0;
                         }
                     }
@@ -390,7 +553,7 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
         }
     }
 
-    // Update optional objectives
+    // Update optional objectives using cached pivot row values
     const optionalObjectives = this.optionalObjectives;
     const nOptionalObjectives = optionalObjectives.length;
     if (nOptionalObjectives > 0) {
@@ -400,13 +563,9 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
             if (coefficient !== 0) {
                 for (let i = 0; i < nNonZeroColumns; i++) {
                     const c = nonZeroColumns[i];
-                    const v0 = matrix[pivotRowOffset + c];
-                    if (v0 !== 0) {
-                        reducedCosts[c] = reducedCosts[c] - coefficient * v0;
-                    }
+                    reducedCosts[c] -= coefficient * pivotRowCache[i];
                 }
-
-                reducedCosts[pivotColumnIndex] = -coefficient / quotient;
+                reducedCosts[pivotColumnIndex] = -coefficient * invQuotient;
             }
         }
     }

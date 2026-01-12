@@ -12,6 +12,123 @@
 import type Tableau from "./tableau";
 import type { VariableValue } from "./types";
 
+// ========== Pseudo-Cost Branching ==========
+
+/**
+ * Pseudo-cost tracker for intelligent variable selection in branch-and-bound.
+ *
+ * Tracks the historical change in objective function when branching on each
+ * integer variable. Uses this history to predict which variable will have
+ * the most impact on the objective, reducing the size of the B&B tree.
+ *
+ * Based on: "Branching rules revisited" by Achterberg, Koch, Martin (2005)
+ */
+export interface PseudoCosts {
+    // Pseudo-cost for rounding down: avg obj change per unit decrease
+    down: Map<number, { sum: number; count: number }>;
+    // Pseudo-cost for rounding up: avg obj change per unit increase
+    up: Map<number, { sum: number; count: number }>;
+    // Default pseudo-cost for uninitialized variables
+    defaultCost: number;
+}
+
+export function createPseudoCosts(): PseudoCosts {
+    return {
+        down: new Map(),
+        up: new Map(),
+        defaultCost: 1.0,
+    };
+}
+
+/**
+ * Update pseudo-costs after a branching decision.
+ * Call this after solving a child node to record the objective change.
+ */
+export function updatePseudoCost(
+    pc: PseudoCosts,
+    varIndex: number,
+    direction: "up" | "down",
+    fractionality: number,
+    objectiveChange: number
+): void {
+    if (fractionality < 1e-10) return; // Avoid division by near-zero
+
+    const costPerUnit = Math.abs(objectiveChange) / fractionality;
+    const map = direction === "up" ? pc.up : pc.down;
+
+    const existing = map.get(varIndex);
+    if (existing) {
+        existing.sum += costPerUnit;
+        existing.count += 1;
+    } else {
+        map.set(varIndex, { sum: costPerUnit, count: 1 });
+    }
+}
+
+/**
+ * Get the pseudo-cost for a variable in a given direction.
+ */
+export function getPseudoCost(pc: PseudoCosts, varIndex: number, direction: "up" | "down"): number {
+    const map = direction === "up" ? pc.up : pc.down;
+    const data = map.get(varIndex);
+    if (data && data.count > 0) {
+        return data.sum / data.count;
+    }
+    return pc.defaultCost;
+}
+
+/**
+ * Select branching variable using pseudo-cost branching.
+ * Uses the product scoring rule: score = f_down * pc_down * f_up * pc_up
+ * This balances the improvement from both branches.
+ */
+export function getPseudoCostBranchingVar(tableau: Tableau, pc: PseudoCosts): VariableValue {
+    let bestScore = -Infinity;
+    let selectedVarIndex: number | null = null;
+    let selectedVarValue = 0;
+
+    const width = tableau.width;
+    const matrix = tableau.matrix;
+    const rhsColumn = tableau.rhsColumn;
+    const rowByVarIndex = tableau.rowByVarIndex;
+    const integerVars = tableau.model!.integerVariables;
+    const nIntegerVars = integerVars.length;
+    const precision = tableau.precision;
+    const epsilon = 1e-6; // Minimum score component
+
+    for (let v = 0; v < nIntegerVars; v += 1) {
+        const varIndex = integerVars[v].index;
+        const row = rowByVarIndex[varIndex];
+        if (row !== -1) {
+            const varValue = matrix[row * width + rhsColumn];
+            const floorVal = Math.floor(varValue);
+            const fracDown = varValue - floorVal; // Distance to floor
+            const fracUp = 1 - fracDown; // Distance to ceil
+
+            // Skip if already integral
+            if (fracDown < precision || fracUp < precision) {
+                continue;
+            }
+
+            const pcDown = getPseudoCost(pc, varIndex, "down");
+            const pcUp = getPseudoCost(pc, varIndex, "up");
+
+            // Product scoring: emphasizes variables that improve both branches
+            const scoreDown = Math.max(epsilon, fracDown * pcDown);
+            const scoreUp = Math.max(epsilon, fracUp * pcUp);
+            const score = scoreDown * scoreUp;
+
+            if (score > bestScore) {
+                bestScore = score;
+                selectedVarIndex = varIndex;
+                selectedVarValue = varValue;
+            }
+        }
+    }
+
+    return { index: selectedVarIndex, value: selectedVarValue };
+}
+
 // ========== Integer Property Functions ==========
 
 /**

@@ -44,9 +44,21 @@ function createCut(type: BranchCut["type"], varIndex: number, value: number): Br
 function createBranch(
     relaxedEvaluation: number,
     cuts: BranchCut[],
-    depth: number
+    depth: number,
+    branchVarIndex?: number,
+    branchDirection?: "up" | "down",
+    branchFractionality?: number,
+    parentEvaluation?: number
 ): Branch & { depth: number } {
-    return { relaxedEvaluation, cuts, depth };
+    return {
+        relaxedEvaluation,
+        cuts,
+        depth,
+        branchVarIndex,
+        branchDirection,
+        branchFractionality,
+        parentEvaluation,
+    };
 }
 
 /**
@@ -61,7 +73,7 @@ export function createEnhancedBranchAndCutService(
     const {
         nodeSelection = "hybrid",
         branching = "pseudocost",
-        useDiving = true,
+        useDiving: _useDiving = true, // Reserved for future diving heuristic
         strongBranchingCandidates = 5,
     } = options;
 
@@ -299,17 +311,18 @@ export function createEnhancedBranchAndCutService(
             }
 
             // Update pseudocosts based on observed improvement
-            if (cuts.length > 0 && parentEval !== 0) {
-                const lastCut = cuts[cuts.length - 1];
-                const improvement = Math.abs(evaluation - parentEval);
-
-                // Estimate fraction (simplified)
-                const fraction = 0.5;
+            if (
+                activeBranch.branchVarIndex !== undefined &&
+                activeBranch.branchDirection !== undefined &&
+                activeBranch.branchFractionality !== undefined &&
+                activeBranch.parentEvaluation !== undefined
+            ) {
+                const improvement = Math.abs(evaluation - activeBranch.parentEvaluation);
                 updatePseudoCost(
-                    lastCut.varIndex,
-                    lastCut.type === "min" ? "up" : "down",
+                    activeBranch.branchVarIndex,
+                    activeBranch.branchDirection,
                     improvement,
-                    fraction
+                    activeBranch.branchFractionality
                 );
             }
 
@@ -404,13 +417,15 @@ export function createEnhancedBranchAndCutService(
                     }
                 }
 
-                const min = Math.ceil(varValue);
-                const max = Math.floor(varValue);
+                const ceilVal = Math.ceil(varValue);
+                const floorVal = Math.floor(varValue);
+                const fracUp = ceilVal - varValue; // Distance to ceil
+                const fracDown = varValue - floorVal; // Distance to floor
 
-                const cutHigh = createCut("min", varIndex, min);
+                const cutHigh = createCut("min", varIndex, ceilVal);
                 cutsHigh.push(cutHigh);
 
-                const cutLow = createCut("max", varIndex, max);
+                const cutLow = createCut("max", varIndex, floorVal);
                 cutsLow.push(cutLow);
 
                 const newDepth = activeBranch.depth + 1;
@@ -418,11 +433,51 @@ export function createEnhancedBranchAndCutService(
                 if (useDepthFirst) {
                     // Push in reverse order so 'up' branch is explored first
                     // (often better for minimization with binary vars)
-                    depthFirstStack.push(createBranch(evaluation, cutsLow, newDepth));
-                    depthFirstStack.push(createBranch(evaluation, cutsHigh, newDepth));
+                    depthFirstStack.push(
+                        createBranch(
+                            evaluation,
+                            cutsLow,
+                            newDepth,
+                            varIndex,
+                            "down",
+                            fracDown,
+                            evaluation
+                        )
+                    );
+                    depthFirstStack.push(
+                        createBranch(
+                            evaluation,
+                            cutsHigh,
+                            newDepth,
+                            varIndex,
+                            "up",
+                            fracUp,
+                            evaluation
+                        )
+                    );
                 } else {
-                    branches.push(createBranch(evaluation, cutsHigh, newDepth));
-                    branches.push(createBranch(evaluation, cutsLow, newDepth));
+                    branches.push(
+                        createBranch(
+                            evaluation,
+                            cutsHigh,
+                            newDepth,
+                            varIndex,
+                            "up",
+                            fracUp,
+                            evaluation
+                        )
+                    );
+                    branches.push(
+                        createBranch(
+                            evaluation,
+                            cutsLow,
+                            newDepth,
+                            varIndex,
+                            "down",
+                            fracDown,
+                            evaluation
+                        )
+                    );
                 }
             }
         }

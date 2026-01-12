@@ -65,7 +65,10 @@ export function createBranchAndCutService(): BranchAndCutService {
         let bestEvaluation = Infinity;
         let bestBranch: Branch | null = null;
         const bestOptionalObjectivesEvaluations: number[] = [];
-        for (let oInit = 0; oInit < tableau.optionalObjectives.length; oInit += 1) {
+        // Cache optionalObjectives reference to avoid repeated property lookups in hot loop
+        const optionalObjectives = tableau.optionalObjectives;
+        const nOptionalObjectives = optionalObjectives.length;
+        for (let oInit = 0; oInit < nOptionalObjectives; oInit += 1) {
             bestOptionalObjectivesEvaluations.push(Infinity);
         }
 
@@ -106,16 +109,12 @@ export function createBranchAndCutService(): BranchAndCutService {
 
             if (evaluation === bestEvaluation) {
                 let isCurrentEvaluationWorse = true;
-                for (let o = 0; o < tableau.optionalObjectives.length; o += 1) {
-                    if (
-                        tableau.optionalObjectives[o].reducedCosts[0] >
-                        bestOptionalObjectivesEvaluations[o]
-                    ) {
+                for (let o = 0; o < nOptionalObjectives; o += 1) {
+                    const currentCost = optionalObjectives[o].reducedCosts[0];
+                    const bestCost = bestOptionalObjectivesEvaluations[o];
+                    if (currentCost > bestCost) {
                         break;
-                    } else if (
-                        tableau.optionalObjectives[o].reducedCosts[0] <
-                        bestOptionalObjectivesEvaluations[o]
-                    ) {
+                    } else if (currentCost < bestCost) {
                         isCurrentEvaluationWorse = false;
                         break;
                     }
@@ -135,9 +134,9 @@ export function createBranchAndCutService(): BranchAndCutService {
                 }
                 bestBranch = activeBranch;
                 bestEvaluation = evaluation;
-                for (let oCopy = 0; oCopy < tableau.optionalObjectives.length; oCopy += 1) {
+                for (let oCopy = 0; oCopy < nOptionalObjectives; oCopy += 1) {
                     bestOptionalObjectivesEvaluations[oCopy] =
-                        tableau.optionalObjectives[oCopy].reducedCosts[0];
+                        optionalObjectives[oCopy].reducedCosts[0];
                 }
 
                 if (tableau.model?.keep_solutions) {
@@ -159,6 +158,7 @@ export function createBranchAndCutService(): BranchAndCutService {
                 const variable = tableau.getMostFractionalVar();
 
                 const varIndex = variable.index as number;
+                const varValue = variable.value as number;
 
                 const cutsHigh: BranchCut[] = [];
                 const cutsLow: BranchCut[] = [];
@@ -178,13 +178,10 @@ export function createBranchAndCutService(): BranchAndCutService {
                     }
                 }
 
-                const min = Math.ceil(variable.value as number);
-                const max = Math.floor(variable.value as number);
-
-                const cutHigh = createCut("min", varIndex, min);
+                const cutHigh = createCut("min", varIndex, Math.ceil(varValue));
                 cutsHigh.push(cutHigh);
 
-                const cutLow = createCut("max", varIndex, max);
+                const cutLow = createCut("max", varIndex, Math.floor(varValue));
                 cutsLow.push(cutLow);
 
                 branches.push(createBranch(evaluation, cutsHigh));
