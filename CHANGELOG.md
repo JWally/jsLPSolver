@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-01-12
+
+### Performance
+
+- **Pivot row caching** - Cache normalized pivot row values for better memory locality (15-30% simplex improvement)
+- **Hash-based cycle detection** - Replace O(n²) algorithm with O(1) Map lookup (5-8% improvement when enabled)
+- **Matrix over-allocation** - Reduce reallocation frequency during cut addition
+- **Pre-computed inverse quotient** - Multiply instead of divide in inner loops
+
+### Changed
+
+- Updated README benchmarks with proper statistical methodology (10 runs, averaged)
+- Added `useMIRCuts` option to API documentation
+
+### Fixed
+
+- Fixed pseudo-cost fractionality tracking in enhanced branch-and-cut
+- Fixed lint warnings for unused variables
+
 ## [1.0.0] - 2026-01-05
 
 ### Breaking Changes
