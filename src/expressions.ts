@@ -158,6 +158,7 @@ export class Constraint {
     setVariableCoefficient(newCoefficient: number, variable: Variable): this | void {
         const varIndex = variable.index;
         if (varIndex === -1) {
+            // eslint-disable-next-line no-console
             console.warn(
                 "[Constraint.setVariableCoefficient] Trying to change coefficient of inexistant variable."
             );
