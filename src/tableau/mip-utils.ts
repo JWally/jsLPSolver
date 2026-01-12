@@ -163,13 +163,16 @@ export function isIntegral(this: Tableau): boolean {
     const rhsColumn = this.rhsColumn;
     const integerVariables = this.model!.integerVariables;
     const nIntegerVars = integerVariables.length;
+    // Cache array reference for faster access in hot loop
+    const rowByVarIndex = this.rowByVarIndex;
+    const precision = this.precision;
 
     for (let v = 0; v < nIntegerVars; v++) {
         const varIndex = integerVariables[v].index;
-        const row = this.rowByVarIndex[varIndex];
+        const row = rowByVarIndex[varIndex];
         if (row !== -1) {
             const value = matrix[row * width + rhsColumn];
-            if (Math.abs(value - Math.round(value)) > this.precision) {
+            if (Math.abs(value - Math.round(value)) > precision) {
                 return false;
             }
         }
@@ -186,15 +189,18 @@ export function computeFractionalVolume(this: Tableau, ignoreIntegerValues?: boo
     const width = this.width;
     const matrix = this.matrix;
     const rhsColumn = this.rhsColumn;
+    const height = this.height;
+    // Cache array references for faster access in hot loop
+    const variablesPerIndex = this.variablesPerIndex;
+    const varIndexByRow = this.varIndexByRow;
+    const precision = this.precision;
 
-    for (let r = 1; r < this.height; r += 1) {
-        const variable = this.variablesPerIndex[this.varIndexByRow[r]];
+    for (let r = 1; r < height; r += 1) {
+        const variable = variablesPerIndex[varIndexByRow[r]];
         if (variable !== undefined && variable.isInteger) {
             const value = matrix[r * width + rhsColumn];
             const distance = Math.abs(value);
-            if (
-                Math.min(distance - Math.floor(distance), Math.floor(distance + 1)) < this.precision
-            ) {
+            if (Math.min(distance - Math.floor(distance), Math.floor(distance + 1)) < precision) {
                 if (ignoreIntegerValues !== true) {
                     return 0;
                 }
@@ -224,10 +230,12 @@ export function getMostFractionalVar(this: Tableau): VariableValue {
     const rhsColumn = this.rhsColumn;
     const integerVars = this.model!.integerVariables;
     const nIntegerVars = integerVars.length;
+    // Cache array reference for faster access in hot loop
+    const rowByVarIndex = this.rowByVarIndex;
 
     for (let v = 0; v < nIntegerVars; v += 1) {
         const varIndex = integerVars[v].index;
-        const row = this.rowByVarIndex[varIndex];
+        const row = rowByVarIndex[varIndex];
         if (row !== -1) {
             const varValue = matrix[row * width + rhsColumn];
             const fraction = Math.abs(varValue - Math.round(varValue));

@@ -36,17 +36,16 @@ export function createBranchAndCutService(): BranchAndCutService {
         tableau.addCutConstraints(branchingCuts);
         tableau.simplex();
         if (tableau.model?.useMIRCuts) {
-            let fractionalVolumeImproved = true;
-            while (fractionalVolumeImproved) {
-                const fractionalVolumeBefore = tableau.computeFractionalVolume(true);
+            // Optimization: reuse previous "after" as next "before" to avoid redundant computation
+            let fractionalVolume = tableau.computeFractionalVolume(true);
+            while (fractionalVolume > 0) {
                 tableau.applyMIRCuts();
                 tableau.simplex();
-
                 const fractionalVolumeAfter = tableau.computeFractionalVolume(true);
-
-                if (fractionalVolumeAfter >= 0.9 * fractionalVolumeBefore) {
-                    fractionalVolumeImproved = false;
+                if (fractionalVolumeAfter >= 0.9 * fractionalVolume) {
+                    break;
                 }
+                fractionalVolume = fractionalVolumeAfter;
             }
         }
     };

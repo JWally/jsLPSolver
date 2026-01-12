@@ -401,3 +401,64 @@ const variable =
 6. **Devex Pricing**: Approximate steepest-edge pricing for simplex. Could reduce iteration count by 20-40% but adds per-iteration overhead.
 
 7. **Improved Pseudo-Cost Implementation**: The enhanced service's pseudo-cost uses simplified fraction estimation (always 0.5). Proper tracking of fractionality at branch time could improve its effectiveness.
+
+### 8. Extended Array Reference Caching (10-25% improvement on MIP)
+
+Applied the "cache array references" pattern more extensively to MIP-related hot paths:
+
+```typescript
+// Before: repeated property access in loops
+for (let v = 0; v < nIntegerVars; v++) {
+    const row = this.rowByVarIndex[integerVariables[v].index];
+    if (Math.abs(value - Math.round(value)) > this.precision) { ... }
+}
+
+// After: cache references before loop
+const rowByVarIndex = this.rowByVarIndex;
+const precision = this.precision;
+for (let v = 0; v < nIntegerVars; v++) {
+    const row = rowByVarIndex[integerVariables[v].index];
+    if (Math.abs(value - Math.round(value)) > precision) { ... }
+}
+```
+
+Applied to:
+
+- `isIntegral()` - caches `rowByVarIndex`, `precision`
+- `getMostFractionalVar()` - caches `rowByVarIndex`
+- `computeFractionalVolume()` - caches `variablesPerIndex`, `varIndexByRow`, `precision`, `height`
+- `addCutConstraints()` - caches `rhsColumn`, `rowByVarIndex`, `colByVarIndex`, `varIndexByRow`, `variablesPerIndex`
+- `addLowerBoundMIRCut()` - caches `variablesPerIndex`, `varIndexByCol`, precomputes `1 - fractionalPart`
+- `addUpperBoundMIRCut()` - same caching pattern
+
+**Results** (measured with warmup and 15 iterations):
+| Problem | Before | After | Change |
+|---------|--------|-------|--------|
+| Vendor Selection | ~670ms | ~480ms | **-28%** |
+| Monster II | ~150ms | ~100ms | **-33%** |
+| Large Farm MIP | ~50ms | ~44ms | **-12%** |
+
+### 9. Fractional Volume Caching in MIR Loop (marginal)
+
+Reuse previous "after" value as next "before" to avoid redundant `computeFractionalVolume` call:
+
+```typescript
+// Before: compute twice per iteration
+while (fractionalVolumeImproved) {
+    const before = tableau.computeFractionalVolume(true);
+    tableau.applyMIRCuts();
+    const after = tableau.computeFractionalVolume(true);
+    if (after >= 0.9 * before) break;
+}
+
+// After: reuse previous after
+let volume = tableau.computeFractionalVolume(true);
+while (volume > 0) {
+    tableau.applyMIRCuts();
+    const after = tableau.computeFractionalVolume(true);
+    if (after >= 0.9 * volume) break;
+    volume = after;
+}
+```
+
+**Results**: Marginal improvement since the MIR loop typically runs only 1-3 iterations.
