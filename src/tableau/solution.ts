@@ -78,6 +78,3 @@ export class MilpSolution extends Solution {
         this.iter = branchAndCutIterations;
     }
 }
-
-// Default export for backwards compatibility
-export default Solution;

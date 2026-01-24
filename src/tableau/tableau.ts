@@ -18,7 +18,6 @@ import { createBranchAndCutService } from "./branch-and-cut";
 
 // Import implementations
 import * as simplexOps from "./simplex";
-import * as sparseSimplexOps from "./sparse-simplex";
 import * as cuttingOps from "./cutting-strategies";
 import * as dynamicOps from "./dynamic-modification";
 import * as backupOps from "./backup";
@@ -101,12 +100,7 @@ export default class Tableau {
     // ========== Core Simplex Operations ==========
 
     simplex(): this {
-        // Use sparse simplex for large, sparse problems
-        if (sparseSimplexOps.shouldUseSparse(this)) {
-            sparseSimplexOps.sparseSimplex.call(this);
-        } else {
-            simplexOps.simplex.call(this);
-        }
+        simplexOps.simplex.call(this);
         return this;
     }
 
