@@ -2,7 +2,7 @@
     "$schema": "https://unpkg.com/knip@latest/schema.json",
     "entry": ["src/solver.ts"],
     "project": ["src/**/*.ts"],
-    "ignore": ["src/**/*.test.ts", "src/external/**"],
+    "ignore": ["src/**/*.test.ts", "src/external/**", "src/shims/**"],
     "ignoreDependencies": ["mocha"],
     "ignoreBinaries": ["dot"]
 }
