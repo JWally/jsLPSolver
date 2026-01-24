@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Variable-name objectives return zero** - When `optimize` names a variable directly (e.g., `optimize: "x"`) rather than a coefficient attribute, the solver now correctly assigns an implicit cost of 1 to that variable instead of producing a trivial zero objective. ([#121](https://github.com/JWally/jsLPSolver/issues/121), reported by [@Daniel-Alievsky](https://github.com/Daniel-Alievsky))
+
 ## [1.0.1] - 2026-01-12
 
 ### Performance
