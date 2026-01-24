@@ -32,8 +32,8 @@ export interface GeneratedProblem {
     opType: "max" | "min";
     constraints: Record<string, { min?: number; max?: number; equal?: number }>;
     variables: Record<string, Record<string, number>>;
-    ints?: Record<string, number>;
-    binaries?: Record<string, number>;
+    ints?: Record<string, 1>;
+    binaries?: Record<string, 1>;
 }
 
 /**
@@ -117,8 +117,8 @@ export function generateRandomMIP(options: GeneratorOptions = {}): GeneratedProb
     const varNames = Object.keys(problem.variables);
     const rng = createRng((options.seed ?? Date.now()) + 1);
 
-    const ints: Record<string, number> = {};
-    const binaries: Record<string, number> = {};
+    const ints: Record<string, 1> = {};
+    const binaries: Record<string, 1> = {};
 
     for (const varName of varNames) {
         const r = rng();
@@ -156,7 +156,7 @@ export function generateKnapsack(options: GeneratorOptions = {}): GeneratedProbl
     const randomInt = (min: number, max: number) => Math.floor(min + rng() * (max - min + 1));
 
     const variables: Record<string, Record<string, number>> = {};
-    const binaries: Record<string, number> = {};
+    const binaries: Record<string, 1> = {};
 
     // Each item has a value (objective) and weight (capacity constraint)
     for (let i = 0; i < numVariables; i++) {
@@ -198,7 +198,7 @@ export function generateSetCover(options: GeneratorOptions = {}): GeneratedProbl
     const randomInt = (min: number, max: number) => Math.floor(min + rng() * (max - min + 1));
 
     const variables: Record<string, Record<string, number>> = {};
-    const binaries: Record<string, number> = {};
+    const binaries: Record<string, 1> = {};
     const constraints: Record<string, { min: number }> = {};
 
     // Create sets (variables)
