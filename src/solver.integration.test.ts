@@ -141,6 +141,47 @@ describe("Solver Integration Tests", () => {
         });
     });
 
+    describe("Variable-name objectives (issue #121)", () => {
+        it("maximizes a variable when optimize names the variable directly", () => {
+            const model = {
+                optimize: "x",
+                opType: "max" as const,
+                constraints: {
+                    v1: { min: -1, max: 1 },
+                    v2: { min: -1, max: 1 },
+                },
+                variables: {
+                    x: { v1: 1, v2: 1 },
+                    y: { v1: 1, v2: -1 },
+                },
+            };
+
+            const result = solver.Solve(model) as SolveResult;
+            expect(result.feasible).toBe(true);
+            expect(result.result).toBe(1);
+            expect(result.x).toBe(1);
+        });
+
+        it("still uses attribute coefficients when optimize names a coefficient key", () => {
+            const model = {
+                optimize: "profit",
+                opType: "max" as const,
+                constraints: {
+                    budget: { max: 10 },
+                },
+                variables: {
+                    x: { budget: 2, profit: 5 },
+                    y: { budget: 3, profit: 4 },
+                },
+            };
+
+            const result = solver.Solve(model) as SolveResult;
+            expect(result.feasible).toBe(true);
+            expect(result.result).toBe(25);
+            expect(result.x).toBe(5);
+        });
+    });
+
     describe("Test Suite: Sanity Tests", () => {
         const problems = loadTestProblems("test-sanity");
 
