@@ -6,7 +6,7 @@ pre-commit:
     commands:
         lint:
             glob: "*.{ts,tsx}"
-            run: ESLINT_USE_FLAT_CONFIG=false npx eslint {staged_files} --max-warnings 0
+            run: ESLINT_USE_FLAT_CONFIG=false npx eslint {staged_files}
         format:
             glob: "*.{ts,tsx,json,md,yml,yaml}"
             run: npx prettier --check {staged_files}
@@ -14,7 +14,11 @@ pre-commit:
 pre-push:
     parallel: false
     commands:
-        test:
-            run: npm test
         typecheck:
-            run: npm run build
+            run: npx tsc --noEmit
+        knip:
+            run: npx knip
+        deps:
+            run: npx depcruise src --config .dependency-cruiser.cjs
+        test:
+            run: npm run test:coverage

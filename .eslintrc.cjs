@@ -23,6 +23,12 @@ module.exports = {
                 caughtErrorsIgnorePattern: "^_",
             },
         ],
+        // Complexity budgets — fights over-abstraction and over-engineering
+        complexity: ["warn", 10],
+        "max-depth": ["warn", 4],
+        "max-lines-per-function": ["warn", { max: 50, skipBlankLines: true, skipComments: true }],
+        "max-params": ["warn", 4],
+        "max-nested-callbacks": ["warn", 3],
         // Consistency
         eqeqeq: ["error", "always", { null: "ignore" }],
         "no-var": "error",
