@@ -193,7 +193,6 @@ export function phase1(this: Tableau): number {
     const SAVE_THRESHOLD = 10;
     const maxQuotientLimit = Math.max(lastRow, lastColumn);
 
-    let unrestricted: boolean;
     let iterations = 0;
     let useBland = false;
     let initialRHS = -Infinity;
@@ -205,10 +204,13 @@ export function phase1(this: Tableau): number {
     let savedColByVarIndex: number[] | null = null;
 
     while (true) {
-        // Find leaving row (most negative RHS)
+        // Find leaving row (most negative RHS among restricted basic vars).
+        // Unrestricted variables can validly have negative values, so rows
+        // where the basic variable is unrestricted are not infeasible.
         let leavingRowIndex = 0;
         let rhsValue = negPrecision;
         for (let r = 1; r <= lastRow; r++) {
+            if (unrestrictedVars[varIndexByRow[r]] === true) continue;
             const value = matrix[r * width + rhsColumn];
             if (value < rhsValue) {
                 rhsValue = value;
@@ -257,33 +259,63 @@ export function phase1(this: Tableau): number {
             initialRHS = rhsValue;
         }
 
-        // Find entering column
+        // Find entering column.
+        // Prefer columns with negative coefficient in leaving row (these directly
+        // fix the infeasibility by making RHS positive after pivot).
+        // Only fall back to unrestricted variables with positive coefficient when
+        // no negative coefficient column exists - this "swaps" the infeasibility
+        // to an unrestricted variable (which is allowed to be negative).
         let enteringColumn = 0;
         const leavingRowOffset = leavingRowIndex * width;
 
         if (useBland) {
             // Bland's rule: pick the first eligible column (smallest index).
-            // Guarantees termination on degenerate problems.
+            // First pass: negative coefficients only (directly fix infeasibility)
             for (let c = 1; c <= lastColumn; c++) {
                 const coefficient = matrix[leavingRowOffset + c];
-                unrestricted = unrestrictedVars[varIndexByCol[c]] === true;
-                if (unrestricted || coefficient < negPrecision) {
+                if (coefficient < negPrecision) {
                     enteringColumn = c;
                     break;
+                }
+            }
+            // Fallback: unrestricted with non-zero coefficient (swap infeasibility)
+            if (enteringColumn === 0) {
+                for (let c = 1; c <= lastColumn; c++) {
+                    const coefficient = matrix[leavingRowOffset + c];
+                    if (
+                        unrestrictedVars[varIndexByCol[c]] === true &&
+                        (coefficient < negPrecision || coefficient > precision)
+                    ) {
+                        enteringColumn = c;
+                        break;
+                    }
                 }
             }
         } else {
             // Max-quotient rule: faster in practice but can oscillate on
             // degenerate problems.
+            // First pass: negative coefficients only
             let maxQuotient = -Infinity;
             for (let c = 1; c <= lastColumn; c++) {
                 const coefficient = matrix[leavingRowOffset + c];
-                unrestricted = unrestrictedVars[varIndexByCol[c]] === true;
-                if (unrestricted || coefficient < negPrecision) {
+                if (coefficient < negPrecision) {
                     const quotient = -matrix[c] / coefficient;
                     if (maxQuotient < quotient) {
                         maxQuotient = quotient;
                         enteringColumn = c;
+                    }
+                }
+            }
+            // Fallback: unrestricted with non-zero coefficient
+            if (enteringColumn === 0) {
+                for (let c = 1; c <= lastColumn; c++) {
+                    const coefficient = matrix[leavingRowOffset + c];
+                    if (
+                        unrestrictedVars[varIndexByCol[c]] === true &&
+                        (coefficient < negPrecision || coefficient > precision)
+                    ) {
+                        enteringColumn = c;
+                        break;
                     }
                 }
             }
