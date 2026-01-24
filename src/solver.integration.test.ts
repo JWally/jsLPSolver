@@ -213,8 +213,8 @@ describe("Solver Integration Tests", () => {
                     b1_def: { equal: -100 },
                     b2_def: { equal: -300 },
                 },
-                binaries: { bin: 1 },
-                unrestricted: { d12: 1 },
+                binaries: { bin: 1 as const },
+                unrestricted: { d12: 1 as const },
             };
 
             const result = solver.Solve(model) as SolveResult;
@@ -253,7 +253,7 @@ describe("Solver Integration Tests", () => {
                     b2_def: { equal: -300 },
                     bin_fix: { equal: 1 },
                 },
-                unrestricted: { d12: 1 },
+                unrestricted: { d12: 1 as const },
             };
 
             const result = solver.Solve(model) as SolveResult;
