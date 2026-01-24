@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Variable-name objectives return zero** - When `optimize` names a variable directly (e.g., `optimize: "x"`) rather than a coefficient attribute, the solver now correctly assigns an implicit cost of 1 to that variable instead of producing a trivial zero objective. ([#121](https://github.com/JWally/jsLPSolver/issues/121), reported by [@Daniel-Alievsky](https://github.com/Daniel-Alievsky))
+- **Solver hangs on degenerate LPs** - Phase 1 of the simplex could oscillate indefinitely on problems with many redundant bound constraints (e.g., 300+ variables with explicit min/max bounds). Now detects non-convergence and falls back to Bland's rule which guarantees termination. ([#112](https://github.com/JWally/jsLPSolver/issues/112), reported by [@luke-thorburn](https://github.com/luke-thorburn))
 
 ## [1.0.1] - 2026-01-12
 

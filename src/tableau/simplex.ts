@@ -183,15 +183,28 @@ export function phase1(this: Tableau): number {
     const varIndexByRow = this.varIndexByRow;
     const varIndexByCol = this.varIndexByCol;
 
+    // Maximum iterations for the fast max-quotient rule before falling
+    // back. On degenerate problems the max-quotient rule can oscillate, so
+    // we save the matrix and restart with Bland's rule if needed.
+    const maxQuotientLimit = Math.max(lastRow, lastColumn);
+
+    // Save matrix state so we can restart cleanly with Bland's rule
+    const savedMatrix = matrix.slice();
+    const savedVarIndexByRow = this.varIndexByRow.slice();
+    const savedVarIndexByCol = this.varIndexByCol.slice();
+    const savedRowByVarIndex = this.rowByVarIndex.slice();
+    const savedColByVarIndex = this.colByVarIndex.slice();
+
     let unrestricted: boolean;
     let iterations = 0;
+    let useBland = false;
 
     while (true) {
         // Find leaving row (most negative RHS)
         let leavingRowIndex = 0;
         let rhsValue = negPrecision;
         for (let r = 1; r <= lastRow; r++) {
-            const value = matrix[r * width + rhsColumn];
+            const value = this.matrix[r * width + rhsColumn];
             if (value < rhsValue) {
                 rhsValue = value;
                 leavingRowIndex = r;
@@ -203,19 +216,55 @@ export function phase1(this: Tableau): number {
             return iterations;
         }
 
+        // If max-quotient rule hasn't converged, restore matrix and switch
+        // to Bland's rule which guarantees finite termination.
+        if (!useBland && iterations >= maxQuotientLimit) {
+            useBland = true;
+            matrix.set(savedMatrix);
+            for (let i = 0; i < savedVarIndexByRow.length; i++) {
+                varIndexByRow[i] = savedVarIndexByRow[i];
+            }
+            for (let i = 0; i < savedVarIndexByCol.length; i++) {
+                varIndexByCol[i] = savedVarIndexByCol[i];
+            }
+            for (let i = 0; i < savedRowByVarIndex.length; i++) {
+                this.rowByVarIndex[i] = savedRowByVarIndex[i];
+            }
+            for (let i = 0; i < savedColByVarIndex.length; i++) {
+                this.colByVarIndex[i] = savedColByVarIndex[i];
+            }
+            iterations = 0;
+            continue;
+        }
+
         // Find entering column
         let enteringColumn = 0;
-        let maxQuotient = -Infinity;
         const leavingRowOffset = leavingRowIndex * width;
-        for (let c = 1; c <= lastColumn; c++) {
-            const coefficient = matrix[leavingRowOffset + c];
 
-            unrestricted = unrestrictedVars[varIndexByCol[c]] === true;
-            if (unrestricted || coefficient < negPrecision) {
-                const quotient = -matrix[c] / coefficient; // costRowOffset is 0
-                if (maxQuotient < quotient) {
-                    maxQuotient = quotient;
+        if (useBland) {
+            // Bland's rule: pick the first eligible column (smallest index).
+            // Guarantees termination on degenerate problems.
+            for (let c = 1; c <= lastColumn; c++) {
+                const coefficient = matrix[leavingRowOffset + c];
+                unrestricted = unrestrictedVars[varIndexByCol[c]] === true;
+                if (unrestricted || coefficient < negPrecision) {
                     enteringColumn = c;
+                    break;
+                }
+            }
+        } else {
+            // Max-quotient rule: faster in practice but can oscillate on
+            // degenerate problems.
+            let maxQuotient = -Infinity;
+            for (let c = 1; c <= lastColumn; c++) {
+                const coefficient = matrix[leavingRowOffset + c];
+                unrestricted = unrestrictedVars[varIndexByCol[c]] === true;
+                if (unrestricted || coefficient < negPrecision) {
+                    const quotient = -matrix[c] / coefficient;
+                    if (maxQuotient < quotient) {
+                        maxQuotient = quotient;
+                        enteringColumn = c;
+                    }
                 }
             }
         }
