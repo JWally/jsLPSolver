@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-01-24
+
+### Fixed
+
+- **Variable-name objectives return zero** - When `optimize` names a variable directly (e.g., `optimize: "x"`) rather than a coefficient attribute, the solver now correctly assigns an implicit cost of 1 to that variable instead of producing a trivial zero objective. ([#121](https://github.com/JWally/jsLPSolver/issues/121), reported by [@Daniel-Alievsky](https://github.com/Daniel-Alievsky))
+- **Solver hangs on degenerate LPs** - Both phases of the simplex could cycle indefinitely on problems with many redundant bound constraints (e.g., 300+ variables with explicit min/max bounds). Phase 1 now detects non-convergence and falls back to Bland's rule with lazy matrix save/restore; phase 2 detects stalled objectives and terminates degenerate cycling. ([#112](https://github.com/JWally/jsLPSolver/issues/112), reported by [@luke-thorburn](https://github.com/luke-thorburn))
+- **Unrestricted variables with Big-M report false infeasibility** - Phase 1 of the simplex incorrectly treated negative-valued unrestricted basic variables as infeasibility violations, causing models with `unrestricted` variables and Big-M constraints (e.g., absolute value formulations `|x| >= C`) to return `feasible: false` or find suboptimal solutions. Phase 1 now skips unrestricted basic variables when checking feasibility and prefers entering columns that directly fix infeasibility. ([#130](https://github.com/JWally/jsLPSolver/issues/130), reported by [@robwieringa](https://github.com/robwieringa))
+
+### Performance
+
+- **B&B node pruning** - Branch-and-bound now prunes nodes whose LP relaxation bound equals the best known integer solution, avoiding unnecessary LP re-solves on provably non-improving nodes. ([#90](https://github.com/JWally/jsLPSolver/issues/90))
+
 ## [1.0.1] - 2026-01-12
 
 ### Performance

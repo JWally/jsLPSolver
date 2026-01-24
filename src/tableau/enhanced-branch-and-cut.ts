@@ -291,7 +291,7 @@ export function createEnhancedBranchAndCutService(
                 break;
             }
 
-            if (activeBranch.relaxedEvaluation > bestEvaluation) {
+            if (activeBranch.relaxedEvaluation >= bestEvaluation) {
                 continue;
             }
 

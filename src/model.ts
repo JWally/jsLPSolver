@@ -381,11 +381,24 @@ class Model {
 
         // Instantiating variables and constraint terms
         const objectiveName = jsonModel.optimize as string;
+
+        // Check if objectiveName exists as a coefficient key in any variable.
+        // If not, and it matches a variable name, the user wants to optimize
+        // that variable directly (implicit cost of 1).
+        const objectiveIsAttribute = variableIds.some(
+            (id) => objectiveName in (variables[id] as Record<string, number>)
+        );
+        const objectiveIsVariable = !objectiveIsAttribute && variableIds.includes(objectiveName);
+
         for (let v = 0; v < nVariables; v += 1) {
             // Creation of the variables
             const variableId = variableIds[v];
             const variableConstraints = variables[variableId] as Record<string, number>;
-            const cost = variableConstraints[objectiveName] || 0;
+            const cost = objectiveIsVariable
+                ? variableId === objectiveName
+                    ? 1
+                    : 0
+                : variableConstraints[objectiveName] || 0;
             const isBinary = !!binaryVarIds[variableId];
             const isInteger = !!integerVarIds[variableId] || isBinary;
             const isUnrestricted = !!unrestrictedVarIds[variableId];

@@ -335,7 +335,7 @@ export function createIncrementalBranchAndCutService(
                 break;
             }
 
-            if (activeBranch.relaxedEvaluation > bestEvaluation) {
+            if (activeBranch.relaxedEvaluation >= bestEvaluation) {
                 continue;
             }
 

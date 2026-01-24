@@ -183,14 +183,34 @@ export function phase1(this: Tableau): number {
     const varIndexByRow = this.varIndexByRow;
     const varIndexByCol = this.varIndexByCol;
 
-    let unrestricted: boolean;
+    // Anti-cycling: on degenerate problems, the max-quotient pivot rule
+    // can oscillate, corrupting the matrix. We detect stalling early
+    // (after SAVE_THRESHOLD iterations without RHS improvement) and save
+    // the matrix state. If still stuck after maxQuotientLimit iterations,
+    // we restore the clean matrix and switch to Bland's rule. The lazy
+    // save avoids the copy cost on the vast majority of phase1 calls
+    // that converge quickly.
+    const SAVE_THRESHOLD = 10;
+    const maxQuotientLimit = Math.max(lastRow, lastColumn);
+
     let iterations = 0;
+    let useBland = false;
+    let initialRHS = -Infinity;
+
+    let savedMatrix: Float64Array | null = null;
+    let savedVarIndexByRow: number[] | null = null;
+    let savedVarIndexByCol: number[] | null = null;
+    let savedRowByVarIndex: number[] | null = null;
+    let savedColByVarIndex: number[] | null = null;
 
     while (true) {
-        // Find leaving row (most negative RHS)
+        // Find leaving row (most negative RHS among restricted basic vars).
+        // Unrestricted variables can validly have negative values, so rows
+        // where the basic variable is unrestricted are not infeasible.
         let leavingRowIndex = 0;
         let rhsValue = negPrecision;
         for (let r = 1; r <= lastRow; r++) {
+            if (unrestrictedVars[varIndexByRow[r]] === true) continue;
             const value = matrix[r * width + rhsColumn];
             if (value < rhsValue) {
                 rhsValue = value;
@@ -203,19 +223,100 @@ export function phase1(this: Tableau): number {
             return iterations;
         }
 
-        // Find entering column
-        let enteringColumn = 0;
-        let maxQuotient = -Infinity;
-        const leavingRowOffset = leavingRowIndex * width;
-        for (let c = 1; c <= lastColumn; c++) {
-            const coefficient = matrix[leavingRowOffset + c];
+        // Detect non-convergence and apply anti-cycling.
+        if (!useBland && iterations > 0 && rhsValue <= initialRHS) {
+            if (iterations >= SAVE_THRESHOLD && savedMatrix === null) {
+                // Stalling detected: save matrix for potential rollback
+                savedMatrix = matrix.slice();
+                savedVarIndexByRow = varIndexByRow.slice();
+                savedVarIndexByCol = varIndexByCol.slice();
+                savedRowByVarIndex = this.rowByVarIndex.slice();
+                savedColByVarIndex = this.colByVarIndex.slice();
+            }
+            if (iterations >= maxQuotientLimit) {
+                // Still stuck after generous budget: restore and switch
+                useBland = true;
+                if (savedMatrix) {
+                    matrix.set(savedMatrix);
+                    for (let i = 0; i < savedVarIndexByRow!.length; i++) {
+                        varIndexByRow[i] = savedVarIndexByRow![i];
+                    }
+                    for (let i = 0; i < savedVarIndexByCol!.length; i++) {
+                        varIndexByCol[i] = savedVarIndexByCol![i];
+                    }
+                    for (let i = 0; i < savedRowByVarIndex!.length; i++) {
+                        this.rowByVarIndex[i] = savedRowByVarIndex![i];
+                    }
+                    for (let i = 0; i < savedColByVarIndex!.length; i++) {
+                        this.colByVarIndex[i] = savedColByVarIndex![i];
+                    }
+                    iterations = 0;
+                    continue;
+                }
+            }
+        }
+        if (iterations === 0) {
+            initialRHS = rhsValue;
+        }
 
-            unrestricted = unrestrictedVars[varIndexByCol[c]] === true;
-            if (unrestricted || coefficient < negPrecision) {
-                const quotient = -matrix[c] / coefficient; // costRowOffset is 0
-                if (maxQuotient < quotient) {
-                    maxQuotient = quotient;
+        // Find entering column.
+        // Prefer columns with negative coefficient in leaving row (these directly
+        // fix the infeasibility by making RHS positive after pivot).
+        // Only fall back to unrestricted variables with positive coefficient when
+        // no negative coefficient column exists - this "swaps" the infeasibility
+        // to an unrestricted variable (which is allowed to be negative).
+        let enteringColumn = 0;
+        const leavingRowOffset = leavingRowIndex * width;
+
+        if (useBland) {
+            // Bland's rule: pick the first eligible column (smallest index).
+            // First pass: negative coefficients only (directly fix infeasibility)
+            for (let c = 1; c <= lastColumn; c++) {
+                const coefficient = matrix[leavingRowOffset + c];
+                if (coefficient < negPrecision) {
                     enteringColumn = c;
+                    break;
+                }
+            }
+            // Fallback: unrestricted with non-zero coefficient (swap infeasibility)
+            if (enteringColumn === 0) {
+                for (let c = 1; c <= lastColumn; c++) {
+                    const coefficient = matrix[leavingRowOffset + c];
+                    if (
+                        unrestrictedVars[varIndexByCol[c]] === true &&
+                        (coefficient < negPrecision || coefficient > precision)
+                    ) {
+                        enteringColumn = c;
+                        break;
+                    }
+                }
+            }
+        } else {
+            // Max-quotient rule: faster in practice but can oscillate on
+            // degenerate problems.
+            // First pass: negative coefficients only
+            let maxQuotient = -Infinity;
+            for (let c = 1; c <= lastColumn; c++) {
+                const coefficient = matrix[leavingRowOffset + c];
+                if (coefficient < negPrecision) {
+                    const quotient = -matrix[c] / coefficient;
+                    if (maxQuotient < quotient) {
+                        maxQuotient = quotient;
+                        enteringColumn = c;
+                    }
+                }
+            }
+            // Fallback: unrestricted with non-zero coefficient
+            if (enteringColumn === 0) {
+                for (let c = 1; c <= lastColumn; c++) {
+                    const coefficient = matrix[leavingRowOffset + c];
+                    if (
+                        unrestrictedVars[varIndexByCol[c]] === true &&
+                        (coefficient < negPrecision || coefficient > precision)
+                    ) {
+                        enteringColumn = c;
+                        break;
+                    }
                 }
             }
         }
@@ -271,6 +372,21 @@ export function phase2(this: Tableau): number {
     let reducedCost: number;
     let unrestricted: boolean;
 
+    // Anti-cycling for phase 2: if the objective stalls (no meaningful
+    // improvement over several hundred iterations), the simplex is
+    // cycling through degenerate vertices. Switch to Bland's rule which
+    // guarantees termination in exact arithmetic. In floating-point,
+    // even Bland's can cycle indefinitely, so we also impose a limit:
+    // if Bland's runs for lastRow iterations without improving the
+    // objective, we accept the current solution as optimal.
+    const PHASE2_WINDOW = 100;
+    const PHASE2_STALE_LIMIT = 5; // consecutive stale windows before switching
+    let useBland = false;
+    let windowStartObj = matrix[rhsColumn];
+    let staleWindows = 0;
+    let blandStartIter = 0;
+    let blandStartObj = 0;
+
     // Partial pricing setup
     // Batch size: use configured value or auto-compute (sqrt of columns, min 50, max 500)
     const nColumns = lastColumn;
@@ -287,11 +403,68 @@ export function phase2(this: Tableau): number {
             optionalCostsColumns = [];
         }
 
+        // Detect degenerate cycling: check every WINDOW iterations
+        // whether the objective has made meaningful progress.
+        if (!useBland && iterations > 0 && iterations % PHASE2_WINDOW === 0) {
+            const currentObj = matrix[rhsColumn];
+            const delta = Math.abs(currentObj - windowStartObj);
+            const scale = Math.max(1, Math.abs(windowStartObj));
+            if (delta / scale < 1e-10) {
+                staleWindows++;
+                if (staleWindows >= PHASE2_STALE_LIMIT) {
+                    useBland = true;
+                    blandStartIter = iterations;
+                    blandStartObj = currentObj;
+                }
+            } else {
+                staleWindows = 0;
+            }
+            windowStartObj = currentObj;
+        }
+
+        // Bland's termination: in floating-point arithmetic, Bland's rule
+        // can cycle through degenerate bases indefinitely. If it hasn't
+        // improved the objective after lastRow pivots, accept the current
+        // solution (reduced costs are within floating-point noise of zero).
+        if (useBland && iterations - blandStartIter > lastRow) {
+            const currentObj = matrix[rhsColumn];
+            const delta = Math.abs(currentObj - blandStartObj);
+            const scale = Math.max(1, Math.abs(blandStartObj));
+            if (delta / scale < 1e-10) {
+                this.setEvaluation();
+                this.simplexIters += 1;
+                return iterations;
+            }
+            // Objective did improve; reset the counter
+            blandStartIter = iterations;
+            blandStartObj = currentObj;
+        }
+
         let enteringColumn = 0;
         let enteringValue = precision;
         let isReducedCostNegative = false;
 
-        if (usePartialPricing) {
+        if (useBland) {
+            // Bland's rule: pick first eligible column (smallest index)
+            for (let c = 1; c <= lastColumn; c++) {
+                reducedCost = matrix[c];
+                unrestricted = unrestrictedVars[varIndexByCol[c]] === true;
+
+                if (unrestricted && reducedCost < 0) {
+                    enteringColumn = c;
+                    enteringValue = -reducedCost;
+                    isReducedCostNegative = true;
+                    break;
+                }
+
+                if (reducedCost > precision) {
+                    enteringColumn = c;
+                    enteringValue = reducedCost;
+                    isReducedCostNegative = false;
+                    break;
+                }
+            }
+        } else if (usePartialPricing) {
             // Partial pricing: scan columns in batches
             const startBatch = this.pricingBatchStart;
             let batchesScanned = 0;

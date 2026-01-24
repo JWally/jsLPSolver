@@ -141,6 +141,128 @@ describe("Solver Integration Tests", () => {
         });
     });
 
+    describe("Variable-name objectives (issue #121)", () => {
+        it("maximizes a variable when optimize names the variable directly", () => {
+            const model = {
+                optimize: "x",
+                opType: "max" as const,
+                constraints: {
+                    v1: { min: -1, max: 1 },
+                    v2: { min: -1, max: 1 },
+                },
+                variables: {
+                    x: { v1: 1, v2: 1 },
+                    y: { v1: 1, v2: -1 },
+                },
+            };
+
+            const result = solver.Solve(model) as SolveResult;
+            expect(result.feasible).toBe(true);
+            expect(result.result).toBe(1);
+            expect(result.x).toBe(1);
+        });
+
+        it("still uses attribute coefficients when optimize names a coefficient key", () => {
+            const model = {
+                optimize: "profit",
+                opType: "max" as const,
+                constraints: {
+                    budget: { max: 10 },
+                },
+                variables: {
+                    x: { budget: 2, profit: 5 },
+                    y: { budget: 3, profit: 4 },
+                },
+            };
+
+            const result = solver.Solve(model) as SolveResult;
+            expect(result.feasible).toBe(true);
+            expect(result.result).toBe(25);
+            expect(result.x).toBe(5);
+        });
+    });
+
+    describe("Unrestricted variables with Big-M (issue #130)", () => {
+        it("finds optimal solution with unrestricted var and binary Big-M constraint", () => {
+            // Absolute value constraint |d12| >= 220 using Big-M with binary variable.
+            // The solver must correctly handle phase 1 when an unrestricted variable
+            // (d12) becomes basic with a negative value.
+            const W = 600;
+            const N = W * 2; // Big-M
+            const mind12 = 220;
+
+            const model = {
+                optimize: "bndOpt",
+                opType: "min" as const,
+                variables: {
+                    I1: { "I1:max": 1, "d12:def": -1, b1_def: -1 },
+                    I2: { "I2:max": 1, "d12:def": 1, b2_def: -1 },
+                    d12: { "d12:def": 1, "d12:min": 1, "d12:max": 1 },
+                    bin: { "d12:min": N, "d12:max": N },
+                    b1_pos: { b1_def: 1, bndOpt: 1 },
+                    b1_neg: { b1_def: -1, bndOpt: 1 },
+                    b2_pos: { b2_def: 1, bndOpt: 1 },
+                    b2_neg: { b2_def: -1, bndOpt: 1 },
+                },
+                constraints: {
+                    "I1:max": { max: W - 200 },
+                    "I2:max": { max: W - 200 },
+                    "d12:def": { equal: 0 },
+                    "d12:min": { min: mind12 },
+                    "d12:max": { max: N - mind12 },
+                    b1_def: { equal: -100 },
+                    b2_def: { equal: -300 },
+                },
+                binaries: { bin: 1 as const },
+                unrestricted: { d12: 1 as const },
+            };
+
+            const result = solver.Solve(model) as SolveResult;
+            expect(result.feasible).toBe(true);
+            // Optimal: bin=1, I1=80, I2=300, d12=-220, b1_neg=20 → objective=20
+            // Suboptimal: bin=0, I1=400, I2=180, d12=220, b1_pos=300, b2_neg=120 → objective=420
+            expect(result.result).toBe(20);
+            expect(result.bin).toBe(1);
+        });
+
+        it("handles LP with unrestricted var forced to negative value via equality", () => {
+            // Same problem but with bin fixed to 1 via equality (LP only).
+            // Phase 1 must not treat negative-valued unrestricted basic variables
+            // as infeasible.
+            const N = 1200;
+            const model = {
+                optimize: "bndOpt",
+                opType: "min" as const,
+                variables: {
+                    I1: { "I1:max": 1, "d12:def": -1, b1_def: -1 },
+                    I2: { "I2:max": 1, "d12:def": 1, b2_def: -1 },
+                    d12: { "d12:def": 1, "d12:min": 1, "d12:max": 1 },
+                    bin: { "d12:min": N, "d12:max": N, bin_fix: 1 },
+                    b1_pos: { b1_def: 1, bndOpt: 1 },
+                    b1_neg: { b1_def: -1, bndOpt: 1 },
+                    b2_pos: { b2_def: 1, bndOpt: 1 },
+                    b2_neg: { b2_def: -1, bndOpt: 1 },
+                },
+                constraints: {
+                    "I1:max": { max: 400 },
+                    "I2:max": { max: 400 },
+                    "d12:def": { equal: 0 },
+                    "d12:min": { min: 220 },
+                    "d12:max": { max: 980 },
+                    b1_def: { equal: -100 },
+                    b2_def: { equal: -300 },
+                    bin_fix: { equal: 1 },
+                },
+                unrestricted: { d12: 1 as const },
+            };
+
+            const result = solver.Solve(model) as SolveResult;
+            expect(result.feasible).toBe(true);
+            expect(result.result).toBe(20);
+            expect(result.d12).toBe(-220);
+        });
+    });
+
     describe("Test Suite: Sanity Tests", () => {
         const problems = loadTestProblems("test-sanity");
 
