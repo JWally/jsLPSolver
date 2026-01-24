@@ -89,7 +89,7 @@ export function createBranchAndCutService(): BranchAndCutService {
             }
 
             const activeBranch = branches.pop()!;
-            if (activeBranch.relaxedEvaluation > bestEvaluation) {
+            if (activeBranch.relaxedEvaluation >= bestEvaluation) {
                 continue;
             }
 
