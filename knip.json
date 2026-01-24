@@ -1,0 +1,8 @@
+{
+    "$schema": "https://unpkg.com/knip@latest/schema.json",
+    "entry": ["src/solver.ts"],
+    "project": ["src/**/*.ts"],
+    "ignore": ["src/**/*.test.ts", "src/external/**"],
+    "ignoreDependencies": ["mocha"],
+    "ignoreBinaries": ["dot"]
+}

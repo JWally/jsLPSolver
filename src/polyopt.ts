@@ -23,7 +23,7 @@ type ObjectiveMap = Record<string, ObjectiveDirection>;
 
 type Vertex = Record<string, number>;
 
-export interface PolyoptResult {
+interface PolyoptResult {
     midpoint: PolyoptSolution;
     vertices: Vertex[];
     ranges: Record<string, { min: number; max: number }>;

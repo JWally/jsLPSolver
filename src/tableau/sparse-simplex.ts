@@ -313,12 +313,12 @@ function sparsePivot(
  * Currently disabled - CSC format overhead exceeds benefits.
  * A dual-indexed (CSC+CSR) approach would be needed for efficient sparse simplex.
  */
-export const SPARSE_THRESHOLD = Infinity; // Disabled
+const SPARSE_THRESHOLD = Infinity; // Disabled
 
 /**
  * Density threshold - only use sparse if below this density
  */
-export const DENSITY_THRESHOLD = 0.1; // 10%
+const DENSITY_THRESHOLD = 0.1; // 10%
 
 /**
  * Check if sparse mode should be used for this tableau
