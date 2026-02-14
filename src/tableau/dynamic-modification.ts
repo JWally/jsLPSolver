@@ -52,7 +52,7 @@ export function takeOutOfBase(this: Tableau, varIndex: number): number {
         const r = this.rowByVarIndex[varIndex];
         const pivotRowOffset = r * width;
 
-        for (let c1 = 1; c1 < this.height; c1 += 1) {
+        for (let c1 = 1; c1 < this.width; c1 += 1) {
             const coefficient = this.matrix[pivotRowOffset + c1];
             if (coefficient < -this.precision || this.precision < coefficient) {
                 c = c1;
