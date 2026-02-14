@@ -14,26 +14,39 @@ import type Tableau from "./tableau";
 import type { Branch, BranchCut } from "./types";
 import { BranchMinHeap } from "./min-heap";
 
+/**
+ * Interface for the enhanced branch-and-cut service.
+ */
 export interface EnhancedBranchAndCutService {
+    /** Apply bound cuts and re-solve the LP relaxation. */
     applyCuts(tableau: Tableau, branchingCuts: BranchCut[]): void;
+    /** Run enhanced branch-and-cut with configurable strategies. */
     branchAndCut(tableau: Tableau): void;
 }
 
+/**
+ * Configuration for the enhanced branch-and-cut solver.
+ */
 export interface BranchAndCutOptions {
-    // Node selection: 'best-first' | 'depth-first' | 'hybrid'
+    /** Node selection strategy for tree traversal. "hybrid" starts depth-first then switches to best-first. */
     nodeSelection?: "best-first" | "depth-first" | "hybrid";
-    // Branching: 'most-fractional' | 'pseudocost' | 'strong'
+    /** Variable selection strategy for branching decisions. */
     branching?: "most-fractional" | "pseudocost" | "strong";
-    // Enable diving heuristic to find feasible solutions faster
+    /** Reserved for future diving heuristic implementation. */
     useDiving?: boolean;
-    // Maximum strong branching candidates
+    /** Maximum number of candidates to evaluate for strong branching. */
     strongBranchingCandidates?: number;
 }
 
+/** Accumulated pseudocost data for a single variable's branching history. */
 interface PseudoCostData {
+    /** Sum of normalized improvements from branching up on this variable. */
     upSum: number;
+    /** Number of times this variable was branched up. */
     upCount: number;
+    /** Sum of normalized improvements from branching down on this variable. */
     downSum: number;
+    /** Number of times this variable was branched down. */
     downCount: number;
 }
 
@@ -62,10 +75,16 @@ function createBranch(
 }
 
 /**
- * Enhanced branch-and-cut with:
- * - Pseudocost branching
- * - Hybrid node selection (depth-first early, best-first later)
- * - Diving heuristic for quick feasible solutions
+ * Create an enhanced branch-and-cut service with configurable strategies.
+ *
+ * Key improvements over the basic service:
+ * - **Pseudocost branching**: Learns from branching history to select better variables.
+ * - **Hybrid node selection**: Starts depth-first (fast feasible solutions), then
+ *   switches to best-first (optimal convergence) after finding the first solution.
+ * - **Strong branching**: Evaluates multiple candidates by estimating LP improvements.
+ *
+ * @param options - Configuration for node/variable selection strategies.
+ * @returns An EnhancedBranchAndCutService instance.
  */
 export function createEnhancedBranchAndCutService(
     options: BranchAndCutOptions = {}

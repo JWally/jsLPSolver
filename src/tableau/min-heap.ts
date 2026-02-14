@@ -11,18 +11,37 @@
  */
 import type { Branch } from "./types";
 
+/** Internal entry pairing a branch with its insertion sequence number for LIFO tie-breaking. */
 interface HeapEntry {
     branch: Branch;
     seq: number;
 }
+
+/**
+ * Binary min-heap for branch-and-bound node selection.
+ *
+ * Orders branches by relaxed objective value (lowest first), with LIFO
+ * tie-breaking so that more recently created nodes are explored first
+ * when evaluations are equal. This mimics depth-first behavior in ties.
+ *
+ * Uses a flat array for cache efficiency and an object pool to reduce
+ * garbage collection pressure during intensive B&B traversals.
+ */
 export class BranchMinHeap {
+    /** Flat array storing heap entries in tree order. */
     private heap: HeapEntry[];
+    /** Number of entries currently in the heap. */
     private size: number;
+    /** Monotonically increasing counter for LIFO tie-breaking. */
     private seqCounter: number;
-    // Object pool to reduce GC pressure
+    /** Object pool for reusing HeapEntry objects. */
     private pool: HeapEntry[];
+    /** Current number of entries in the pool. */
     private poolSize: number;
 
+    /**
+     * @param initialCapacity - Pre-allocated array size (grows automatically if exceeded).
+     */
     constructor(initialCapacity = 64) {
         this.heap = new Array(initialCapacity);
         this.size = 0;
@@ -31,6 +50,7 @@ export class BranchMinHeap {
         this.poolSize = 0;
     }
 
+    /** Allocate a HeapEntry, reusing from the pool if available. */
     private allocEntry(branch: Branch, seq: number): HeapEntry {
         if (this.poolSize > 0) {
             const entry = this.pool[--this.poolSize];
@@ -41,26 +61,33 @@ export class BranchMinHeap {
         return { branch, seq };
     }
 
+    /** Return a HeapEntry to the pool for reuse (capped at 256 entries). */
     private freeEntry(entry: HeapEntry): void {
         if (this.poolSize < 256) {
             this.pool[this.poolSize++] = entry;
         }
     }
 
+    /** Number of branches currently in the heap. */
     get length(): number {
         return this.size;
     }
 
+    /** Whether the heap contains no branches. */
     isEmpty(): boolean {
         return this.size === 0;
     }
 
+    /** Remove all entries and reset the sequence counter. */
     clear(): void {
         this.size = 0;
         this.seqCounter = 0;
     }
 
-    // Compare: returns true if a should be before b (a has higher priority)
+    /**
+     * Compare two entries for priority ordering.
+     * @returns True if `a` should be extracted before `b`.
+     */
     private isBefore(a: HeapEntry, b: HeapEntry): boolean {
         if (a.branch.relaxedEvaluation !== b.branch.relaxedEvaluation) {
             return a.branch.relaxedEvaluation < b.branch.relaxedEvaluation;
@@ -69,6 +96,10 @@ export class BranchMinHeap {
         return a.seq > b.seq;
     }
 
+    /**
+     * Insert a branch into the heap. O(log n).
+     * @param branch - The B&B node to insert.
+     */
     push(branch: Branch): void {
         const heap = this.heap;
         let idx = this.size;
@@ -94,6 +125,10 @@ export class BranchMinHeap {
         heap[idx] = entry;
     }
 
+    /**
+     * Remove and return the highest-priority branch (lowest relaxed evaluation). O(log n).
+     * @returns The most promising branch, or undefined if empty.
+     */
     pop(): Branch | undefined {
         if (this.size === 0) {
             return undefined;
@@ -138,6 +173,10 @@ export class BranchMinHeap {
         return result;
     }
 
+    /**
+     * View the highest-priority branch without removing it. O(1).
+     * @returns The most promising branch, or undefined if empty.
+     */
     peek(): Branch | undefined {
         return this.size > 0 ? this.heap[0].branch : undefined;
     }

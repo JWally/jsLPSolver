@@ -14,15 +14,26 @@ import type Tableau from "./tableau";
 import type { Branch, BranchCut } from "./types";
 import { BranchMinHeap } from "./min-heap";
 
+/**
+ * Interface for the incremental branch-and-cut service.
+ */
 export interface IncrementalBranchAndCutService {
+    /** Apply bound cuts and re-solve the LP relaxation. */
     applyCuts(tableau: Tableau, branchingCuts: BranchCut[]): void;
+    /** Run incremental branch-and-cut with checkpoint-based state management. */
     branchAndCut(tableau: Tableau): void;
 }
 
+/**
+ * Configuration for the incremental branch-and-cut solver.
+ */
 export interface IncrementalBranchAndCutOptions {
+    /** Node selection strategy for tree traversal. */
     nodeSelection?: "best-first" | "depth-first" | "hybrid";
+    /** Variable selection strategy for branching decisions. */
     branching?: "most-fractional" | "pseudocost" | "strong";
-    maxCheckpoints?: number; // Limit memory usage
+    /** Maximum number of checkpoints to store (limits memory usage). */
+    maxCheckpoints?: number;
 }
 
 /**
@@ -52,6 +63,10 @@ interface IncrementalBranch extends Branch {
     newCut?: BranchCut; // The single cut added from parent
 }
 
+/**
+ * Capture the current tableau state as a lightweight checkpoint.
+ * All arrays are copied by value so the checkpoint is independent of future mutations.
+ */
 function createCheckpoint(tableau: Tableau): StateCheckpoint {
     return {
         matrix: new Float64Array(tableau.matrix),
@@ -69,6 +84,10 @@ function createCheckpoint(tableau: Tableau): StateCheckpoint {
     };
 }
 
+/**
+ * Restore a tableau's state from a checkpoint.
+ * Reuses existing arrays where possible to avoid allocation.
+ */
 function restoreCheckpoint(tableau: Tableau, checkpoint: StateCheckpoint): void {
     // Only copy if sizes match, otherwise need full restore
     if (tableau.matrix.length >= checkpoint.matrix.length) {
@@ -127,6 +146,19 @@ interface PseudoCostData {
     downCount: number;
 }
 
+/**
+ * Create an incremental branch-and-cut service with checkpoint-based restoration.
+ *
+ * Key optimization: instead of always restoring to root and reapplying all cuts,
+ * child nodes store a parent checkpoint and apply only their new cut. This reduces
+ * cut application cost from O(depth) to O(1) per node in depth-first traversal.
+ *
+ * **Memory trade-off**: Stores one checkpoint per active tree path (capped by maxCheckpoints).
+ * Falls back to full-restore when the checkpoint limit is exceeded.
+ *
+ * @param options - Configuration for strategies and checkpoint limits.
+ * @returns An IncrementalBranchAndCutService instance.
+ */
 export function createIncrementalBranchAndCutService(
     options: IncrementalBranchAndCutOptions = {}
 ): IncrementalBranchAndCutService {

@@ -14,17 +14,42 @@
  */
 import type Model from "./model";
 
+/**
+ * Priority level for hierarchical optimization.
+ * Numeric values represent custom priority levels (lower = higher priority).
+ * String values map to predefined levels: "required" (0), "strong" (1), "medium" (2), "weak" (3).
+ */
 export type Priority = number | "required" | "strong" | "medium" | "weak";
 
+/**
+ * A continuous decision variable in the optimization problem.
+ *
+ * Variables represent quantities the solver can adjust. Each variable has
+ * an objective coefficient (`cost`), a solution `value`, and a `priority`
+ * level for hierarchical optimization.
+ */
 export class Variable {
+    /** Unique string identifier (used in solution output). */
     id: string;
+    /** Objective function coefficient. */
     cost: number;
+    /** Internal index in the tableau's variable/column arrays. */
     index: number;
+    /** Current solution value (set after solving). */
     value: number;
+    /** Priority level for hierarchical optimization (0 = primary objective). */
     priority: number;
+    /** Whether this variable is restricted to integer values. */
     isInteger?: true;
+    /** Whether this is a slack variable (internal, not a decision variable). */
     isSlack?: true;
 
+    /**
+     * @param id - Unique identifier for this variable.
+     * @param cost - Objective function coefficient.
+     * @param index - Internal tableau index.
+     * @param priority - Priority level for hierarchical optimization.
+     */
     constructor(id: string, cost: number, index: number, priority: number) {
         this.id = id;
         this.cost = cost;
@@ -34,6 +59,10 @@ export class Variable {
     }
 }
 
+/**
+ * A decision variable restricted to integer values.
+ * The branch-and-cut algorithm ensures integrality in the final solution.
+ */
 export class IntegerVariable extends Variable {
     isInteger: true = true;
 
@@ -42,16 +71,29 @@ export class IntegerVariable extends Variable {
     }
 }
 
+/**
+ * An internal variable added to convert inequality constraints to equalities.
+ * Slack variables have zero cost and priority and are excluded from solution output.
+ */
 export class SlackVariable extends Variable {
     isSlack: true = true;
 
+    /**
+     * @param id - Identifier (typically "s" + index).
+     * @param index - Internal tableau index.
+     */
     constructor(id: string, index: number) {
         super(id, 0, index, 0);
     }
 }
 
+/**
+ * A single term in a linear expression: a variable multiplied by a coefficient.
+ */
 export class Term {
+    /** The variable in this term. */
     variable: Variable;
+    /** The scalar multiplier for the variable. */
     coefficient: number;
 
     constructor(variable: Variable, coefficient: number) {
@@ -70,6 +112,17 @@ type RelaxationModel = Model & {
     ): Variable;
 };
 
+/**
+ * Create a relaxation variable for a soft constraint.
+ *
+ * Relaxation variables allow constraints to be violated at a cost in the objective.
+ * The `weight` controls how expensive violation is; `priority` controls hierarchical ordering.
+ *
+ * @param model - The model to add the relaxation variable to.
+ * @param weight - Cost per unit of constraint violation (default: 1).
+ * @param priority - Priority level; "required" (or 0) means no relaxation is created.
+ * @returns The relaxation variable, or null if priority is "required".
+ */
 export function createRelaxationVariable(
     model: RelaxationModel,
     weight?: number,
@@ -93,16 +146,44 @@ export function createRelaxationVariable(
     );
 }
 
+/**
+ * A linear inequality constraint: sum(terms) <= rhs (upper bound) or sum(terms) >= rhs (lower bound).
+ *
+ * Constraints are created via `model.smallerThan()` or `model.greaterThan()` and populated
+ * with terms via the fluent `addTerm()` method. Internally, the constraint is stored
+ * in standard form with a slack variable.
+ *
+ * @example
+ * ```ts
+ * // x + 2y <= 10
+ * const c = model.smallerThan(10);
+ * c.addTerm(1, x).addTerm(2, y);
+ * ```
+ */
 export class Constraint {
+    /** Slack variable converting this inequality to an equality for the tableau. */
     slack: SlackVariable;
+    /** Internal constraint index in the tableau. */
     index: number;
+    /** Reference to the parent model (used for dynamic coefficient updates). */
     model: RelaxationModel;
+    /** Right-hand side value. */
     rhs: number;
+    /** If true, this is a <= constraint; if false, a >= constraint. */
     isUpperBound: boolean;
+    /** All terms on the left-hand side. */
     terms: Term[];
+    /** Fast lookup of terms by variable index for coefficient updates. */
     termsByVarIndex: Record<number, Term>;
+    /** Relaxation variable for soft constraint violation (null if hard). */
     relaxation: Variable | null;
 
+    /**
+     * @param rhs - Right-hand side value.
+     * @param isUpperBound - True for <= constraint, false for >=.
+     * @param index - Internal index assigned by the tableau.
+     * @param model - Parent model for registering coefficient updates.
+     */
     constructor(rhs: number, isUpperBound: boolean, index: number, model: RelaxationModel) {
         this.slack = new SlackVariable("s" + index, index);
         this.index = index;
@@ -116,6 +197,14 @@ export class Constraint {
         this.relaxation = null;
     }
 
+    /**
+     * Add a term (coefficient * variable) to this constraint.
+     * If the variable already has a term, the coefficients are summed.
+     *
+     * @param coefficient - Scalar multiplier for the variable.
+     * @param variable - The decision variable.
+     * @returns This constraint for method chaining.
+     */
     addTerm(coefficient: number, variable: Variable): this {
         const varIndex = variable.index;
         const term = this.termsByVarIndex[varIndex];
@@ -136,11 +225,18 @@ export class Constraint {
         return this;
     }
 
-    // TODO: Implement term removal if required by consumers.
+    /** @deprecated Not yet implemented. Placeholder for future term removal. */
     removeTerm(_term: Term): this {
         return this;
     }
 
+    /**
+     * Update the right-hand side value of this constraint.
+     * Propagates the change to the tableau if already initialized.
+     *
+     * @param newRhs - New RHS value.
+     * @returns This constraint for method chaining.
+     */
     setRightHandSide(newRhs: number): this {
         if (newRhs !== this.rhs) {
             let difference = newRhs - this.rhs;
@@ -155,6 +251,14 @@ export class Constraint {
         return this;
     }
 
+    /**
+     * Set the coefficient of a variable in this constraint.
+     * Creates a new term if the variable doesn't already appear.
+     *
+     * @param newCoefficient - The new coefficient value.
+     * @param variable - The variable whose coefficient to set.
+     * @returns This constraint for chaining, or void if the variable has no index.
+     */
     setVariableCoefficient(newCoefficient: number, variable: Variable): this | void {
         const varIndex = variable.index;
         if (varIndex === -1) {
@@ -184,11 +288,22 @@ export class Constraint {
         return this;
     }
 
+    /**
+     * Make this constraint "soft" by adding a relaxation variable.
+     * Violation of the constraint incurs a penalty in the objective.
+     *
+     * @param weight - Cost per unit of violation (default: 1).
+     * @param priority - Priority level for hierarchical optimization.
+     */
     relax(weight?: number, priority?: Priority): void {
         this.relaxation = createRelaxationVariable(this.model, weight, priority);
         this._relax(this.relaxation);
     }
 
+    /**
+     * Apply a relaxation variable to this constraint.
+     * Adds the variable with coefficient +1 (lower bound) or -1 (upper bound).
+     */
     _relax(relaxationVariable: Variable | null): void {
         if (relaxationVariable === null) {
             // Relaxation variable not created, priority was probably "required"
@@ -203,12 +318,24 @@ export class Constraint {
     }
 }
 
+/**
+ * An equality constraint represented as two paired inequalities (upper + lower bound).
+ *
+ * Created via `model.equal(rhs)`. Operations like `addTerm()` and `relax()` are
+ * delegated to both underlying constraints simultaneously.
+ */
 export class Equality {
+    /** The <= constraint (sum <= rhs). */
     upperBound: Constraint;
+    /** The >= constraint (sum >= rhs). */
     lowerBound: Constraint;
+    /** Reference to the parent model. */
     model: RelaxationModel;
+    /** Right-hand side value (same for both bounds). */
     rhs: number;
+    /** Shared relaxation variable (null if hard constraint). */
     relaxation: Variable | null;
+    /** Type discriminator for distinguishing Equality from Constraint. */
     isEquality: true = true;
 
     constructor(constraintUpper: Constraint, constraintLower: Constraint) {
@@ -219,25 +346,40 @@ export class Equality {
         this.relaxation = null;
     }
 
+    /**
+     * Add a term to both sides of the equality.
+     * @param coefficient - Scalar multiplier.
+     * @param variable - The decision variable.
+     * @returns This equality for method chaining.
+     */
     addTerm(coefficient: number, variable: Variable): this {
         this.upperBound.addTerm(coefficient, variable);
         this.lowerBound.addTerm(coefficient, variable);
         return this;
     }
 
-    // TODO: Implement term removal if required by consumers.
+    /** @deprecated Not yet implemented. Placeholder for future term removal. */
     removeTerm(_term: Term): this {
         this.upperBound.removeTerm(_term);
         this.lowerBound.removeTerm(_term);
         return this;
     }
 
+    /**
+     * Update the RHS value for both inequality constraints.
+     * @param rhs - New right-hand side value.
+     */
     setRightHandSide(rhs: number): void {
         this.upperBound.setRightHandSide(rhs);
         this.lowerBound.setRightHandSide(rhs);
         this.rhs = rhs;
     }
 
+    /**
+     * Make this equality constraint soft by adding a shared relaxation variable to both bounds.
+     * @param weight - Cost per unit of violation.
+     * @param priority - Priority level for hierarchical optimization.
+     */
     relax(weight?: number, priority?: Priority): void {
         this.relaxation = createRelaxationVariable(this.model, weight, priority);
         this.upperBound.relaxation = this.relaxation;
@@ -247,7 +389,11 @@ export class Equality {
     }
 }
 
+/**
+ * A wrapped numeric constant, used for expression building APIs.
+ */
 export class Numeral {
+    /** The numeric value. */
     value: number;
 
     constructor(value: number) {

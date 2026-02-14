@@ -13,14 +13,26 @@
 import type Model from "../model";
 import type { Variable, Constraint } from "../expressions";
 
+/**
+ * Results from the presolve preprocessing phase.
+ * Contains all reductions discovered and an infeasibility flag.
+ */
 export interface PresolveResult {
+    /** Variables proven to have a unique feasible value. */
     fixedVariables: Map<Variable, number>;
+    /** Constraints proven to be redundant (always satisfied). */
     removedConstraints: Set<Constraint>;
+    /** Variables with tightened lower/upper bounds from constraint analysis. */
     tightenedBounds: Map<Variable, { lower?: number; upper?: number }>;
+    /** Set to true if preprocessing proves the problem has no feasible solution. */
     isInfeasible: boolean;
+    /** Summary statistics of reductions applied. */
     stats: {
+        /** Number of variables fixed to a constant value. */
         variablesFixed: number;
+        /** Number of constraints removed as redundant. */
         constraintsRemoved: number;
+        /** Number of variable bounds tightened. */
         boundsTightened: number;
     };
 }

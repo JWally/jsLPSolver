@@ -10,6 +10,15 @@
  */
 import type Tableau from "./tableau";
 
+/**
+ * Create a deep copy of this tableau's state.
+ *
+ * Copies all mutable state (matrix, index arrays, optional objectives) while
+ * sharing immutable references (variables, model). The matrix is copied using
+ * the Float64Array constructor for maximum speed.
+ *
+ * @returns A new Tableau instance with identical state.
+ */
 export function copy(this: Tableau): Tableau {
     const copy = new (this.constructor as typeof Tableau)(this.precision, this.branchAndCutService);
 
@@ -46,10 +55,23 @@ export function copy(this: Tableau): Tableau {
     return copy;
 }
 
+/**
+ * Snapshot the current tableau state for later restoration.
+ * Used before branch-and-cut to establish a root state that branches can revert to.
+ */
 export function save(this: Tableau): void {
     this.savedState = this.copy();
 }
 
+/**
+ * Restore the tableau to the previously saved state.
+ *
+ * Copies all mutable arrays from the saved snapshot back into the current tableau.
+ * Uses `Float64Array.set()` for efficient matrix restoration and explicit loops
+ * for index arrays to avoid allocation.
+ *
+ * No-op if no state has been saved.
+ */
 export function restore(this: Tableau): void {
     if (this.savedState === null) {
         return;

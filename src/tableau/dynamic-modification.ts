@@ -13,6 +13,12 @@
 import type Tableau from "./tableau";
 import type { Constraint, Variable } from "../expressions";
 
+/**
+ * Ensure a variable is in the basis (basic). If non-basic, pivot it in.
+ *
+ * @param varIndex - Internal index of the variable to make basic.
+ * @returns Row index where the variable is now basic.
+ */
 export function putInBase(this: Tableau, varIndex: number): number {
     const width = this.width;
     let r = this.rowByVarIndex[varIndex];
@@ -33,6 +39,12 @@ export function putInBase(this: Tableau, varIndex: number): number {
     return r;
 }
 
+/**
+ * Ensure a variable is non-basic. If currently basic, pivot it out.
+ *
+ * @param varIndex - Internal index of the variable to make non-basic.
+ * @returns Column index where the variable is now non-basic.
+ */
 export function takeOutOfBase(this: Tableau, varIndex: number): number {
     const width = this.width;
     let c = this.colByVarIndex[varIndex];
@@ -54,6 +66,10 @@ export function takeOutOfBase(this: Tableau, varIndex: number): number {
     return c;
 }
 
+/**
+ * Read current variable values from the tableau matrix into Variable.value.
+ * Non-basic variables get value 0; basic variables get their RHS value (rounded).
+ */
 export function updateVariableValues(this: Tableau): void {
     const width = this.width;
     const matrix = this.matrix;
@@ -75,6 +91,15 @@ export function updateVariableValues(this: Tableau): void {
     }
 }
 
+/**
+ * Update a constraint's RHS value in the current tableau.
+ *
+ * If the constraint's slack is basic, directly adjusts the RHS cell.
+ * If non-basic, propagates the change through all rows using the slack column.
+ *
+ * @param constraint - The constraint to update.
+ * @param difference - Amount to subtract from the current RHS.
+ */
 export function updateRightHandSide(
     this: Tableau,
     constraint: Constraint,
@@ -105,6 +130,17 @@ export function updateRightHandSide(
     }
 }
 
+/**
+ * Update a variable's coefficient in a constraint within the active tableau.
+ *
+ * Ensures the constraint is basic (via putInBase) then applies the coefficient
+ * change. Handles both basic and non-basic target variables.
+ *
+ * @param constraint - The constraint being modified.
+ * @param variable - The variable whose coefficient is changing.
+ * @param difference - Amount to add to the current coefficient.
+ * @throws If constraint.index equals variable.index.
+ */
 export function updateConstraintCoefficient(
     this: Tableau,
     constraint: Constraint,
@@ -134,6 +170,15 @@ export function updateConstraintCoefficient(
     }
 }
 
+/**
+ * Update a variable's objective coefficient in the active tableau.
+ *
+ * If the variable is basic, propagates the cost change through the cost row
+ * (or optional objective's reduced costs). If non-basic, directly updates its column.
+ *
+ * @param variable - The variable whose cost is changing.
+ * @param difference - Amount to add to the current reduced cost.
+ */
 export function updateCost(this: Tableau, variable: Variable, difference: number): void {
     const width = this.width;
     const matrix = this.matrix;
@@ -159,6 +204,15 @@ export function updateCost(this: Tableau, variable: Variable, difference: number
     }
 }
 
+/**
+ * Add a new constraint row to the active tableau.
+ *
+ * Appends a new row with the constraint's terms expressed in the current basis.
+ * Grows the matrix capacity with exponential growth strategy if needed.
+ * The constraint's slack variable becomes the basic variable in the new row.
+ *
+ * @param constraint - The constraint to add (with terms already populated).
+ */
 export function addConstraint(this: Tableau, constraint: Constraint): void {
     const sign = constraint.isUpperBound ? 1 : -1;
     const lastRow = this.height;
@@ -216,6 +270,14 @@ export function addConstraint(this: Tableau, constraint: Constraint): void {
     this.height += 1;
 }
 
+/**
+ * Remove a constraint from the active tableau.
+ *
+ * Pivots the constraint's slack into the basis, swaps the row with the last row,
+ * and decrements the height. The slack variable's index is returned to the pool.
+ *
+ * @param constraint - The constraint to remove.
+ */
 export function removeConstraint(this: Tableau, constraint: Constraint): void {
     const slackIndex = constraint.index;
     const lastRow = this.height - 1;
@@ -244,6 +306,14 @@ export function removeConstraint(this: Tableau, constraint: Constraint): void {
     this.height -= 1;
 }
 
+/**
+ * Add a new variable (column) to the active tableau.
+ *
+ * Requires reallocating the matrix since the stride (width) changes.
+ * Sets the variable's reduced cost in the appropriate objective row.
+ *
+ * @param variable - The variable to add (cost and priority must be set).
+ */
 export function addVariable(this: Tableau, variable: Variable): void {
     const _lastRow = this.height - 1;
     const oldWidth = this.width;
@@ -292,6 +362,14 @@ export function addVariable(this: Tableau, variable: Variable): void {
     this.varIndexByCol[lastColumn] = variable.index;
 }
 
+/**
+ * Remove a variable (column) from the active tableau.
+ *
+ * Pivots the variable out of the basis if basic, then overwrites its column
+ * with the last column and decrements width. The variable index is recycled.
+ *
+ * @param variable - The variable to remove.
+ */
 export function removeVariable(this: Tableau, variable: Variable): void {
     const varIndex = variable.index;
     const width = this.width;

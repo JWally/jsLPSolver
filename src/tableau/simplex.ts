@@ -17,10 +17,23 @@ import type Tableau from "./tableau";
  * This version uses a Map to track where each (leaving,entering) pair occurred,
  * making duplicate detection O(1) average case.
  */
+/**
+ * Detects pivot cycles using hash-based O(1) lookups.
+ *
+ * Tracks all (leaving, entering) pairs seen during simplex pivots.
+ * When a duplicate pair is detected, verifies whether the sequence
+ * after the first occurrence repeats, confirming a cycle.
+ */
 class CycleDetector {
     private pairs: Array<[number, number]> = [];
     private positions: Map<string, number[]> = new Map();
 
+    /**
+     * Record a pivot and check for cycles.
+     * @param leaving - Variable index leaving the basis.
+     * @param entering - Variable index entering the basis.
+     * @returns [startPosition, cycleLength] if cycle detected, empty array otherwise.
+     */
     add(leaving: number, entering: number): number[] {
         const key = `${leaving}_${entering}`;
         const pos = this.pairs.length;
@@ -64,6 +77,14 @@ class CycleDetector {
     }
 }
 
+/**
+ * Run the full two-phase simplex algorithm.
+ *
+ * Phase 1 finds a basic feasible solution (or proves infeasibility).
+ * Phase 2 optimizes the objective (or proves unboundedness).
+ *
+ * @returns The tableau instance for chaining.
+ */
 export function simplex(this: Tableau): Tableau {
     this.bounded = true;
     this.phase1();
@@ -166,6 +187,15 @@ export function dualSimplex(this: Tableau): number {
     return iterations;
 }
 
+/**
+ * Phase 1: Find an initial basic feasible solution.
+ *
+ * Pivots to eliminate negative RHS values (infeasible basic variables).
+ * Uses max-quotient rule for fast convergence, with anti-cycling fallback
+ * to Bland's rule if degenerate stalling is detected.
+ *
+ * @returns Number of pivot iterations performed.
+ */
 export function phase1(this: Tableau): number {
     const debugCheckForCycles = this.model.checkForCycles;
     const cycleDetector = debugCheckForCycles ? new CycleDetector() : null;
@@ -346,6 +376,18 @@ export function phase1(this: Tableau): number {
     }
 }
 
+/**
+ * Phase 2: Optimize the objective function.
+ *
+ * Pivots to improve the objective by selecting entering variables with
+ * positive reduced costs. Uses partial pricing on large problems (batched
+ * column scanning) and falls back to Bland's rule on degenerate cycling.
+ *
+ * Handles hierarchical (multi-priority) objectives by checking optional
+ * objective reduced costs when the primary objective is at optimality.
+ *
+ * @returns Number of pivot iterations performed.
+ */
 export function phase2(this: Tableau): number {
     const debugCheckForCycles = this.model.checkForCycles;
     const cycleDetector = debugCheckForCycles ? new CycleDetector() : null;
@@ -647,10 +689,20 @@ export function phase2(this: Tableau): number {
     }
 }
 
-// Pre-allocated typed arrays for pivot optimization (better cache performance)
+// Pre-allocated typed arrays for pivot optimization (better cache locality)
 let nonZeroColumns = new Int32Array(1024);
 let pivotRowCache = new Float64Array(1024);
 
+/**
+ * Perform a single simplex pivot operation.
+ *
+ * Swaps the entering variable (non-basic, in column) with the leaving variable
+ * (basic, in row). Updates the entire matrix using cached pivot row values
+ * for better cache locality. Also updates optional objective reduced costs.
+ *
+ * @param pivotRowIndex - Row of the leaving variable.
+ * @param pivotColumnIndex - Column of the entering variable.
+ */
 export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: number): void {
     const matrix = this.matrix;
     const width = this.width;
@@ -744,6 +796,13 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
     }
 }
 
+/**
+ * Legacy O(n^2) cycle detection by brute-force pair comparison.
+ * Superseded by CycleDetector but retained for API compatibility.
+ *
+ * @param varIndexes - Array of [leaving, entering] pairs from pivot history.
+ * @returns [startIndex, cycleLength] if cycle found, empty array otherwise.
+ */
 export function checkForCycles(this: Tableau, varIndexes: Array<[number, number]>): number[] {
     for (let e1 = 0; e1 < varIndexes.length - 1; e1++) {
         for (let e2 = e1 + 1; e2 < varIndexes.length; e2++) {

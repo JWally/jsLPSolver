@@ -16,19 +16,35 @@ import type Tableau from "./tableau";
 import type { Branch, BranchCut } from "./types";
 import { BranchMinHeap } from "./min-heap";
 
+/**
+ * Interface for branch-and-cut solver services.
+ * Implementations provide the strategy for exploring the B&B tree.
+ */
 export interface BranchAndCutService {
+    /** Apply bound cuts and re-solve the LP relaxation. */
     applyCuts(tableau: Tableau, branchingCuts: BranchCut[]): void;
+    /** Run the full branch-and-cut algorithm to find an integer-optimal solution. */
     branchAndCut(tableau: Tableau): void;
 }
 
+/** Helper to create a BranchCut object. */
 function createCut(type: BranchCut["type"], varIndex: number, value: number): BranchCut {
     return { type, varIndex, value };
 }
 
+/** Helper to create a Branch node. */
 function createBranch(relaxedEvaluation: number, cuts: BranchCut[]): Branch {
     return { relaxedEvaluation, cuts };
 }
 
+/**
+ * Create the default (basic) branch-and-cut service.
+ *
+ * Uses best-first node selection via a min-heap, most-fractional branching,
+ * and optional MIR cuts. Suitable for small-to-medium MIP instances.
+ *
+ * @returns A BranchAndCutService with applyCuts and branchAndCut methods.
+ */
 export function createBranchAndCutService(): BranchAndCutService {
     const applyCuts = (tableau: Tableau, branchingCuts: BranchCut[]): void => {
         tableau.restore();

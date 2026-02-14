@@ -17,6 +17,15 @@
 /*global console*/
 /*global process*/
 /*jshint -W083 */
+/**
+ * Parse LP format text into a JSON model definition.
+ *
+ * Supports objectives (max/min), inequality/equality constraints, integer
+ * variables, binary variables, and unrestricted variables.
+ *
+ * @param {string|string[]} input - LP format text (string or array of lines).
+ * @returns {object} JSON model definition compatible with solver.Solve().
+ */
 function to_JSON(input) {
     var rxo = {
             /* jshint ignore:start */
@@ -202,14 +211,16 @@ function to_JSON(input) {
     return model;
 }
 
-/*************************************************************
- * Method: from_JSON
- * Scope: Public:
- * Agruments: model: The model we want solver to operate on
- * Purpose: Convert a friendly JSON model into a model for a
- *          real solving library...in this case
- *          lp_solver
- **************************************************************/
+/**
+ * Convert a JSON model definition to LP format text.
+ *
+ * Generates the objective line, constraint lines (with proper <=, >=, = operators),
+ * integer variable declarations, and unrestricted variable declarations.
+ *
+ * @param {object} model - The JSON model definition.
+ * @returns {string} LP format text suitable for lp_solve.
+ * @throws {Error} If model is null/undefined.
+ */
 function from_JSON(model) {
     // Make sure we at least have a model
     if (!model) {
@@ -287,10 +298,17 @@ function from_JSON(model) {
     return output;
 }
 
+/**
+ * Auto-detect conversion direction based on input type.
+ *
+ * If the input has a `length` property (string or array), it's treated as
+ * LP format text and converted to JSON. Otherwise, it's treated as a JSON
+ * model and converted to LP format text.
+ *
+ * @param {object|string|string[]} model - LP format input or JSON model.
+ * @returns {object|string} JSON model or LP format text.
+ */
 module.exports = function (model) {
-    // If the user is giving us an array
-    // or a string, convert it to a JSON Model
-    // otherwise, spit it out as a string
     if (model.length) {
         return to_JSON(model);
     } else {

@@ -13,6 +13,15 @@ import type Tableau from "./tableau";
 import { SlackVariable } from "../expressions";
 import type { BranchCut } from "./types";
 
+/**
+ * Add bound constraints (cuts) to the tableau for branch-and-bound.
+ *
+ * Each cut adds a new row enforcing a variable bound (x >= value or x <= value).
+ * The matrix is grown with 50% over-allocation to reduce reallocation frequency.
+ * New slack variables are created for each added row.
+ *
+ * @param cutConstraints - Array of bound constraints to add.
+ */
 export function addCutConstraints(this: Tableau, cutConstraints: BranchCut[]): void {
     const nCutConstraints = cutConstraints.length;
     const height = this.height;
@@ -80,6 +89,16 @@ export function addCutConstraints(this: Tableau, cutConstraints: BranchCut[]): v
     }
 }
 
+/**
+ * Add a lower-bound Mixed Integer Rounding (MIR) cut from the given row.
+ *
+ * Generates a Gomory-style cut that is valid for integer solutions but
+ * removes the current fractional LP relaxation point. The cut coefficients
+ * are derived from the fractional parts of the tableau row.
+ *
+ * @param rowIndex - Row of the fractional integer variable to cut on.
+ * @returns True if a cut was successfully added, false if the row is unsuitable.
+ */
 export function addLowerBoundMIRCut(this: Tableau, rowIndex: number): boolean {
     if (rowIndex === this.costRowIndex) {
         return false;
@@ -151,6 +170,15 @@ export function addLowerBoundMIRCut(this: Tableau, rowIndex: number): boolean {
     return true;
 }
 
+/**
+ * Add an upper-bound Mixed Integer Rounding (MIR) cut from the given row.
+ *
+ * Similar to addLowerBoundMIRCut but derives coefficients for the complementary
+ * direction. Effective when the fractional variable is closer to its ceiling.
+ *
+ * @param rowIndex - Row of the fractional integer variable to cut on.
+ * @returns True if a cut was successfully added, false if the row is unsuitable.
+ */
 export function addUpperBoundMIRCut(this: Tableau, rowIndex: number): boolean {
     if (rowIndex === this.costRowIndex) {
         return false;
@@ -220,9 +248,13 @@ export function addUpperBoundMIRCut(this: Tableau, rowIndex: number): boolean {
     return true;
 }
 
+/**
+ * Apply MIR cuts to all rows with fractional integer basic variables.
+ *
+ * Iterates through constraint rows, adding lower-bound MIR cuts where
+ * applicable. Limited to 10 cuts per call to avoid excessive tableau growth.
+ */
 export function applyMIRCuts(this: Tableau): void {
-    // Apply MIR (Mixed Integer Rounding) cuts to all rows with fractional integer variables
-    // This tightens the LP relaxation and can help prune the branch-and-bound tree
     const height = this.height;
     let cutsAdded = 0;
     const maxCuts = 10; // Limit cuts per iteration to avoid excessive growth

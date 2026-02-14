@@ -30,25 +30,42 @@ type ValidationFn = (model: ModelDefinition) => ModelDefinition;
 
 /**
  * Main solver class providing the public API for solving optimization problems.
+ *
+ * Typically used as a singleton (exported as `solver` from this module).
+ * Orchestrates model parsing, validation, simplex/B&C solving, and
+ * multi-objective optimization.
+ *
+ * @example
+ * ```ts
+ * import solver from "javascript-lp-solver";
+ * const result = solver.Solve({ optimize: "profit", opType: "max", ... });
+ * ```
  */
 class Solver {
-    // Expose constructors for programmatic model building
+    /** Model class constructor for programmatic model building. */
     Model = Model;
+    /** Tableau class constructor (advanced: for direct tableau manipulation). */
     Tableau = Tableau;
+    /** Constraint class constructor. */
     Constraint = expressions.Constraint;
+    /** Variable class constructor. */
     Variable = expressions.Variable;
+    /** Numeral class constructor. */
     Numeral = expressions.Numeral;
+    /** Term class constructor. */
     Term = expressions.Term;
 
-    // External solver integrations
+    /** Registry of external solver integrations (e.g., lp_solve). */
     External = External;
+    /** LP format conversion utility for external solvers. */
     ReformatLP = ReformatLP;
 
-    // Branch-and-cut service (default implementation)
+    /** Default branch-and-cut service instance. */
     branchAndCutService = createBranchAndCutService();
+    /** Convenience method to run branch-and-cut on a tableau. */
     branchAndCut = (tableau: Tableau): void => this.branchAndCutService.branchAndCut(tableau);
 
-    // Reference to the last solved model (useful for debugging)
+    /** Reference to the most recently solved Model instance (useful for post-solve inspection). */
     lastSolvedModel: Model | null = null;
 
     /**

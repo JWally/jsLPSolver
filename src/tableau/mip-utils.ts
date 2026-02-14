@@ -16,6 +16,10 @@ import type { VariableValue } from "./types";
 
 /**
  * Count how many integer variables currently have integral values.
+ * A value is considered integral if its distance to the nearest integer
+ * is within the tableau's precision tolerance.
+ *
+ * @returns Number of integer variables with integral current values.
  */
 export function countIntegerValues(this: Tableau): number {
     let count = 0;
@@ -37,8 +41,9 @@ export function countIntegerValues(this: Tableau): number {
 }
 
 /**
- * Check if all integer variables have integral values.
- * Returns true if the current solution is integral.
+ * Check if all integer variables have integral values within precision.
+ *
+ * @returns True if the current solution satisfies all integrality constraints.
  */
 export function isIntegral(this: Tableau): boolean {
     const width = this.width;
@@ -64,8 +69,14 @@ export function isIntegral(this: Tableau): boolean {
 }
 
 /**
- * Compute a measure of how fractional the current solution is.
- * Used for evaluating the quality of cutting planes.
+ * Compute a measure of total fractionality across all integer variables.
+ *
+ * The "volume" is the product of fractional values. Used to evaluate cutting
+ * plane effectiveness: a decreasing volume indicates the LP relaxation is
+ * tightening toward integrality.
+ *
+ * @param ignoreIntegerValues - If true, skip already-integral variables (don't return 0 early).
+ * @returns Product of fractional variable values, or 0 if all are integral.
  */
 export function computeFractionalVolume(this: Tableau, ignoreIntegerValues?: boolean): number {
     let volume = -1;
@@ -100,8 +111,13 @@ export function computeFractionalVolume(this: Tableau, ignoreIntegerValues?: boo
 // ========== Branching Variable Selection ==========
 
 /**
- * Select the integer variable with the most fractional value.
- * Standard branching strategy - picks the variable closest to 0.5 fractionality.
+ * Select the integer variable with the most fractional value for branching.
+ *
+ * This is the default branching strategy. Picks the variable whose current
+ * value is farthest from the nearest integer (closest to 0.5 fractionality),
+ * creating the most balanced branching.
+ *
+ * @returns The selected variable's index and value, or nulls if all are integral.
  */
 export function getMostFractionalVar(this: Tableau): VariableValue {
     let biggestFraction = 0;
@@ -134,8 +150,13 @@ export function getMostFractionalVar(this: Tableau): VariableValue {
 }
 
 /**
- * Select the fractional integer variable with the lowest cost coefficient.
- * Alternative branching strategy that considers objective function impact.
+ * Select the fractional integer variable with the lowest objective coefficient.
+ *
+ * Alternative branching strategy that prioritizes variables with less
+ * objective impact, potentially leading to smaller objective degradation
+ * in child nodes.
+ *
+ * @returns The selected variable's index and value, or nulls if all are integral.
  */
 export function getFractionalVarWithLowestCost(this: Tableau): VariableValue {
     let highestCost = Infinity;

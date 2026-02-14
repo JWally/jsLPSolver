@@ -11,21 +11,29 @@
  * the min/max ranges for each objective.
  */
 import type { Model as ModelDefinition, ObjectiveDirection, SolveResult } from "./types/solver";
+/** Minimal solver interface required by Polyopt (allows decoupling from Solver class). */
 interface SolverLike {
     Solve(model: ModelDefinition, precision?: number, full?: boolean, validate?: boolean): unknown;
 }
 
-// Multi-objective solutions are still shaped like regular solve results but may
-// include additional numeric attributes for the auxiliary objectives.
+/** Extended solve result with numeric attributes for all objectives. */
 type PolyoptSolution = SolveResult & Record<string, number>;
 
+/** Map of objective attribute names to their optimization directions. */
 type ObjectiveMap = Record<string, ObjectiveDirection>;
 
+/** A Pareto-optimal point: variable values achieving an extreme objective combination. */
 type Vertex = Record<string, number>;
 
+/**
+ * Result of multi-objective optimization.
+ */
 interface PolyoptResult {
+    /** The compromise solution at the midpoint of Pareto-optimal vertices. */
     midpoint: PolyoptSolution;
+    /** Individual Pareto-optimal solutions (one per objective optimized independently). */
     vertices: Vertex[];
+    /** Min/max ranges for each objective attribute across all vertices. */
     ranges: Record<string, { min: number; max: number }>;
 }
 
@@ -143,9 +151,17 @@ function computeRanges(vertices: Vertex[]): Record<string, { min: number; max: n
 }
 
 /**
- * Solve a model with multiple objective functions by optimizing each objective
- * independently, collecting the resulting Pareto vertices, and solving a
- * derived model that targets the midpoint across all objectives.
+ * Solve a model with multiple objective functions using compromise programming.
+ *
+ * Algorithm:
+ * 1. Optimize each objective independently to find Pareto-optimal vertices.
+ * 2. Average the vertex values to compute a target midpoint.
+ * 3. Solve a derived model with equality constraints at the midpoint.
+ *
+ * @param solver - A solver instance (or anything with a compatible `Solve` method).
+ * @param model - The model with `optimize` as a `Record<string, ObjectiveDirection>`.
+ * @returns Midpoint solution, all Pareto vertices, and min/max ranges per objective.
+ * @throws If `optimize` has no keys or solver returns a non-object result.
  */
 export default function Polyopt(solver: SolverLike, model: ModelDefinition): PolyoptResult {
     const workingModel = cloneModel(model);

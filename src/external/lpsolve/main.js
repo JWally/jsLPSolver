@@ -21,6 +21,15 @@
 
 exports.reformat = require("./reformat.js");
 
+/**
+ * Parse lp_solve text output into a key-value result object.
+ *
+ * Filters out zero-valued variables and lines that don't end with a number,
+ * then splits each remaining line into variable name and value.
+ *
+ * @param {string} data - Raw stdout from the lp_solve process.
+ * @returns {Record<string, string>} Map of variable names to their string values.
+ */
 function clean_data(data) {
     //
     // Clean Up
@@ -60,6 +69,15 @@ function clean_data(data) {
     return data;
 }
 
+/**
+ * Solve a model using the lp_solve CLI binary.
+ *
+ * Converts the JSON model to LP format, writes it to a temp file, executes
+ * lp_solve with the specified arguments, and parses the output.
+ *
+ * @param {object} model - The model definition with `external.binPath`, `external.args`, and `external.tempName`.
+ * @returns {Promise<Record<string, string>>} Resolves with variable values on success; rejects with error details.
+ */
 exports.solve = function (model) {
     //
     return new Promise(function (res, rej) {

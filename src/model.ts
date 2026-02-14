@@ -21,30 +21,78 @@ import { presolve, type PresolveResult } from "./tableau/presolve";
 
 type ConstraintDefinition = ConstraintBound | (ConstraintBound & { equal?: number });
 
+/**
+ * High-level representation of an optimization problem.
+ *
+ * Provides a programmatic API for building LP/MIP problems:
+ * - Add variables with costs, integer constraints, and priorities
+ * - Define constraints (<=, >=, =) with coefficients
+ * - Load problems from JSON model definitions
+ * - Dynamically modify models after initialization
+ *
+ * The Model converts high-level definitions into the internal Tableau
+ * representation used by the simplex algorithm.
+ *
+ * @example
+ * ```ts
+ * const model = new Model();
+ * const x = model.addVariable(3, "x");
+ * const y = model.addVariable(5, "y");
+ * model.smallerThan(10).addTerm(1, x).addTerm(2, y);
+ * const solution = model.solve();
+ * ```
+ */
 class Model {
+    /** The underlying simplex tableau. */
     tableau: Tableau;
+    /** Optional model name for identification. */
     name?: string;
+    /** All decision variables in insertion order. */
     variables: Variable[];
+    /** Subset of variables with integrality constraints. */
     integerVariables: IntegerVariable[];
+    /** Set of variable indices that may take negative values. */
     unrestrictedVariables: Record<number, boolean>;
+    /** All constraints in insertion order. */
     constraints: Constraint[];
+    /** Current number of constraints. */
     nConstraints: number;
+    /** Current number of variables. */
     nVariables: number;
+    /** True for minimization, false for maximization. */
     isMinimization: boolean;
+    /** Whether the tableau has been initialized from this model. */
     tableauInitialized: boolean;
+    /** Counter for generating unique relaxation variable IDs. */
     relaxationIndex: number;
+    /** Whether MIR cuts are enabled for branch-and-cut. */
     useMIRCuts: boolean;
+    /** Whether to detect and abort on simplex pivot cycles. */
     checkForCycles: boolean;
+    /** Diagnostic messages collected during solving. */
     messages: unknown[];
+    /** Optimality tolerance for early termination in B&C. */
     tolerance?: number;
+    /** Maximum solve time in milliseconds. */
     timeout?: number;
+    /** Whether to store all integer-feasible solutions found during B&C. */
     keep_solutions?: boolean;
+    /** All integer-feasible solutions found (if keep_solutions is true). */
     solutions?: TableauSolutionSet[];
+    /** Pool of recycled variable/constraint indices. */
     availableIndexes: number[];
+    /** Next fresh index to allocate. */
     lastElementIndex: number;
+    /** Whether to apply preprocessing reductions before solving. */
     usePresolve: boolean;
+    /** Cached presolve results (null if not yet applied). */
     presolveResult: PresolveResult | null;
 
+    /**
+     * @param precision - Numerical tolerance for the tableau (default: 1e-8).
+     * @param name - Optional model name.
+     * @param branchAndCutService - Custom B&C strategy for MIP solving.
+     */
     constructor(precision?: number, name?: string, branchAndCutService?: BranchAndCutService) {
         this.tableau = new Tableau(precision, branchAndCutService);
 
@@ -81,16 +129,19 @@ class Model {
         this.presolveResult = null;
     }
 
+    /** Set the optimization direction to minimization. */
     minimize(): this {
         this.isMinimization = true;
         return this;
     }
 
+    /** Set the optimization direction to maximization. */
     maximize(): this {
         this.isMinimization = false;
         return this;
     }
 
+    /** Allocate a new element index, reusing from pool if available. */
     _getNewElementIndex(): number {
         if (this.availableIndexes.length > 0) {
             return this.availableIndexes.pop() as number;
@@ -101,6 +152,7 @@ class Model {
         return index;
     }
 
+    /** Register a constraint with the model and propagate to tableau if initialized. */
     _addConstraint(constraint: Constraint): void {
         const slackVariable = constraint.slack;
         this.tableau.variablesPerIndex[slackVariable.index] = slackVariable;
@@ -111,18 +163,33 @@ class Model {
         }
     }
 
+    /**
+     * Create a <= (upper bound) constraint.
+     * @param rhs - The upper bound value.
+     * @returns The new constraint (add terms via .addTerm()).
+     */
     smallerThan(rhs: number): Constraint {
         const constraint = new Constraint(rhs, true, this.tableau.getNewElementIndex(), this);
         this._addConstraint(constraint);
         return constraint;
     }
 
+    /**
+     * Create a >= (lower bound) constraint.
+     * @param rhs - The lower bound value.
+     * @returns The new constraint (add terms via .addTerm()).
+     */
     greaterThan(rhs: number): Constraint {
         const constraint = new Constraint(rhs, false, this.tableau.getNewElementIndex(), this);
         this._addConstraint(constraint);
         return constraint;
     }
 
+    /**
+     * Create an equality constraint (implemented as paired upper + lower bounds).
+     * @param rhs - The equality value.
+     * @returns An Equality wrapping both bounds (add terms via .addTerm()).
+     */
     equal(rhs: number): Equality {
         const constraintUpper = new Constraint(rhs, true, this.tableau.getNewElementIndex(), this);
         this._addConstraint(constraintUpper);
@@ -133,6 +200,16 @@ class Model {
         return new Equality(constraintUpper, constraintLower);
     }
 
+    /**
+     * Add a decision variable to the model.
+     *
+     * @param cost - Objective function coefficient (default: 0).
+     * @param id - Unique identifier (default: auto-generated).
+     * @param isInteger - If true, the variable is restricted to integer values.
+     * @param isUnrestricted - If true, the variable may be negative.
+     * @param priority - Priority level for hierarchical optimization.
+     * @returns The newly created Variable instance.
+     */
     addVariable(
         cost?: number | null,
         id?: string | null,
@@ -195,6 +272,7 @@ class Model {
         return variable;
     }
 
+    /** Remove a single constraint from the model and propagate to tableau. */
     _removeConstraint(constraint: Constraint): void {
         const idx = this.constraints.indexOf(constraint);
         if (idx === -1) {
@@ -215,9 +293,13 @@ class Model {
         }
     }
 
-    //-------------------------------------------------------------------
-    // For dynamic model modification
-    //-------------------------------------------------------------------
+    /**
+     * Remove a constraint or equality from the model.
+     * For equalities, removes both the upper and lower bound constraints.
+     *
+     * @param constraint - The Constraint or Equality to remove.
+     * @returns This model for chaining.
+     */
     removeConstraint(constraint: Constraint | Equality): this {
         if ((constraint as Equality).isEquality) {
             const equalityConstraint = constraint as Equality;
@@ -230,6 +312,11 @@ class Model {
         return this;
     }
 
+    /**
+     * Remove a variable from the model.
+     * @param variable - The variable to remove.
+     * @returns This model for chaining, or void if variable not found.
+     */
     removeVariable(variable: Variable): this | void {
         const idx = this.variables.indexOf(variable);
         if (idx === -1) {
@@ -246,6 +333,11 @@ class Model {
         return this;
     }
 
+    /**
+     * Update a constraint's RHS in the live tableau.
+     * @param constraint - The constraint to update.
+     * @param difference - Amount to subtract from the current RHS.
+     */
     updateRightHandSide(constraint: Constraint, difference: number): this {
         if (this.tableauInitialized === true) {
             this.tableau.updateRightHandSide(constraint, difference);
@@ -253,6 +345,12 @@ class Model {
         return this;
     }
 
+    /**
+     * Update a variable's coefficient in a constraint in the live tableau.
+     * @param constraint - The constraint being modified.
+     * @param variable - The variable whose coefficient is changing.
+     * @param difference - Amount to add to the current coefficient.
+     */
     updateConstraintCoefficient(
         constraint: Constraint,
         variable: Variable,
@@ -264,6 +362,11 @@ class Model {
         return this;
     }
 
+    /**
+     * Change a variable's objective coefficient.
+     * @param cost - New objective coefficient value.
+     * @param variable - The variable to update.
+     */
     setCost(cost: number, variable: Variable): this {
         let difference = cost - variable.cost;
         if (this.isMinimization === false) {
@@ -275,8 +378,16 @@ class Model {
         return this;
     }
 
-    //-------------------------------------------------------------------
-    //-------------------------------------------------------------------
+    /**
+     * Load a problem from the JSON model definition format.
+     *
+     * Parses constraints, variables, integer/binary flags, and solver options
+     * from the JSON structure. Supports equality constraints (via paired bounds),
+     * soft constraints (weight/priority), and binary variable upper bounds.
+     *
+     * @param jsonModel - The JSON model definition.
+     * @returns This model for chaining.
+     */
     loadJson(jsonModel: JsonModel): this {
         this.isMinimization = jsonModel.opType !== "max";
 
@@ -433,12 +544,19 @@ class Model {
         return this;
     }
 
-    //-------------------------------------------------------------------
-    //-------------------------------------------------------------------
+    /** @returns The number of integer-constrained variables in this model. */
     getNumberOfIntegerVariables(): number {
         return this.integerVariables.length;
     }
 
+    /**
+     * Solve the optimization problem.
+     *
+     * Applies presolve reductions (if enabled), initializes the tableau,
+     * and runs simplex (for LP) or branch-and-cut (for MIP).
+     *
+     * @returns The solution with objective value and variable assignments.
+     */
     solve(): TableauSolution {
         // Apply presolve to reduce problem size
         if (this.usePresolve && this.presolveResult === null) {
@@ -481,26 +599,38 @@ class Model {
         // A more aggressive presolve would rebuild the model without fixed variables.
     }
 
+    /** @returns Whether the last solve found a feasible solution. */
     isFeasible(): boolean {
         return this.tableau.feasible;
     }
 
+    /** Snapshot the current tableau state for later restoration. */
     save(): void {
         this.tableau.save();
     }
 
+    /** Restore the tableau to the previously saved state. */
     restore(): void {
         this.tableau.restore();
     }
 
+    /**
+     * Enable or disable Mixed Integer Rounding cuts.
+     * @param useMIRCuts - Whether to apply MIR cuts during branch-and-cut.
+     */
     activateMIRCuts(useMIRCuts: boolean): void {
         this.useMIRCuts = useMIRCuts;
     }
 
+    /**
+     * Enable or disable cycle detection in the simplex algorithm.
+     * @param debugCheckForCycles - Whether to check for pivot cycles.
+     */
     debug(debugCheckForCycles: boolean): void {
         this.checkForCycles = debugCheckForCycles;
     }
 
+    /** Print the tableau to console for debugging. */
     log(message: unknown): Tableau {
         return this.tableau.log(message);
     }

@@ -11,8 +11,23 @@
  */
 import type Tableau from "./tableau";
 
+/** Global flag to enable/disable debug logging. Set to true during development. */
 const DEBUG_ENABLED = false;
 
+/**
+ * Print the current tableau state to console for debugging.
+ *
+ * Outputs the complete matrix in a formatted table showing:
+ * - Variable names along the top (non-basic) and right side (basic)
+ * - Cost row (objective function reduced costs)
+ * - Constraint rows with RHS values
+ * - Optional objective reduced costs (if hierarchical optimization)
+ * - Current feasibility and evaluation
+ *
+ * @param message - Label to display above the tableau output.
+ * @param force - If true, print even when DEBUG_ENABLED is false.
+ * @returns The tableau instance for chaining.
+ */
 export function log(this: Tableau, message: unknown, force?: boolean): Tableau {
     if (!DEBUG_ENABLED && !force) {
         return this;
