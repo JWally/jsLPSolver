@@ -63,9 +63,7 @@ export function addCutConstraints(this: Tableau, cutConstraints: BranchCut[]): v
         if (varRowIndex === -1) {
             matrix[cutRowOffset + rhsColumn] = sign * cut.value;
 
-            for (let c = 1; c <= lastColumn; c += 1) {
-                matrix[cutRowOffset + c] = 0;
-            }
+            matrix.fill(0, cutRowOffset + 1, cutRowOffset + width);
 
             matrix[cutRowOffset + colByVarIndex[varIndex]] = sign;
         } else {

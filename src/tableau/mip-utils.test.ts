@@ -599,6 +599,33 @@ describe("getMostFractionalVar", () => {
         expect(result.index).toBeNull();
         expect(result.value).toBe(0);
     });
+
+    it("ignores near-integral variables within precision", () => {
+        const tableau = createMockTableau({
+            width: 3,
+            height: 3,
+            matrix: new Float64Array([0, 0, 0, 0, 0, 4.9999999, 0, 0, 3.25]),
+            rhsColumn: 2,
+            precision: 1e-6,
+            variablesPerIndex: [
+                undefined,
+                { isInteger: true, index: 1, cost: 1 },
+                { isInteger: true, index: 2, cost: 2 },
+            ],
+            varIndexByRow: [0, 1, 2],
+            rowByVarIndex: [-1, 1, 2],
+            model: {
+                integerVariables: [
+                    { index: 1, cost: 1 },
+                    { index: 2, cost: 2 },
+                ],
+            },
+        });
+
+        const result = getMostFractionalVar.call(tableau as never);
+        expect(result.index).toBe(2);
+        expect(result.value).toBe(3.25);
+    });
 });
 
 describe("getFractionalVarWithLowestCost", () => {

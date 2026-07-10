@@ -49,7 +49,9 @@ export function createBranchAndCutService(): BranchAndCutService {
     const applyCuts = (tableau: Tableau, branchingCuts: BranchCut[]): void => {
         tableau.restore();
 
-        tableau.addCutConstraints(branchingCuts);
+        if (branchingCuts.length > 0) {
+            tableau.addCutConstraints(branchingCuts);
+        }
         tableau.simplex();
         if (tableau.model?.useMIRCuts) {
             // Optimization: reuse previous "after" as next "before" to avoid redundant computation
@@ -145,7 +147,9 @@ export function createBranchAndCutService(): BranchAndCutService {
                 }
             }
 
-            if (tableau.isIntegral() === true) {
+            const variable = tableau.getMostFractionalVar();
+
+            if (variable.index === null) {
                 tableau.__isIntegral = true;
 
                 if (iterations === 1) {
@@ -174,8 +178,6 @@ export function createBranchAndCutService(): BranchAndCutService {
                 if (iterations === 1) {
                     tableau.save();
                 }
-
-                const variable = tableau.getMostFractionalVar();
 
                 const varIndex = variable.index as number;
                 const varValue = variable.value as number;

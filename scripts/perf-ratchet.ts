@@ -16,9 +16,9 @@ interface Case {
 }
 
 const CASES: Case[] = [
-    { file: "Vendor Selection.json", maxMedianMs: 650 },
-    { file: "Monster_II.json", maxMedianMs: 120 },
-    { file: "LargeFarmMIP.json", maxMedianMs: 70 },
+    { file: "Vendor Selection.json", maxMedianMs: 575 },
+    { file: "Monster_II.json", maxMedianMs: 105 },
+    { file: "LargeFarmMIP.json", maxMedianMs: 55 },
 ];
 
 const WARMUPS = 2;
@@ -71,6 +71,8 @@ for (const testCase of CASES) {
 
     const med = median(times);
     const avg = times.reduce((sum, value) => sum + value, 0) / times.length;
+    const min = Math.min(...times);
+    const max = Math.max(...times);
     const status = med <= testCase.maxMedianMs ? "PASS" : "FAIL";
 
     if (status === "FAIL") {
@@ -80,6 +82,7 @@ for (const testCase of CASES) {
     console.log(
         `${status} ${testCase.file.padEnd(24)} median=${med.toFixed(2).padStart(8)}ms ` +
             `avg=${avg.toFixed(2).padStart(8)}ms ` +
+            `range=${min.toFixed(2)}-${max.toFixed(2)}ms ` +
             `nodes=${String(branchAndCutIterations).padStart(5)} ` +
             `cap=${testCase.maxMedianMs.toFixed(2)}ms`
     );

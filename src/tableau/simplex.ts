@@ -739,9 +739,11 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
         if (!(val >= -1e-16 && val <= 1e-16)) {
             const normalized = val / quotient;
             matrix[idx] = normalized;
-            nonZeroColumns[nNonZeroColumns] = c;
-            pivotRowCache[nNonZeroColumns] = normalized;
-            nNonZeroColumns++;
+            if (c !== pivotColumnIndex) {
+                nonZeroColumns[nNonZeroColumns] = c;
+                pivotRowCache[nNonZeroColumns] = normalized;
+                nNonZeroColumns++;
+            }
         } else {
             matrix[idx] = 0;
         }
@@ -756,24 +758,14 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
             if (!(pivotColVal >= -1e-16 && pivotColVal <= 1e-16)) {
                 const coefficient = pivotColVal;
 
-                if (!(coefficient >= -1e-16 && coefficient <= 1e-16)) {
-                    // Use cached pivot row values for better cache locality
-                    for (let i = 0; i < nNonZeroColumns; i++) {
-                        const c = nonZeroColumns[i];
-                        const v0 = pivotRowCache[i];
-                        // Inner zero check is critical for numerical stability
-                        if (!(v0 >= -1e-16 && v0 <= 1e-16)) {
-                            matrix[rowOffset + c] -= coefficient * v0;
-                        } else if (v0 !== 0) {
-                            // Clean up near-zero values in pivot row
-                            matrix[pivotRowOffset + c] = 0;
-                        }
-                    }
-
-                    matrix[rowOffset + pivotColumnIndex] = -coefficient / quotient;
-                } else if (coefficient !== 0) {
-                    matrix[rowOffset + pivotColumnIndex] = 0;
+                // Use cached pivot row values for better cache locality
+                for (let i = 0; i < nNonZeroColumns; i++) {
+                    const c = nonZeroColumns[i];
+                    const v0 = pivotRowCache[i];
+                    matrix[rowOffset + c] -= coefficient * v0;
                 }
+
+                matrix[rowOffset + pivotColumnIndex] = -coefficient / quotient;
             }
         }
     }

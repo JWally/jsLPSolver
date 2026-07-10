@@ -124,7 +124,7 @@ export function computeFractionalVolume(this: Tableau, ignoreIntegerValues?: boo
  * @returns The selected variable's index and value, or nulls if all are integral.
  */
 export function getMostFractionalVar(this: Tableau): VariableValue {
-    let biggestFraction = 0;
+    let biggestFraction = this.precision;
     let selectedVarIndex: number | null = null;
     let selectedVarValue = 0;
 

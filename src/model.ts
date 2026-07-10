@@ -20,6 +20,7 @@ import type { TableauSolution, TableauSolutionSet } from "./tableau";
 import { presolve, type PresolveResult } from "./tableau/presolve";
 
 type ConstraintDefinition = ConstraintBound | (ConstraintBound & { equal?: number });
+const hasOwnProperty = {}.hasOwnProperty;
 
 /**
  * High-level representation of an optimization problem.
@@ -401,11 +402,10 @@ class Model {
         const constraintsMax: Record<string, Constraint> = {};
 
         // Instantiating constraints
-        const constraintIds = Object.keys(constraints);
-        const nConstraintIds = constraintIds.length;
-
-        for (let c = 0; c < nConstraintIds; c += 1) {
-            const constraintId = constraintIds[c];
+        for (const constraintId in constraints) {
+            if (!hasOwnProperty.call(constraints, constraintId)) {
+                continue;
+            }
             const constraint = constraints[constraintId] as ConstraintDefinition;
             const equal = (constraint as ConstraintBound).equal;
 
@@ -521,9 +521,10 @@ class Model {
                 this.smallerThan(1).addTerm(1, variable);
             }
 
-            const constraintNames = Object.keys(variableConstraints);
-            for (let c = 0; c < constraintNames.length; c += 1) {
-                const constraintName = constraintNames[c];
+            for (const constraintName in variableConstraints) {
+                if (!hasOwnProperty.call(variableConstraints, constraintName)) {
+                    continue;
+                }
                 if (constraintName === objectiveName) {
                     continue;
                 }
