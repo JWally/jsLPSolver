@@ -405,6 +405,7 @@ export function phase2(this: Tableau): number {
 
     // Cache arrays for faster access in hot loops
     const unrestrictedVars = this.unrestrictedVars;
+    const hasUnrestrictedVars = Object.keys(unrestrictedVars).length > 0;
     const varIndexByCol = this.varIndexByCol;
     const varIndexByRow = this.varIndexByRow;
 
@@ -412,7 +413,6 @@ export function phase2(this: Tableau): number {
 
     let iterations = 0;
     let reducedCost: number;
-    let unrestricted: boolean;
 
     // Anti-cycling for phase 2: if the objective stalls (no meaningful
     // improvement over several hundred iterations), the simplex is
@@ -490,9 +490,12 @@ export function phase2(this: Tableau): number {
             // Bland's rule: pick first eligible column (smallest index)
             for (let c = 1; c <= lastColumn; c++) {
                 reducedCost = matrix[c];
-                unrestricted = unrestrictedVars[varIndexByCol[c]] === true;
 
-                if (unrestricted && reducedCost < 0) {
+                if (
+                    hasUnrestrictedVars &&
+                    reducedCost < 0 &&
+                    unrestrictedVars[varIndexByCol[c]] === true
+                ) {
                     enteringColumn = c;
                     enteringValue = -reducedCost;
                     isReducedCostNegative = true;
@@ -519,7 +522,6 @@ export function phase2(this: Tableau): number {
 
                 for (let c = batchStart; c <= batchEnd; c++) {
                     reducedCost = matrix[c]; // costRowOffset is 0
-                    unrestricted = unrestrictedVars[varIndexByCol[c]] === true;
 
                     if (
                         nOptionalObjectives > 0 &&
@@ -530,7 +532,11 @@ export function phase2(this: Tableau): number {
                         continue;
                     }
 
-                    if (unrestricted && reducedCost < 0) {
+                    if (
+                        hasUnrestrictedVars &&
+                        reducedCost < 0 &&
+                        unrestrictedVars[varIndexByCol[c]] === true
+                    ) {
                         if (-reducedCost > enteringValue) {
                             enteringValue = -reducedCost;
                             enteringColumn = c;
@@ -559,7 +565,6 @@ export function phase2(this: Tableau): number {
             // Full pricing for small problems
             for (let c = 1; c <= lastColumn; c++) {
                 reducedCost = matrix[c]; // costRowOffset is 0
-                unrestricted = unrestrictedVars[varIndexByCol[c]] === true;
 
                 if (
                     nOptionalObjectives > 0 &&
@@ -570,7 +575,11 @@ export function phase2(this: Tableau): number {
                     continue;
                 }
 
-                if (unrestricted && reducedCost < 0) {
+                if (
+                    hasUnrestrictedVars &&
+                    reducedCost < 0 &&
+                    unrestrictedVars[varIndexByCol[c]] === true
+                ) {
                     if (-reducedCost > enteringValue) {
                         enteringValue = -reducedCost;
                         enteringColumn = c;
@@ -604,14 +613,17 @@ export function phase2(this: Tableau): number {
                     const c = optionalCostsColumns[i];
 
                     reducedCost = reducedCosts[c];
-                    unrestricted = unrestrictedVars[varIndexByCol[c]] === true;
 
                     if (negPrecision < reducedCost && reducedCost < precision) {
                         optionalCostsColumns2.push(c);
                         continue;
                     }
 
-                    if (unrestricted && reducedCost < 0) {
+                    if (
+                        hasUnrestrictedVars &&
+                        reducedCost < 0 &&
+                        unrestrictedVars[varIndexByCol[c]] === true
+                    ) {
                         if (-reducedCost > enteringValue) {
                             enteringValue = -reducedCost;
                             enteringColumn = c;
