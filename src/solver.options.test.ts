@@ -46,6 +46,36 @@ function createSlowMIP(size: number): Model {
 }
 
 describe("Solver Options", () => {
+    describe("options.exitOnCycles", () => {
+        const model: Model = {
+            optimize: "profit",
+            opType: "max",
+            constraints: {
+                capacity: { max: 10 },
+            },
+            variables: {
+                x: { profit: 5, capacity: 2 },
+            },
+        };
+
+        it("leaves cycle detection disabled by default", () => {
+            const result = solve(model);
+
+            expect(result.feasible).toBe(true);
+            expect(solver.lastSolvedModel?.checkForCycles).toBe(false);
+        });
+
+        it("enables cycle detection when explicitly requested", () => {
+            const result = solve({
+                ...model,
+                options: { exitOnCycles: true },
+            });
+
+            expect(result.feasible).toBe(true);
+            expect(solver.lastSolvedModel?.checkForCycles).toBe(true);
+        });
+    });
+
     describe("timeout", () => {
         it("respects timeout and returns best solution found", () => {
             // Create a problem that would take a while to solve optimally

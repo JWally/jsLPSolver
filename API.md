@@ -176,7 +176,7 @@ Options can be specified at the model level or in an `options` object:
 | ---------------- | -------------- | ------------------------------------------------------------------- |
 | `timeout`        | none           | Maximum solve time in milliseconds (MIP only)                       |
 | `tolerance`      | 0              | Accept solutions within X% of optimal (e.g., 0.05 = 5%)             |
-| `exitOnCycles`   | true           | Stop if cycling is detected in simplex                              |
+| `exitOnCycles`   | false          | Stop if cycling is detected in simplex                              |
 | `presolve`       | true           | Apply preprocessing to reduce problem size                          |
 | `useMIRCuts`     | true           | Apply Mixed-Integer Rounding cuts to tighten LP relaxation          |
 | `keep_solutions` | false          | Store intermediate MIP solutions                                    |

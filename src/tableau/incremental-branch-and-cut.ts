@@ -317,9 +317,10 @@ export function createIncrementalBranchAndCutService(
         let checkpointCount = 0;
         const tolerance = tableau.model?.tolerance ?? 0;
         let toleranceFlag = true;
+        const hasTimeout = !!tableau.model?.timeout;
         let terminalTime = 1e99;
 
-        if (tableau.model?.timeout) {
+        if (hasTimeout) {
             terminalTime = Date.now() + tableau.model.timeout;
         }
 
@@ -345,7 +346,7 @@ export function createIncrementalBranchAndCutService(
         while (
             (useDepthFirst ? depthFirstStack.length > 0 : !branches.isEmpty()) &&
             toleranceFlag === true &&
-            Date.now() < terminalTime
+            (!hasTimeout || Date.now() < terminalTime)
         ) {
             let acceptableThreshold: number;
             if (tableau.model?.isMinimization) {

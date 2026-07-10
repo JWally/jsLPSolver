@@ -258,9 +258,10 @@ export function createEnhancedBranchAndCutService(
         let iterations = 0;
         const tolerance = tableau.model?.tolerance ?? 0;
         let toleranceFlag = true;
+        const hasTimeout = !!tableau.model?.timeout;
         let terminalTime = 1e99;
 
-        if (tableau.model?.timeout) {
+        if (hasTimeout) {
             terminalTime = Date.now() + tableau.model.timeout;
         }
 
@@ -288,7 +289,7 @@ export function createEnhancedBranchAndCutService(
         while (
             (useDepthFirst ? depthFirstStack.length > 0 : !branches.isEmpty()) &&
             toleranceFlag === true &&
-            Date.now() < terminalTime
+            (!hasTimeout || Date.now() < terminalTime)
         ) {
             if (tableau.model?.isMinimization) {
                 acceptableThreshold = tableau.bestPossibleEval * (1 + tolerance);

@@ -355,11 +355,19 @@ export function presolve(model: Model): PresolveResult {
         for (const constraint of model.constraints) {
             if (result.removedConstraints.has(constraint)) continue;
 
-            const activeTerms = constraint.terms.filter(
-                (t) => !result.fixedVariables.has(t.variable)
-            );
+            let activeTermsLength = 0;
+            let activeTerm = constraint.terms[0];
+            for (const term of constraint.terms) {
+                if (!result.fixedVariables.has(term.variable)) {
+                    activeTermsLength++;
+                    activeTerm = term;
+                    if (activeTermsLength > 1) {
+                        break;
+                    }
+                }
+            }
 
-            if (activeTerms.length === 0) {
+            if (activeTermsLength === 0) {
                 // All variables fixed - check feasibility
                 let lhs = 0;
                 for (const term of constraint.terms) {
@@ -381,9 +389,9 @@ export function presolve(model: Model): PresolveResult {
                 result.removedConstraints.add(constraint);
                 result.stats.constraintsRemoved++;
                 changed = true;
-            } else if (activeTerms.length === 1) {
+            } else if (activeTermsLength === 1) {
                 // Singleton row - can fix or tighten bounds
-                const term = activeTerms[0];
+                const term = activeTerm;
                 const variable = term.variable;
                 const coeff = term.coefficient;
 

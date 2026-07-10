@@ -118,7 +118,7 @@ class Model {
 
         this.useMIRCuts = false;
 
-        this.checkForCycles = true;
+        this.checkForCycles = false;
 
         // Collect diagnostic messages for debugging without console output
         this.messages = [];
@@ -468,10 +468,7 @@ class Model {
                 this.useMIRCuts = jsonModel.options.useMIRCuts;
             }
 
-            // Cycle detection defaults to true
-            if (typeof jsonModel.options.exitOnCycles === "undefined") {
-                this.checkForCycles = true;
-            } else {
+            if (typeof jsonModel.options.exitOnCycles !== "undefined") {
                 this.checkForCycles = jsonModel.options.exitOnCycles;
             }
 
