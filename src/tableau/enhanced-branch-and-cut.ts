@@ -13,6 +13,7 @@
 import type Tableau from "./tableau";
 import type { Branch, BranchCut } from "./types";
 import { BranchMinHeap } from "./min-heap";
+import { integerDistance } from "./mip-utils";
 
 /**
  * Interface for the enhanced branch-and-cut service.
@@ -158,7 +159,7 @@ export function createEnhancedBranchAndCutService(
             const row = tableau.rowByVarIndex[varIndex];
             if (row !== -1) {
                 const value = matrix[row * width + rhsColumn];
-                const fraction = Math.abs(value - Math.round(value));
+                const fraction = integerDistance(value);
                 if (fraction > precision) {
                     candidates.push({ index: varIndex, value, fraction });
                 }

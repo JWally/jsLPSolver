@@ -138,6 +138,23 @@ describe("countIntegerValues", () => {
         expect(result).toBe(1);
     });
 
+    it("handles values just below an integer within precision as integral", () => {
+        const precision = 1e-6;
+        const tableau = createMockTableau({
+            width: 3,
+            height: 2,
+            matrix: new Float64Array([0, 0, 0, 0, 0, 4.9999999]),
+            rhsColumn: 2,
+            precision,
+            variablesPerIndex: [undefined, { isInteger: true, index: 1, cost: 1 }],
+            varIndexByRow: [0, 1],
+            rowByVarIndex: [-1, 1],
+        });
+
+        const result = countIntegerValues.call(tableau as never);
+        expect(result).toBe(1);
+    });
+
     it("skips non-integer variables", () => {
         const tableau = createMockTableau({
             width: 3,
@@ -230,6 +247,24 @@ describe("isIntegral", () => {
 
         const result = isIntegral.call(tableau as never);
         expect(result).toBe(false);
+    });
+
+    it("returns true for values just below an integer within precision", () => {
+        const precision = 1e-6;
+        const tableau = createMockTableau({
+            width: 3,
+            height: 2,
+            matrix: new Float64Array([0, 0, 0, 0, 0, 4.9999999]),
+            rhsColumn: 2,
+            precision,
+            variablesPerIndex: [undefined, { isInteger: true, index: 1, cost: 1 }],
+            varIndexByRow: [0, 1],
+            rowByVarIndex: [-1, 1],
+            model: { integerVariables: [{ index: 1, cost: 1 }] },
+        });
+
+        const result = isIntegral.call(tableau as never);
+        expect(result).toBe(true);
     });
 
     it("returns true when no integer variables exist", () => {

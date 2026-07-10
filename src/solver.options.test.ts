@@ -45,6 +45,26 @@ function createSlowMIP(size: number): Model {
     };
 }
 
+function createLargeTrivialMIP(size: number): Model {
+    const constraints: Record<string, { max: number }> = {};
+    const variables: Record<string, Record<string, number>> = {};
+
+    for (let i = 0; i < size; i++) {
+        constraints[`c${i}`] = { max: 1 };
+        variables[`x${i}`] = { profit: i === 0 ? 1 : 0 };
+    }
+
+    variables.x0.c0 = 1;
+
+    return {
+        optimize: "profit",
+        opType: "max",
+        constraints,
+        variables,
+        ints: { x0: 1 },
+    };
+}
+
 describe("Solver Options", () => {
     describe("options.exitOnCycles", () => {
         const model: Model = {
@@ -116,6 +136,25 @@ describe("Solver Options", () => {
             expect(elapsed).toBeLessThan(100); // Should solve quickly
             expect(result.feasible).toBe(true);
             expect(result.x).toBe(5);
+        });
+    });
+
+    describe("options.presolve", () => {
+        it("auto-skips presolve for large MIP models", () => {
+            const result = solve(createLargeTrivialMIP(501));
+
+            expect(result.feasible).toBe(true);
+            expect(solver.lastSolvedModel?.presolveResult).toBe(null);
+        });
+
+        it("forces presolve for large MIP models when explicitly enabled", () => {
+            const result = solve({
+                ...createLargeTrivialMIP(501),
+                options: { presolve: true },
+            });
+
+            expect(result.feasible).toBe(true);
+            expect(solver.lastSolvedModel?.presolveResult).not.toBe(null);
         });
     });
 

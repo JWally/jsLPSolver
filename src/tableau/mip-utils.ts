@@ -12,6 +12,11 @@
 import type Tableau from "./tableau";
 import type { VariableValue } from "./types";
 
+/** Distance from a numeric value to its nearest integer. */
+export function integerDistance(value: number): number {
+    return Math.abs(value - Math.floor(value + 0.5));
+}
+
 // ========== Integer Property Functions ==========
 
 /**
@@ -31,8 +36,7 @@ export function countIntegerValues(this: Tableau): number {
         const variable = this.variablesPerIndex[this.varIndexByRow[r]];
         if (variable !== undefined && variable.isInteger) {
             const value = matrix[r * width + rhsColumn];
-            const decimalPart = value - Math.floor(value);
-            if (decimalPart < this.precision && -decimalPart < this.precision) {
+            if (integerDistance(value) < this.precision) {
                 count += 1;
             }
         }
@@ -60,7 +64,7 @@ export function isIntegral(this: Tableau): boolean {
         const row = rowByVarIndex[varIndex];
         if (row !== -1) {
             const value = matrix[row * width + rhsColumn];
-            if (Math.abs(value - Math.round(value)) > precision) {
+            if (integerDistance(value) > precision) {
                 return false;
             }
         }
@@ -137,7 +141,7 @@ export function getMostFractionalVar(this: Tableau): VariableValue {
         const row = rowByVarIndex[varIndex];
         if (row !== -1) {
             const varValue = matrix[row * width + rhsColumn];
-            const fraction = Math.abs(varValue - Math.round(varValue));
+            const fraction = integerDistance(varValue);
             if (fraction > biggestFraction) {
                 biggestFraction = fraction;
                 selectedVarIndex = varIndex;
@@ -175,10 +179,7 @@ export function getFractionalVarWithLowestCost(this: Tableau): VariableValue {
         const varRow = this.rowByVarIndex[varIndex];
         if (varRow !== -1) {
             const varValue = matrix[varRow * width + rhsColumn];
-            if (
-                Math.abs(varValue - Math.round(varValue)) > this.precision &&
-                variable.cost < highestCost
-            ) {
+            if (integerDistance(varValue) > this.precision && variable.cost < highestCost) {
                 highestCost = variable.cost;
                 selectedVarIndex = varIndex;
                 selectedVarValue = varValue;

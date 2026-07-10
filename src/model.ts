@@ -85,6 +85,8 @@ class Model {
     lastElementIndex: number;
     /** Whether to apply preprocessing reductions before solving. */
     usePresolve: boolean;
+    /** Whether the user explicitly configured presolve behavior. */
+    presolveExplicitlyConfigured: boolean;
     /** Cached presolve results (null if not yet applied). */
     presolveResult: PresolveResult | null;
 
@@ -126,6 +128,7 @@ class Model {
         this.availableIndexes = [];
         this.lastElementIndex = 0;
         this.usePresolve = true;
+        this.presolveExplicitlyConfigured = false;
         this.presolveResult = null;
     }
 
@@ -480,6 +483,7 @@ class Model {
 
             if (jsonModel.options.presolve !== undefined) {
                 this.usePresolve = jsonModel.options.presolve;
+                this.presolveExplicitlyConfigured = true;
             }
         }
 
@@ -556,7 +560,7 @@ class Model {
      */
     solve(): TableauSolution {
         // Apply presolve to reduce problem size
-        if (this.usePresolve && this.presolveResult === null) {
+        if (this.shouldRunPresolve() && this.presolveResult === null) {
             this.presolveResult = presolve(this);
 
             if (this.presolveResult.isInfeasible) {
@@ -594,6 +598,24 @@ class Model {
         // as that would require complex bookkeeping. Instead, the presolve
         // information is used to detect early infeasibility and fix variable values.
         // A more aggressive presolve would rebuild the model without fixed variables.
+    }
+
+    private shouldRunPresolve(): boolean {
+        if (!this.usePresolve) {
+            return false;
+        }
+
+        if (this.presolveExplicitlyConfigured) {
+            return true;
+        }
+
+        // Current presolve mostly records reductions instead of rebuilding a
+        // smaller tableau. On large dense MIPs that makes it measurable overhead.
+        return !(
+            this.integerVariables.length > 0 &&
+            this.nVariables > 500 &&
+            this.nConstraints > 500
+        );
     }
 
     /** @returns Whether the last solve found a feasible solution. */

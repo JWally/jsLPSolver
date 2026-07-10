@@ -430,12 +430,12 @@ export function phase2(this: Tableau): number {
     let blandStartObj = 0;
 
     // Partial pricing setup
-    // Batch size: use configured value or auto-compute (sqrt of columns, min 50, max 500)
+    // Batch size: use configured value or auto-compute (sqrt of columns, min 100, max 500)
     const nColumns = lastColumn;
     const batchSize =
         this.pricingBatchSize > 0
             ? this.pricingBatchSize
-            : Math.min(500, Math.max(50, Math.floor(Math.sqrt(nColumns))));
+            : Math.min(500, Math.max(100, Math.floor(Math.sqrt(nColumns))));
 
     // For small problems, just scan everything (no benefit from partial pricing)
     const usePartialPricing = nColumns > batchSize * 2;

@@ -60,11 +60,13 @@ for (const testCase of CASES) {
     }
 
     const times: number[] = [];
+    let branchAndCutIterations = 0;
     for (let i = 0; i < SAMPLES; i++) {
         const startedAt = performance.now();
         const result = solver.Solve(model) as SolveResult;
         times.push(performance.now() - startedAt);
         assertSolution(testCase.file, model, result);
+        branchAndCutIterations = solver.lastSolvedModel?.tableau.branchAndCutIterations ?? 0;
     }
 
     const med = median(times);
@@ -77,7 +79,9 @@ for (const testCase of CASES) {
 
     console.log(
         `${status} ${testCase.file.padEnd(24)} median=${med.toFixed(2).padStart(8)}ms ` +
-            `avg=${avg.toFixed(2).padStart(8)}ms cap=${testCase.maxMedianMs.toFixed(2)}ms`
+            `avg=${avg.toFixed(2).padStart(8)}ms ` +
+            `nodes=${String(branchAndCutIterations).padStart(5)} ` +
+            `cap=${testCase.maxMedianMs.toFixed(2)}ms`
     );
 }
 
