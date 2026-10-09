@@ -46,11 +46,7 @@ function createBranch(relaxedEvaluation: number, cuts: BranchCut[]): Branch {
  * @returns A BranchAndCutService with applyCuts and branchAndCut methods.
  */
 export function createBranchAndCutService(): BranchAndCutService {
-    const applyCuts = (tableau: Tableau, branchingCuts: BranchCut[]): void => {
-        tableau.restore();
-
-        tableau.addCutConstraints(branchingCuts);
-        tableau.simplex();
+    const applyMIRCuts = (tableau: Tableau): void => {
         if (tableau.model?.useMIRCuts) {
             // Optimization: reuse previous "after" as next "before" to avoid redundant computation
             let fractionalVolume = tableau.computeFractionalVolume(true);
@@ -64,6 +60,24 @@ export function createBranchAndCutService(): BranchAndCutService {
                 fractionalVolume = fractionalVolumeAfter;
             }
         }
+    };
+
+    const applyCuts = (tableau: Tableau, branchingCuts: BranchCut[]): void => {
+        tableau.restore();
+
+        tableau.addCutConstraints(branchingCuts);
+        tableau.simplex();
+        applyMIRCuts(tableau);
+    };
+
+    // Plunging: solve one child directly from its parent's optimal tableau by
+    // adding only the new bound row. The parent basis stays dual feasible, so
+    // phase 1 runs as a dual simplex and usually needs a pivot or two, instead
+    // of restoring the root and re-solving every bound on the path.
+    const applyCutInPlace = (tableau: Tableau, cut: BranchCut): void => {
+        tableau.addCutConstraints([cut]);
+        tableau.simplex();
+        applyMIRCuts(tableau);
     };
 
     const branchAndCut = (tableau: Tableau): void => {
@@ -92,8 +106,13 @@ export function createBranchAndCutService(): BranchAndCutService {
         let acceptableThreshold: number;
 
         branches.push(branch);
+
+        // Child to solve next in place (see applyCutInPlace), with its new cut.
+        let diveBranch: Branch | null = null;
+        let diveCut: BranchCut | null = null;
+
         while (
-            !branches.isEmpty() &&
+            (diveBranch !== null || !branches.isEmpty()) &&
             toleranceFlag === true &&
             (!hasTimeout || Date.now() < terminalTime)
         ) {
@@ -109,13 +128,21 @@ export function createBranchAndCutService(): BranchAndCutService {
                 }
             }
 
-            const activeBranch = branches.pop()!;
-            if (activeBranch.relaxedEvaluation >= bestEvaluation) {
-                continue;
+            let activeBranch: Branch;
+            if (diveBranch !== null) {
+                activeBranch = diveBranch;
+                applyCutInPlace(tableau, diveCut!);
+                diveBranch = null;
+                diveCut = null;
+            } else {
+                activeBranch = branches.pop()!;
+                if (activeBranch.relaxedEvaluation >= bestEvaluation) {
+                    continue;
+                }
+                applyCuts(tableau, activeBranch.cuts);
             }
 
             const cuts = activeBranch.cuts;
-            applyCuts(tableau, cuts);
 
             iterations++;
             if (tableau.feasible === false) {
@@ -204,8 +231,19 @@ export function createBranchAndCutService(): BranchAndCutService {
                 const cutLow = createCut("max", varIndex, Math.floor(varValue));
                 cutsLow.push(cutLow);
 
-                branches.push(createBranch(evaluation, cutsHigh));
-                branches.push(createBranch(evaluation, cutsLow));
+                const branchHigh = createBranch(evaluation, cutsHigh);
+                const branchLow = createBranch(evaluation, cutsLow);
+
+                // Dive toward the nearer integer; queue the sibling.
+                if (varValue - Math.floor(varValue) >= 0.5) {
+                    diveBranch = branchHigh;
+                    diveCut = cutHigh;
+                    branches.push(branchLow);
+                } else {
+                    diveBranch = branchLow;
+                    diveCut = cutLow;
+                    branches.push(branchHigh);
+                }
             }
         }
 
