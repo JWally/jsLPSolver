@@ -220,6 +220,16 @@ export function phase1(this: Tableau): number {
     // we restore the clean matrix and switch to Bland's rule. The lazy
     // save avoids the copy cost on the vast majority of phase1 calls
     // that converge quickly.
+    // The loop below picks the entering column by the dual ratio test, so it
+    // is a genuine dual simplex only when the starting basis is dual
+    // feasible (the usual case after branch-and-cut adds bound rows to an
+    // optimal tableau). From any other basis it is a heuristic that can
+    // wander, cycle, or falsely report infeasibility, so use the primal
+    // phase 1 instead.
+    if (!isDualFeasible(this)) {
+        return phase1Robust.call(this);
+    }
+
     const SAVE_THRESHOLD = 10;
     const maxQuotientLimit = Math.max(lastRow, lastColumn);
 
@@ -264,8 +274,9 @@ export function phase1(this: Tableau): number {
                 savedColByVarIndex = this.colByVarIndex.slice();
             }
             if (iterations >= maxQuotientLimit) {
-                // Still stuck after generous budget: restore and switch
-                useBland = true;
+                // Still stuck after generous budget: restore the pre-stall
+                // matrix and finish with the primal-monotone phase 1, which
+                // cannot cycle the way this dual-style loop can.
                 if (savedMatrix) {
                     matrix.set(savedMatrix);
                     for (let i = 0; i < savedVarIndexByRow!.length; i++) {
@@ -280,9 +291,8 @@ export function phase1(this: Tableau): number {
                     for (let i = 0; i < savedColByVarIndex!.length; i++) {
                         this.colByVarIndex[i] = savedColByVarIndex![i];
                     }
-                    iterations = 0;
-                    continue;
                 }
+                return iterations + phase1Robust.call(this);
             }
         }
         if (iterations === 0) {
@@ -352,8 +362,10 @@ export function phase1(this: Tableau): number {
         }
 
         if (enteringColumn === 0) {
-            this.feasible = false;
-            return iterations;
+            // The row looks unfixable, but entries within precision of zero
+            // were ignored. Confirm with the primal phase 1 before declaring
+            // the problem infeasible.
+            return iterations + phase1Robust.call(this);
         }
 
         if (cycleDetector) {
@@ -374,6 +386,172 @@ export function phase1(this: Tableau): number {
         this.pivot(leavingRowIndex, enteringColumn);
         iterations += 1;
     }
+}
+
+/**
+ * Check whether the current basis is dual feasible: no nonbasic column has a
+ * reduced cost that phase 2 would treat as improving.
+ */
+function isDualFeasible(tableau: Tableau): boolean {
+    const matrix = tableau.matrix;
+    const lastColumn = tableau.width - 1;
+    const precision = tableau.precision;
+    const unrestrictedVars = tableau.unrestrictedVars;
+    const varIndexByCol = tableau.varIndexByCol;
+    for (let c = 1; c <= lastColumn; c++) {
+        const reducedCost = matrix[c];
+        if (reducedCost > precision) return false;
+        if (reducedCost < -precision && unrestrictedVars[varIndexByCol[c]] === true) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * Robust phase 1: minimize the sum of primal infeasibilities.
+ *
+ * Textbook composite phase 1 (Chvátal ch. 8; Maros ch. 9). Unlike the fast
+ * dual-style loop in `phase1`, every pivot is primal-monotone: rows that are
+ * feasible stay feasible (ratio test over them) and infeasible rows only
+ * move toward zero, so the total infeasibility never increases. A
+ * dual-feasible basis is not required, which makes this safe as a fallback
+ * from any basis. Bland's rule is used on degenerate stalls so it terminates.
+ *
+ * Infeasibility is only declared when no column can reduce the
+ * infeasibility sum, which is a proof (Farkas) rather than a heuristic.
+ *
+ * Convention: basic value x_B(r) = rhs(r) - a(r,c) * t when the nonbasic in
+ * column c moves by t.
+ *
+ * @returns Number of pivot iterations performed.
+ */
+export function phase1Robust(this: Tableau): number {
+    const matrix = this.matrix;
+    const width = this.width;
+    const rhsColumn = this.rhsColumn;
+    const lastColumn = width - 1;
+    const lastRow = this.height - 1;
+    const precision = this.precision;
+    const unrestrictedVars = this.unrestrictedVars;
+    const varIndexByRow = this.varIndexByRow;
+    const varIndexByCol = this.varIndexByCol;
+
+    // Pivot elements smaller than this are rejected to avoid blowing up the tableau.
+    const PIVOT_TOL = 1e-9;
+    const STALL_LIMIT = 50;
+    const maxIterations = 50 * (lastRow + lastColumn) + 1000;
+
+    const gradient = new Float64Array(width);
+    const infeasibleRows = new Int32Array(lastRow + 1);
+
+    let iterations = 0;
+    let bestInfeasibility = Infinity;
+    let stalled = 0;
+
+    while (iterations < maxIterations) {
+        let nInfeasible = 0;
+        let infeasibility = 0;
+        for (let r = 1; r <= lastRow; r++) {
+            if (unrestrictedVars[varIndexByRow[r]] === true) continue;
+            const value = matrix[r * width + rhsColumn];
+            if (value < -precision) {
+                infeasibleRows[nInfeasible++] = r;
+                infeasibility -= value;
+            }
+        }
+        if (nInfeasible === 0) {
+            this.feasible = true;
+            return iterations;
+        }
+
+        if (infeasibility < bestInfeasibility * (1 - 1e-12)) {
+            bestInfeasibility = infeasibility;
+            stalled = 0;
+        } else {
+            stalled++;
+        }
+        const useBland = stalled >= STALL_LIMIT;
+
+        // gradient[c] = d(sum of infeasible x_B)/dt for column c moving up
+        gradient.fill(0);
+        for (let i = 0; i < nInfeasible; i++) {
+            const rowOffset = infeasibleRows[i] * width;
+            for (let c = 1; c <= lastColumn; c++) {
+                gradient[c] -= matrix[rowOffset + c];
+            }
+        }
+
+        // Pricing: restricted nonbasics may only increase; unrestricted may move either way.
+        let enteringColumn = 0;
+        let direction = 1;
+        let best = precision;
+        for (let c = 1; c <= lastColumn; c++) {
+            if (c === rhsColumn) continue;
+            const g = gradient[c];
+            let score = g;
+            let dir = 1;
+            if (g < 0 && unrestrictedVars[varIndexByCol[c]] === true) {
+                score = -g;
+                dir = -1;
+            }
+            if (score > best) {
+                enteringColumn = c;
+                direction = dir;
+                if (useBland) break;
+                best = score;
+            }
+        }
+
+        if (enteringColumn === 0) {
+            this.feasible = false;
+            return iterations;
+        }
+
+        // Ratio test. Feasible restricted rows block when they would go negative;
+        // infeasible rows block when they reach zero (keeps the step conservative).
+        let leavingRow = 0;
+        let minRatio = Infinity;
+        let leavingPivot = 0;
+        for (let r = 1; r <= lastRow; r++) {
+            if (unrestrictedVars[varIndexByRow[r]] === true) continue;
+            const rowOffset = r * width;
+            const a = direction * matrix[rowOffset + enteringColumn];
+            const value = matrix[rowOffset + rhsColumn];
+            let ratio: number;
+            if (value >= -precision) {
+                if (a <= PIVOT_TOL) continue;
+                ratio = (value > 0 ? value : 0) / a;
+            } else {
+                if (a >= -PIVOT_TOL) continue;
+                ratio = value / a;
+            }
+            const absA = a < 0 ? -a : a;
+            if (
+                ratio < minRatio - 1e-12 ||
+                (ratio <= minRatio + 1e-12 &&
+                    (useBland
+                        ? varIndexByRow[r] < varIndexByRow[leavingRow]
+                        : absA > leavingPivot))
+            ) {
+                minRatio = ratio;
+                leavingRow = r;
+                leavingPivot = absA;
+            }
+        }
+
+        if (leavingRow === 0) {
+            // Gradient was driven by entries below PIVOT_TOL: no safe pivot.
+            this.feasible = false;
+            return iterations;
+        }
+
+        this.pivot(leavingRow, enteringColumn);
+        iterations++;
+    }
+
+    this.feasible = false;
+    return iterations;
 }
 
 /**
