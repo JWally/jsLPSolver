@@ -668,6 +668,7 @@ export function phase2(this: Tableau): number {
     let staleWindows = 0;
     let blandStartIter = 0;
     let blandStartObj = 0;
+    const blandBudget = Math.max(1000, 20 * (lastRow + lastColumn));
 
     // Partial pricing setup
     // Batch size: use configured value or auto-compute (sqrt of columns, min 100, max 500)
@@ -706,9 +707,13 @@ export function phase2(this: Tableau): number {
 
         // Bland's termination: in floating-point arithmetic, Bland's rule
         // can cycle through degenerate bases indefinitely. If it hasn't
-        // improved the objective after lastRow pivots, accept the current
+        // improved the objective after a generous budget, accept the current
         // solution (reduced costs are within floating-point noise of zero).
-        if (useBland && iterations - blandStartIter > lastRow) {
+        // With Bland's rule on both entering and leaving choices it should
+        // reach optimality or detect unboundedness well within the budget;
+        // a short budget (it used to be lastRow pivots) gave up on
+        // degenerate cycles and reported unbounded problems as optimal.
+        if (useBland && iterations - blandStartIter > blandBudget) {
             const currentObj = matrix[rhsColumn];
             const delta = Math.abs(currentObj - blandStartObj);
             const scale = Math.max(1, Math.abs(blandStartObj));
@@ -877,29 +882,69 @@ export function phase2(this: Tableau): number {
             return iterations;
         }
 
+        // Harris two-pass ratio test (Harris 1973; Koberstein 2005 §6.2).
+        // Basic value x_B(r) = rhs(r) - a(r) * t, where a is the entering
+        // column oriented along the direction of motion. Only restricted rows
+        // with a > 0 block; unrestricted basic variables may go negative.
+        //   Pass 1: largest step if every blocking row may dip to -FEAS_TOL.
+        //   Pass 2: among rows reaching zero within that step, take the
+        //           largest |a| for a stable pivot.
+        // Every blocking row counts, however small its ratio: skipping tiny
+        // ratios overshoots and drives rows negative.
         let leavingRow = 0;
         let minQuotient = Infinity;
-
+        let maxStep = Infinity;
         for (let r = 1; r <= lastRow; r++) {
+            if (unrestrictedVars[varIndexByRow[r]] === true) continue;
             const rowOffset = r * width;
-            const rhsValue = matrix[rowOffset + rhsColumn];
             const colValue = matrix[rowOffset + enteringColumn];
-
-            if (negPrecision < colValue && colValue < precision) {
-                continue;
+            const a = isReducedCostNegative ? -colValue : colValue;
+            if (a <= HARRIS_PIVOT_TOL) continue;
+            const step = (matrix[rowOffset + rhsColumn] + HARRIS_FEAS_TOL) / a;
+            if (step < maxStep) maxStep = step;
+        }
+        if (maxStep !== Infinity && useBland) {
+            // Anti-cycling needs Bland's rule on the leaving side too: exact
+            // minimum ratio, ties broken by smallest basic variable index.
+            // Harris's largest-pivot choice can cycle on degenerate vertices.
+            for (let r = 1; r <= lastRow; r++) {
+                if (unrestrictedVars[varIndexByRow[r]] === true) continue;
+                const rowOffset = r * width;
+                const colValue = matrix[rowOffset + enteringColumn];
+                const a = isReducedCostNegative ? -colValue : colValue;
+                if (a <= HARRIS_PIVOT_TOL) continue;
+                const rhsValue = matrix[rowOffset + rhsColumn];
+                const ratio = (rhsValue > 0 ? rhsValue : 0) / a;
+                if (
+                    ratio < minQuotient ||
+                    (ratio === minQuotient && varIndexByRow[r] < varIndexByRow[leavingRow])
+                ) {
+                    minQuotient = ratio;
+                    leavingRow = r;
+                }
             }
-
-            if (colValue > 0 && precision > rhsValue && rhsValue > negPrecision) {
-                minQuotient = 0;
-                leavingRow = r;
-                break;
+            const leavingRhs = leavingRow * width + rhsColumn;
+            if (matrix[leavingRhs] < 0) matrix[leavingRhs] = 0;
+        } else if (maxStep !== Infinity) {
+            let bestPivot = 0;
+            for (let r = 1; r <= lastRow; r++) {
+                if (unrestrictedVars[varIndexByRow[r]] === true) continue;
+                const rowOffset = r * width;
+                const colValue = matrix[rowOffset + enteringColumn];
+                const a = isReducedCostNegative ? -colValue : colValue;
+                if (a <= HARRIS_PIVOT_TOL) continue;
+                const rhsValue = matrix[rowOffset + rhsColumn];
+                const ratio = (rhsValue > 0 ? rhsValue : 0) / a;
+                if (ratio <= maxStep && a > bestPivot) {
+                    bestPivot = a;
+                    leavingRow = r;
+                    minQuotient = ratio;
+                }
             }
-
-            const quotient = isReducedCostNegative ? -rhsValue / colValue : rhsValue / colValue;
-            if (quotient > precision && minQuotient > quotient) {
-                minQuotient = quotient;
-                leavingRow = r;
-            }
+            // The chosen row may sit slightly below zero (within FEAS_TOL);
+            // snap it to zero so the step is never negative.
+            const leavingRhs = leavingRow * width + rhsColumn;
+            if (matrix[leavingRhs] < 0) matrix[leavingRhs] = 0;
         }
 
         if (minQuotient === Infinity) {
@@ -928,6 +973,11 @@ export function phase2(this: Tableau): number {
         iterations += 1;
     }
 }
+
+/** Harris ratio test: smallest entering-column entry accepted as a pivot. */
+const HARRIS_PIVOT_TOL = 1e-9;
+/** Harris ratio test: how far a basic variable may dip below zero in pass 1. */
+const HARRIS_FEAS_TOL = 1e-9;
 
 // Pre-allocated typed arrays for pivot optimization (better cache locality)
 let nonZeroColumns = new Int32Array(1024);

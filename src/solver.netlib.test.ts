@@ -52,7 +52,8 @@ describe("Netlib LP regressions", () => {
             const outcome = solveInChild(name);
             expect(outcome.feasible, "feasible").toBe(true);
             expect(outcome.bounded, "bounded").not.toBe(false);
-            const relativeError = Math.abs(outcome.result - optimum) / Math.max(1, Math.abs(optimum));
+            const relativeError =
+                Math.abs(outcome.result - optimum) / Math.max(1, Math.abs(optimum));
             expect(relativeError, `result ${outcome.result} vs ${optimum}`).toBeLessThan(1e-6);
         });
     }
