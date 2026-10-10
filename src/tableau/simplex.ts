@@ -258,6 +258,10 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
     // that converge quickly.
     const SAVE_THRESHOLD = 10;
     const maxQuotientLimit = Math.max(lastRow, lastColumn);
+    const DUAL_MAX_FACTOR = 20;
+    const dualWindow = Math.max(50, lastRow);
+    let windowObjective = matrix[rhsColumn];
+    let objectiveMoving = robustFallback;
 
     let iterations = 0;
     let useBland = false;
@@ -305,8 +309,24 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
             flipRowToUpper(this, leavingRowIndex);
         }
 
-        // Detect non-convergence and apply anti-cycling.
-        if (!useBland && iterations > 0 && rhsValue <= initialRHS) {
+        // Detect non-convergence and apply anti-cycling: stalled while the
+        // worst rhs is no better than the first. From a dual-feasible start
+        // this loop is a dual simplex, whose objective moves monotonically,
+        // so the budget is extended while the objective keeps moving (qnet1
+        // climbs to its optimum for ~2000 pivots while the worst rhs
+        // wanders). A degenerate run whose objective is stuck (brandy) still
+        // gives up on the original budget, before its pivots blow up.
+        if (robustFallback && iterations > 0 && iterations % dualWindow === 0) {
+            const objective = matrix[rhsColumn];
+            objectiveMoving =
+                Math.abs(objective - windowObjective) > 1e-9 * Math.max(1, Math.abs(objective));
+            windowObjective = objective;
+        }
+        const stalledNow = !useBland && iterations > 0 && rhsValue <= initialRHS;
+        const giveUp =
+            iterations >= maxQuotientLimit &&
+            (!objectiveMoving || iterations >= DUAL_MAX_FACTOR * maxQuotientLimit);
+        if (stalledNow) {
             if (iterations >= SAVE_THRESHOLD && savedMatrix === null) {
                 // Stalling detected: save matrix for potential rollback
                 savedMatrix = matrix.slice();
@@ -316,7 +336,7 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
                 savedColByVarIndex = this.colByVarIndex.slice();
                 savedBounds = captureBounds(this);
             }
-            if (iterations >= maxQuotientLimit) {
+            if (giveUp) {
                 if (!robustFallback) {
                     return -1;
                 }
@@ -652,32 +672,47 @@ function phase1Robust(this: Tableau): number {
             let bestRatio = Infinity;
             let toUpper = false;
             leavingRow = 0;
-            for (let r = 1; r <= lastRow; r++) {
-                const rowVar = varIndexByRow[r];
-                if (unrestrictedVars[rowVar] === true) continue;
-                const rowOffset = r * width;
-                const a = direction * matrix[rowOffset + enteringColumn];
-                const value = matrix[rowOffset + rhsColumn];
-                const consider = (ratio: number, size: number, upper: boolean): void => {
-                    const take = useBland
-                        ? ratio < bestRatio - 1e-12 ||
-                          (ratio <= bestRatio + 1e-12 &&
-                              (leavingRow === 0 || rowVar < varIndexByRow[leavingRow]))
-                        : ratio <= maxStep && size > bestPivot;
-                    if (take) {
-                        bestRatio = ratio;
-                        bestPivot = size;
-                        leavingRow = r;
-                        toUpper = upper;
-                    }
-                };
-                if (a > PIVOT_TOL && value >= -precision) {
-                    consider(Math.max(value, 0) / a, a, false);
-                } else if (a < -PIVOT_TOL) {
-                    if (value < -precision) consider(value / a, -a, false);
-                    const range = rangeOf(this, rowVar);
-                    if (range !== Infinity && value >= -precision) {
-                        consider(Math.max(range - value, 0) / -a, -a, true);
+            // Bland's tie-break ignores pivot size, so keep it off pivots that
+            // are tiny relative to the column (they blow up the dense tableau).
+            let columnMax = 0;
+            if (useBland) {
+                for (let r = 1; r <= lastRow; r++) {
+                    const a = Math.abs(matrix[r * width + enteringColumn]);
+                    if (a > columnMax) columnMax = a;
+                }
+            }
+            const blandMinPivot = Math.max(PIVOT_TOL, 1e-7 * columnMax);
+            // If no Bland candidate passes the size gate, use the Harris choice.
+            for (let pass = useBland ? 0 : 1; pass < 2 && leavingRow === 0; pass++) {
+                const bland = pass === 0;
+                for (let r = 1; r <= lastRow; r++) {
+                    const rowVar = varIndexByRow[r];
+                    if (unrestrictedVars[rowVar] === true) continue;
+                    const rowOffset = r * width;
+                    const a = direction * matrix[rowOffset + enteringColumn];
+                    const value = matrix[rowOffset + rhsColumn];
+                    const consider = (ratio: number, size: number, upper: boolean): void => {
+                        const take = bland
+                            ? size >= blandMinPivot &&
+                              (ratio < bestRatio - 1e-12 ||
+                                  (ratio <= bestRatio + 1e-12 &&
+                                      (leavingRow === 0 || rowVar < varIndexByRow[leavingRow])))
+                            : ratio <= maxStep && size > bestPivot;
+                        if (take) {
+                            bestRatio = ratio;
+                            bestPivot = size;
+                            leavingRow = r;
+                            toUpper = upper;
+                        }
+                    };
+                    if (a > PIVOT_TOL && value >= -precision) {
+                        consider(Math.max(value, 0) / a, a, false);
+                    } else if (a < -PIVOT_TOL) {
+                        if (value < -precision) consider(value / a, -a, false);
+                        const range = rangeOf(this, rowVar);
+                        if (range !== Infinity && value >= -precision) {
+                            consider(Math.max(range - value, 0) / -a, -a, true);
+                        }
                     }
                 }
             }
