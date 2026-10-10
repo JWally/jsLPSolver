@@ -113,14 +113,16 @@ export default class Tableau {
 
     /** True once any column bound has been set (see bounds.ts). */
     hasBounds = false;
-    /** Per variable index: x = boundOffset + boundSign * stored. */
-    boundOffset: number[] = [];
-    boundSign: number[] = [];
-    /** Per variable index: stored value range [0, boundRange]. */
-    boundRange: number[] = [];
-    /** Per variable index: actual bounds. */
-    boundLower: number[] = [];
-    boundUpper: number[] = [];
+    /**
+     * Per variable index (dense, allocated on first use; see bounds.ts):
+     * x = boundOffset + boundSign * stored, stored in [0, boundRange],
+     * actual bounds [boundLower, boundUpper].
+     */
+    boundOffset: Float64Array = new Float64Array(0);
+    boundSign: Float64Array = new Float64Array(0);
+    boundRange: Float64Array = new Float64Array(0);
+    boundLower: Float64Array = new Float64Array(0);
+    boundUpper: Float64Array = new Float64Array(0);
 
     /** Pool of recycled variable/constraint indices. */
     availableIndexes: number[] = [];

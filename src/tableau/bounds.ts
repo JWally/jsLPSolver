@@ -19,8 +19,26 @@
  */
 import type Tableau from "./tableau";
 
-/** Default range for a variable without a finite upper bound. */
-const NO_RANGE = Infinity;
+/**
+ * Grow the dense bound arrays to cover varIndex, filling defaults
+ * (offset 0, sign +1, range/upper Infinity, lower 0).
+ */
+function ensureCapacity(tableau: Tableau, varIndex: number): void {
+    const current = tableau.boundRange.length;
+    if (varIndex < current) return;
+    const size = Math.max(varIndex + 1, tableau.lastElementIndex + 1, current * 2, 16);
+    const grow = (old: Float64Array, fill: number): Float64Array => {
+        const next = new Float64Array(size);
+        next.set(old);
+        if (fill !== 0) next.fill(fill, old.length);
+        return next;
+    };
+    tableau.boundOffset = grow(tableau.boundOffset, 0);
+    tableau.boundSign = grow(tableau.boundSign, 1);
+    tableau.boundRange = grow(tableau.boundRange, Infinity);
+    tableau.boundLower = grow(tableau.boundLower, 0);
+    tableau.boundUpper = grow(tableau.boundUpper, Infinity);
+}
 
 /**
  * Substitute s = alpha + beta * s' for the variable at varIndex (beta = +/-1).
@@ -60,8 +78,9 @@ export function substituteVariable(
         }
     }
 
-    const sign = tableau.boundSign[varIndex] ?? 1;
-    tableau.boundOffset[varIndex] = (tableau.boundOffset[varIndex] ?? 0) + sign * alpha;
+    ensureCapacity(tableau, varIndex);
+    const sign = tableau.boundSign[varIndex];
+    tableau.boundOffset[varIndex] += sign * alpha;
     tableau.boundSign[varIndex] = sign * beta;
 }
 
@@ -84,9 +103,10 @@ export function setVariableBounds(
         return false;
     }
     tableau.hasBounds = true;
+    ensureCapacity(tableau, varIndex);
 
-    const offset = tableau.boundOffset[varIndex] ?? 0;
-    const sign = tableau.boundSign[varIndex] ?? 1;
+    const offset = tableau.boundOffset[varIndex];
+    const sign = tableau.boundSign[varIndex];
     const isBasic = tableau.rowByVarIndex[varIndex] !== -1;
 
     let alpha: number;
@@ -116,17 +136,18 @@ export function setVariableBounds(
 
 /** Current lower bound of a variable (0 unless changed). */
 export function lowerBoundOf(tableau: Tableau, varIndex: number): number {
-    return tableau.boundLower[varIndex] ?? 0;
+    return varIndex < tableau.boundLower.length ? tableau.boundLower[varIndex] : 0;
 }
 
 /** Current upper bound of a variable (Infinity unless changed). */
 export function upperBoundOf(tableau: Tableau, varIndex: number): number {
-    return tableau.boundUpper[varIndex] ?? Infinity;
+    return varIndex < tableau.boundUpper.length ? tableau.boundUpper[varIndex] : Infinity;
 }
 
 /** Range (ub - lb) of the stored variable, Infinity when unbounded above. */
 export function rangeOf(tableau: Tableau, varIndex: number): number {
-    return tableau.boundRange[varIndex] ?? NO_RANGE;
+    const ranges = tableau.boundRange;
+    return varIndex < ranges.length ? ranges[varIndex] : Infinity;
 }
 
 /** Actual value x of a variable given the current basis. */
@@ -136,13 +157,14 @@ export function actualValue(tableau: Tableau, varIndex: number): number {
         row !== -1 && row !== undefined
             ? tableau.matrix[row * tableau.width + tableau.rhsColumn]
             : 0;
-    return (tableau.boundOffset[varIndex] ?? 0) + (tableau.boundSign[varIndex] ?? 1) * stored;
+    if (varIndex >= tableau.boundOffset.length) return stored;
+    return tableau.boundOffset[varIndex] + tableau.boundSign[varIndex] * stored;
 }
 
 /** Actual value of a basic variable from its stored value. */
 export function toActual(tableau: Tableau, varIndex: number, stored: number): number {
-    if (!tableau.hasBounds) return stored;
-    return (tableau.boundOffset[varIndex] ?? 0) + (tableau.boundSign[varIndex] ?? 1) * stored;
+    if (!tableau.hasBounds || varIndex >= tableau.boundOffset.length) return stored;
+    return tableau.boundOffset[varIndex] + tableau.boundSign[varIndex] * stored;
 }
 
 /**
@@ -165,11 +187,11 @@ export function flipColumnToUpper(tableau: Tableau, column: number): void {
 /** State captured with snapshots and saved tableaux. */
 export interface BoundState {
     hasBounds: boolean;
-    offset: number[];
-    sign: number[];
-    range: number[];
-    lower: number[];
-    upper: number[];
+    offset: Float64Array;
+    sign: Float64Array;
+    range: Float64Array;
+    lower: Float64Array;
+    upper: Float64Array;
 }
 
 /** Capture the bound state (cheap when no bounds were ever set). */
@@ -190,11 +212,11 @@ export function restoreBounds(tableau: Tableau, state: BoundState | null): void 
     if (state === null) {
         if (tableau.hasBounds) {
             tableau.hasBounds = false;
-            tableau.boundOffset = [];
-            tableau.boundSign = [];
-            tableau.boundRange = [];
-            tableau.boundLower = [];
-            tableau.boundUpper = [];
+            tableau.boundOffset = new Float64Array(0);
+            tableau.boundSign = new Float64Array(0);
+            tableau.boundRange = new Float64Array(0);
+            tableau.boundLower = new Float64Array(0);
+            tableau.boundUpper = new Float64Array(0);
         }
         return;
     }
