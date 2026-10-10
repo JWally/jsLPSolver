@@ -114,6 +114,14 @@ export default class Tableau {
 
     /** Pivots performed so far (deterministic work measure for branch-and-cut). */
     pivotCount = 0;
+    /**
+     * Row equilibration factor per constraint (indexed by the constraint's
+     * slack variable index; absent means 1). Each constraint row is stored
+     * multiplied by a power of two that brings its largest coefficient near
+     * 1, so the slack is measured on a comparable scale to the structurals
+     * and the fixed tolerances mean the same thing on every row.
+     */
+    rowScale: Float64Array = new Float64Array(0);
 
     /** True once any column bound has been set (see bounds.ts). */
     hasBounds = false;
@@ -489,9 +497,12 @@ export default class Tableau {
             this.varIndexByCol[v + 1] = varIndex;
         }
 
+        this.rowScale = new Float64Array(this.nVars);
         let rowIndex = 1;
         for (let c = 0; c < nConstraints; c += 1) {
             const constraint = constraints[c];
+            const scale = equilibrationScale(constraint.terms);
+            this.rowScale[constraint.index] = scale;
 
             const constraintIndex = constraint.index;
             this.rowByVarIndex[constraintIndex] = rowIndex;
@@ -503,21 +514,13 @@ export default class Tableau {
             const rowOffset = rowIndex * width;
             rowIndex++;
 
-            if (constraint.isUpperBound) {
-                for (let t = 0; t < nTerms; t += 1) {
-                    const term = terms[t];
-                    const column = this.colByVarIndex[term.variable.index];
-                    matrix[rowOffset + column] = term.coefficient;
-                }
-                matrix[rowOffset] = constraint.rhs;
-            } else {
-                for (let t = 0; t < nTerms; t += 1) {
-                    const term = terms[t];
-                    const column = this.colByVarIndex[term.variable.index];
-                    matrix[rowOffset + column] = -term.coefficient;
-                }
-                matrix[rowOffset] = -constraint.rhs;
+            const sign = constraint.isUpperBound ? scale : -scale;
+            for (let t = 0; t < nTerms; t += 1) {
+                const term = terms[t];
+                const column = this.colByVarIndex[term.variable.index];
+                matrix[rowOffset + column] = sign * term.coefficient;
             }
+            matrix[rowOffset] = sign * constraint.rhs;
         }
     }
 
@@ -582,4 +585,19 @@ export default class Tableau {
             this.bestPossibleEval = roundedEvaluation;
         }
     }
+}
+
+/**
+ * Power of two that brings a row's largest absolute coefficient into [0.5, 1).
+ * Powers of two scale exactly in binary floating point, so equilibration adds
+ * no rounding error of its own.
+ */
+function equilibrationScale(terms: ReadonlyArray<{ coefficient: number }>): number {
+    let largest = 0;
+    for (let t = 0; t < terms.length; t++) {
+        const magnitude = Math.abs(terms[t].coefficient);
+        if (magnitude > largest) largest = magnitude;
+    }
+    if (!(largest > 0) || !Number.isFinite(largest)) return 1;
+    return Math.pow(2, -Math.ceil(Math.log2(largest)));
 }

@@ -256,6 +256,7 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
     // we restore the clean matrix and switch to Bland's rule. The lazy
     // save avoids the copy cost on the vast majority of phase1 calls
     // that converge quickly.
+    const feasTol = Math.max(precision, PRIMAL_FEAS_TOL);
     const SAVE_THRESHOLD = 10;
     const maxQuotientLimit = Math.max(lastRow, lastColumn);
     const DUAL_MAX_FACTOR = 20;
@@ -279,7 +280,9 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
         // Unrestricted variables can validly have negative values, so rows
         // where the basic variable is unrestricted are not infeasible.
         let leavingRowIndex = 0;
-        let rhsValue = negPrecision;
+        // Rows within PRIMAL_FEAS_TOL count as feasible: the Harris ratio
+        // tests let basic variables overshoot their bounds by that much.
+        let rhsValue = -feasTol;
         let leavesAboveRange = false;
         for (let r = 1; r <= lastRow; r++) {
             if (unrestrictedVars[varIndexByRow[r]] === true) continue;
@@ -387,6 +390,71 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
                 }
             }
             // Fallback: unrestricted with non-zero coefficient (swap infeasibility)
+            if (enteringColumn === 0) {
+                for (let c = 1; c <= lastColumn; c++) {
+                    const coefficient = matrix[leavingRowOffset + c];
+                    if (
+                        unrestrictedVars[varIndexByCol[c]] === true &&
+                        (coefficient < negPrecision || coefficient > precision)
+                    ) {
+                        enteringColumn = c;
+                        break;
+                    }
+                }
+            }
+        } else if (robustFallback) {
+            // Dual-feasible start: a genuine dual simplex, so use the Harris
+            // two-pass dual ratio test (Harris 1973; Koberstein 2005, ch. 6).
+            // Pass 1 bounds the dual step over every candidate, letting
+            // reduced costs overshoot zero by at most DUAL_FEAS_TOL; pass 2
+            // takes the largest pivot within that step. The textbook
+            // min-ratio rule took whichever entry gave the smallest ratio,
+            // however tiny, and blew the tableau up (MIPLIB blend2 nodes
+            // reached rhs ~ -1e6 and then reported infeasible).
+            let maxStep = Infinity;
+            let rowMax = 0;
+            for (let c = 1; c <= lastColumn; c++) {
+                const coefficient = matrix[leavingRowOffset + c];
+                if (-coefficient > rowMax) rowMax = -coefficient;
+                if (coefficient >= -DUAL_PIVOT_TOL) continue;
+                if (hasBounds && rangeOf(this, varIndexByCol[c]) <= precision) continue;
+                const reducedCost = matrix[c];
+                const slack = reducedCost < 0 ? -reducedCost : 0;
+                const step = (slack + DUAL_FEAS_TOL) / -coefficient;
+                if (step < maxStep) maxStep = step;
+            }
+            let bestPivot = 0;
+            for (let c = 1; c <= lastColumn; c++) {
+                const coefficient = matrix[leavingRowOffset + c];
+                if (coefficient >= -DUAL_PIVOT_TOL) continue;
+                if (hasBounds && rangeOf(this, varIndexByCol[c]) <= precision) continue;
+                const reducedCost = matrix[c];
+                const ratio = (reducedCost < 0 ? -reducedCost : 0) / -coefficient;
+                if (ratio <= maxStep && -coefficient > bestPivot) {
+                    bestPivot = -coefficient;
+                    enteringColumn = c;
+                }
+            }
+            const minPivot = Math.max(DUAL_MIN_PIVOT, DUAL_RELATIVE_MIN_PIVOT * rowMax);
+            if (bestPivot < minPivot) {
+                // Every candidate inside the Harris bound is tiny (blend2
+                // pivoted on -2e-7 and the tableau lost all consistency).
+                // Take the smallest-ratio candidate that is large enough,
+                // accepting a small dual infeasibility; phase 2 removes it.
+                let minRatio = Infinity;
+                for (let c = 1; c <= lastColumn; c++) {
+                    const coefficient = matrix[leavingRowOffset + c];
+                    if (coefficient > -minPivot) continue;
+                    if (hasBounds && rangeOf(this, varIndexByCol[c]) <= precision) continue;
+                    const reducedCost = matrix[c];
+                    const ratio = (reducedCost < 0 ? -reducedCost : 0) / -coefficient;
+                    if (ratio < minRatio) {
+                        minRatio = ratio;
+                        enteringColumn = c;
+                    }
+                }
+            }
+            // Fallback: unrestricted with non-zero coefficient
             if (enteringColumn === 0) {
                 for (let c = 1; c <= lastColumn; c++) {
                     const coefficient = matrix[leavingRowOffset + c];
@@ -527,6 +595,8 @@ function phase1Robust(this: Tableau): number {
     let stalled = 0;
 
     const hasBounds = this.hasBounds;
+    // Rows within PRIMAL_FEAS_TOL count as feasible (see phase1Fast).
+    const feasTol = Math.max(precision, PRIMAL_FEAS_TOL);
 
     while (iterations < maxIterations) {
         let nInfeasible = 0;
@@ -535,13 +605,13 @@ function phase1Robust(this: Tableau): number {
             if (unrestrictedVars[varIndexByRow[r]] === true) continue;
             if (
                 hasBounds &&
-                matrix[r * width + rhsColumn] > rangeOf(this, varIndexByRow[r]) + precision
+                matrix[r * width + rhsColumn] > rangeOf(this, varIndexByRow[r]) + feasTol
             ) {
                 // Above its range: complement so the excess reads as a negative rhs.
                 flipRowToUpper(this, r);
             }
             const value = matrix[r * width + rhsColumn];
-            if (value < -precision) {
+            if (value < -feasTol) {
                 infeasibleRows[nInfeasible++] = r;
                 infeasibility -= value;
             }
@@ -1171,10 +1241,21 @@ export function phase2(this: Tableau): number {
     }
 }
 
+/** Dual ratio test: smallest leaving-row entry ever accepted as a pivot. */
+const DUAL_PIVOT_TOL = 1e-9;
+/** Dual ratio test: pivots smaller than this are avoided when a larger one exists. */
+const DUAL_MIN_PIVOT = 1e-7;
+/** Dual ratio test: likewise for pivots below this fraction of the row's largest entry. */
+const DUAL_RELATIVE_MIN_PIVOT = 1e-6;
+/** Dual Harris test: how far a reduced cost may overshoot zero in pass 1. */
+const DUAL_FEAS_TOL = 1e-7;
+
 /** Harris ratio test: smallest entering-column entry accepted as a pivot. */
 const HARRIS_PIVOT_TOL = 1e-9;
 /** Harris ratio test: how far a basic variable may dip below zero in pass 1. */
-const HARRIS_FEAS_TOL = 1e-9;
+const HARRIS_FEAS_TOL = 1e-7;
+/** Phase 1: basic variables this close to their bounds count as feasible. */
+const PRIMAL_FEAS_TOL = HARRIS_FEAS_TOL;
 
 // Pre-allocated typed arrays for pivot optimization (better cache locality)
 let nonZeroColumns = new Int32Array(1024);
