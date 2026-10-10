@@ -907,6 +907,16 @@ export function phase2(this: Tableau): number {
     // For small problems, just scan everything (no benefit from partial pricing)
     const usePartialPricing = nColumns > batchSize * 2;
 
+    // Devex pricing (Harris 1973; Forrest and Goldfarb 1992): price columns
+    // by d_j^2 / w_j, where w_j approximates the squared norm of column j's
+    // edge direction relative to a reference framework. Dantzig's rule
+    // (largest d_j) depends on how each column happens to be scaled and can
+    // take many times more pivots. The dense tableau has the whole pivot row
+    // at hand, so the weights update exactly as the method prescribes, in
+    // O(width) per pivot. Optional objectives keep Dantzig pricing.
+    const useDevex = nOptionalObjectives === 0;
+    const devexWeights = useDevex ? new Float64Array(width).fill(1) : null;
+
     while (true) {
         if (nOptionalObjectives > 0) {
             optionalCostsColumns = [];
@@ -976,6 +986,32 @@ export function phase2(this: Tableau): number {
                     enteringValue = reducedCost;
                     isReducedCostNegative = false;
                     break;
+                }
+            }
+        } else if (devexWeights !== null) {
+            let bestScore = 0;
+            for (let c = 1; c <= lastColumn; c++) {
+                reducedCost = matrix[c];
+                let magnitude: number;
+                let negative = false;
+                if (reducedCost > precision) {
+                    magnitude = reducedCost;
+                } else if (
+                    reducedCost < negPrecision &&
+                    unrestrictedVars[varIndexByCol[c]] === true
+                ) {
+                    magnitude = -reducedCost;
+                    negative = true;
+                } else {
+                    continue;
+                }
+                if (hasBounds && rangeOf(this, varIndexByCol[c]) <= precision) continue;
+                const score = (magnitude * magnitude) / devexWeights[c];
+                if (score > bestScore) {
+                    bestScore = score;
+                    enteringColumn = c;
+                    enteringValue = magnitude;
+                    isReducedCostNegative = negative;
                 }
             }
         } else if (usePartialPricing) {
@@ -1236,10 +1272,37 @@ export function phase2(this: Tableau): number {
             }
         }
 
+        if (devexWeights !== null) {
+            // Devex update from the pivot row: w_j = max(w_j, (a_rj/a_rq)^2 w_q);
+            // the leaving variable takes column q with max(w_q / a_rq^2, 1).
+            const pivotRowOffset = leavingRow * width;
+            const pivotElement = matrix[pivotRowOffset + enteringColumn];
+            const enteringWeight = devexWeights[enteringColumn];
+            let largest = 0;
+            for (let c = 1; c <= lastColumn; c++) {
+                const a = matrix[pivotRowOffset + c];
+                if (a === 0 || c === enteringColumn) continue;
+                const ratio = a / pivotElement;
+                const candidate = ratio * ratio * enteringWeight;
+                if (candidate > devexWeights[c]) devexWeights[c] = candidate;
+                if (devexWeights[c] > largest) largest = devexWeights[c];
+            }
+            devexWeights[enteringColumn] = Math.max(
+                enteringWeight / (pivotElement * pivotElement),
+                1
+            );
+            // Weights only grow; restart the reference framework when they
+            // drift far from 1 so the approximation stays meaningful.
+            if (largest > DEVEX_RESET) devexWeights.fill(1);
+        }
+
         this.pivot(leavingRow, enteringColumn);
         iterations += 1;
     }
 }
+
+/** Devex: reset the reference weights once any exceeds this. */
+const DEVEX_RESET = 1e6;
 
 /** Dual ratio test: smallest leaving-row entry ever accepted as a pivot. */
 const DUAL_PIVOT_TOL = 1e-9;
