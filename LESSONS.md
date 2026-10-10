@@ -530,13 +530,44 @@ nodes) with no algorithmic difference. Compare across many instances, never
 one. MIP sanity tests now verify objective/feasibility/integrality instead of
 pinning one of several optimal vectors.
 
+### Harris ratio test (perf/harris-ratio)
+
+The phase 2 ratio test skipped rows whose ratio was <= precision. Skipping
+them overshoots and drives rows negative, after which phase 2 optimizes over
+an infeasible point: netlib e226 ended "unbounded", and the old SPY option
+MIPs (test/test-speed in git history) got an LP relaxation of 7.1e9 with a
+constraint violated by 3.7e12 (true bound 0.893), so B&B never found an
+incumbent. Fixed with a Harris two-pass test; unrestricted basic variables no
+longer block; in Bland mode the leaving row also follows Bland's rule
+(Harris's largest-pivot choice can cycle); the Bland stall exit allows a real
+budget instead of lastRow pivots (Chvátal's cycling example was being
+reported optimal). Pass 1 must clamp distances at zero, or a row slightly
+past its bound makes the step negative and fakes an unbounded ray (lotfi).
+
+### Column bounds instead of rows (perf/bounded-simplex)
+
+Upper-bounding technique (Dantzig 1955; Chvátal ch. 8) in tableau form:
+x = offset + sign * s, 0 <= s <= range, so "nonbasic = 0" still holds and
+bound changes are substitutions (bounds.ts). Branching cuts and
+single-variable JSON constraints (incl. binary <= 1) become column bounds.
+
+- SPY_20151030: 20s (rows) -> 6.1s. MIPLIB p0201 12.7s -> 0.9s.
+- Store bound arrays as dense Float64Arrays: sparse JS arrays written at
+  scattered indices turned `rangeOf` into 35% of runtime.
+- Anything that captures/restores tableau state must capture bounds too: the
+  dual loop's stall rollback silently restored a matrix inconsistent with the
+  bound arrays (netlib brandy went "infeasible").
+- A presolve size rule counted rows; converting rows to bounds flipped its
+  decision, and a failing toBe(null) made vitest pretty-print a huge object
+  and OOM the worker. Count converted bounds as rows.
+- Tried a dual Harris ratio test for warm starts: 2x slower on SPY and broke
+  Sudoku. Reverted.
+
 ### Known remaining issues
 
-- Phase 2 ratio test skips rows whose ratio is <= precision, which can drive
-  them negative (netlib e226 now ends as a false "unbounded"; master hung).
-  Patching the rule in isolation broke unrestricted handling — needs a proper
-  Harris-style ratio test with consistent tolerances.
-- Phase 2's "accept after Bland stall" exit can return a suboptimal LP.
-- The big remaining structural win is a bounded-variable dual simplex:
-  variable bounds and branching bounds as column bounds instead of rows
-  (bell3a's tableau is ~224 rows for 123 real constraints).
+- Phase 2's Bland stall exit can still accept a suboptimal LP after its
+  (now generous) budget.
+- Ranged rows (min and max on one constraint) are still two rows; a bounded
+  slack would halve SPY's scenario rows.
+- No primal heuristics: HiGHS solves SPY at the root via a sub-MIP heuristic
+  and reduced-cost fixing (223 -> 21 columns).
