@@ -197,6 +197,33 @@ export function dualSimplex(this: Tableau): number {
  * @returns Number of pivot iterations performed.
  */
 export function phase1(this: Tableau): number {
+    // The fast loop picks the entering column by the dual ratio test, so it is
+    // a genuine dual simplex only from a dual-feasible basis (the usual case
+    // after branch-and-cut adds bound rows to an optimal tableau). From any
+    // other basis it is a heuristic: usually quick, but it can wander, cycle,
+    // or falsely report infeasibility. So on a cold start, run it from a
+    // saved state and, if it fails, restore and use the primal phase 1.
+    if (isDualFeasible(this)) {
+        return phase1Fast.call(this, true);
+    }
+    const start = this.snapshot();
+    const iterations = phase1Fast.call(this, false);
+    if (iterations >= 0) {
+        return iterations;
+    }
+    this.loadSnapshot(start);
+    return phase1Robust.call(this);
+}
+
+/**
+ * Fast phase 1 loop (most-negative row, dual ratio test column).
+ *
+ * @param robustFallback - On stall or an infeasibility verdict, finish with
+ *   phase1Robust from the current basis (valid when the start was dual
+ *   feasible). When false, return -1 instead so the caller can restore.
+ * @returns Number of pivot iterations, or -1 if it failed without fallback.
+ */
+function phase1Fast(this: Tableau, robustFallback: boolean): number {
     const debugCheckForCycles = this.model.checkForCycles;
     const cycleDetector = debugCheckForCycles ? new CycleDetector() : null;
 
@@ -220,16 +247,6 @@ export function phase1(this: Tableau): number {
     // we restore the clean matrix and switch to Bland's rule. The lazy
     // save avoids the copy cost on the vast majority of phase1 calls
     // that converge quickly.
-    // The loop below picks the entering column by the dual ratio test, so it
-    // is a genuine dual simplex only when the starting basis is dual
-    // feasible (the usual case after branch-and-cut adds bound rows to an
-    // optimal tableau). From any other basis it is a heuristic that can
-    // wander, cycle, or falsely report infeasibility, so use the primal
-    // phase 1 instead.
-    if (!isDualFeasible(this)) {
-        return phase1Robust.call(this);
-    }
-
     const SAVE_THRESHOLD = 10;
     const maxQuotientLimit = Math.max(lastRow, lastColumn);
 
@@ -274,6 +291,9 @@ export function phase1(this: Tableau): number {
                 savedColByVarIndex = this.colByVarIndex.slice();
             }
             if (iterations >= maxQuotientLimit) {
+                if (!robustFallback) {
+                    return -1;
+                }
                 // Still stuck after generous budget: restore the pre-stall
                 // matrix and finish with the primal-monotone phase 1, which
                 // cannot cycle the way this dual-style loop can.
@@ -365,6 +385,9 @@ export function phase1(this: Tableau): number {
             // The row looks unfixable, but entries within precision of zero
             // were ignored. Confirm with the primal phase 1 before declaring
             // the problem infeasible.
+            if (!robustFallback) {
+                return -1;
+            }
             return iterations + phase1Robust.call(this);
         }
 
@@ -444,6 +467,9 @@ export function phase1Robust(this: Tableau): number {
 
     const gradient = new Float64Array(width);
     const infeasibleRows = new Int32Array(lastRow + 1);
+    const breakpointRows = new Int32Array(lastRow + 1);
+    const breakpointRatios = new Float64Array(lastRow + 1);
+    const order: number[] = [];
 
     let iterations = 0;
     let bestInfeasibility = Infinity;
@@ -508,33 +534,71 @@ export function phase1Robust(this: Tableau): number {
             return iterations;
         }
 
-        // Ratio test. Feasible restricted rows block when they would go negative;
-        // infeasible rows block when they reach zero (keeps the step conservative).
+        // Ratio test. Feasible restricted rows are hard blocks (they must not go
+        // negative). Infeasible rows moving up are breakpoints: once one reaches
+        // zero it stops contributing to the slope. The long step (Wolfe's
+        // composite rule; Maros ch. 9) passes breakpoints while the slope stays
+        // positive, so one pivot can repair many rows. On degenerate stalls,
+        // fall back to the shortest step with Bland's tie-break.
         let leavingRow = 0;
-        let minRatio = Infinity;
-        let leavingPivot = 0;
+        let hardRatio = Infinity;
+        let hardRow = 0;
+        let hardPivot = 0;
+        let nBreakpoints = 0;
         for (let r = 1; r <= lastRow; r++) {
             if (unrestrictedVars[varIndexByRow[r]] === true) continue;
             const rowOffset = r * width;
             const a = direction * matrix[rowOffset + enteringColumn];
             const value = matrix[rowOffset + rhsColumn];
-            let ratio: number;
             if (value >= -precision) {
                 if (a <= PIVOT_TOL) continue;
-                ratio = (value > 0 ? value : 0) / a;
-            } else {
-                if (a >= -PIVOT_TOL) continue;
-                ratio = value / a;
+                const ratio = (value > 0 ? value : 0) / a;
+                if (
+                    ratio < hardRatio - 1e-12 ||
+                    (ratio <= hardRatio + 1e-12 &&
+                        (useBland ? varIndexByRow[r] < varIndexByRow[hardRow] : a > hardPivot))
+                ) {
+                    hardRatio = ratio;
+                    hardRow = r;
+                    hardPivot = a;
+                }
+            } else if (a < -PIVOT_TOL) {
+                breakpointRows[nBreakpoints] = r;
+                breakpointRatios[nBreakpoints] = value / a;
+                nBreakpoints++;
             }
-            const absA = a < 0 ? -a : a;
-            if (
-                ratio < minRatio - 1e-12 ||
-                (ratio <= minRatio + 1e-12 &&
-                    (useBland ? varIndexByRow[r] < varIndexByRow[leavingRow] : absA > leavingPivot))
-            ) {
-                minRatio = ratio;
+        }
+
+        if (useBland) {
+            let minRatio = hardRatio;
+            leavingRow = hardRow;
+            for (let i = 0; i < nBreakpoints; i++) {
+                const ratio = breakpointRatios[i];
+                const r = breakpointRows[i];
+                if (
+                    ratio < minRatio - 1e-12 ||
+                    (ratio <= minRatio + 1e-12 && varIndexByRow[r] < varIndexByRow[leavingRow])
+                ) {
+                    minRatio = ratio;
+                    leavingRow = r;
+                }
+            }
+        } else {
+            // Walk breakpoints before the hard block in increasing order.
+            order.length = 0;
+            for (let i = 0; i < nBreakpoints; i++) {
+                if (breakpointRatios[i] < hardRatio) order.push(i);
+            }
+            order.sort((i, j) => breakpointRatios[i] - breakpointRatios[j]);
+            let slope = best;
+            for (let k = 0; k < order.length; k++) {
+                const r = breakpointRows[order[k]];
                 leavingRow = r;
-                leavingPivot = absA;
+                slope += direction * matrix[r * width + enteringColumn];
+                if (slope <= precision) break;
+            }
+            if (hardRow !== 0 && (order.length === 0 || slope > precision)) {
+                leavingRow = hardRow;
             }
         }
 

@@ -485,3 +485,58 @@ devexNorms[c] = Math.max(1, devexNorms[c] + ratio_sq * pivotColNorm);
 **Why it failed**: The overhead of maintaining and updating Devex norms exceeds any benefit from reduced iterations. Each pivot requires O(width) additional work for norm updates, and the pricing scan has additional division overhead. Modern V8 JIT is very efficient at the simple Dantzig's rule pricing, making sophisticated pricing strategies counterproductive.
 
 **Key insight**: Devex pricing was designed for problems where iteration count dominates runtime. For JS-based LP solving, the per-iteration overhead matters more. Only consider Devex if benchmarks show > 1000 iterations per problem.
+
+## 2026-10 Round: Classic Benchmarks, Phase 1 Robustness, Warm-Started B&B
+
+Measured against 25 Netlib LPs and 30 MIPLIB 3 instances (converted from MPS;
+optima cross-checked with HiGHS), not just the bundled problems, which are
+mostly too small to show anything.
+
+### Phase 1 was a dual simplex only from dual-feasible bases
+
+`phase1` picks the most negative row and the entering column by the dual
+ratio test. From a dual-feasible basis (every B&C node: root optimum + bound
+rows) that is a real dual simplex. From a cold start it is a heuristic: it
+cycled forever on netlib share2b/share1b/brandy/boeing2 and falsely reported
+netlib agg infeasible. Fix: on a cold start, run the fast loop from a saved
+state; if it stalls or claims infeasibility, restore and run `phase1Robust`
+(minimize the sum of infeasibilities, long-step ratio test). Problems the
+fast loop already solved take the exact same path as before.
+
+### Warm-starting B&C nodes (2x-67x on MIPLIB)
+
+Per node the old code restored the root tableau, re-added one row per bound on
+the path and re-solved. Now:
+
+1. **Plunging**: one child is solved in place from its parent's optimum by
+   adding a single row (dual simplex, usually 1-2 pivots).
+2. **Parent snapshots**: queued siblings may carry a copy of the parent
+   tableau. Whether to take one is decided online by measuring both routes
+   (re-solve cost per path row vs snapshot copy+load+solve): snapshots lose on
+   big shallow problems (Monster_II) and win big on deep ones (stein27).
+3. **Node selection**: backtrack to the newest sibling, best-bound jump every
+   100 selections. Pure depth-first was 3x faster on egout but stalled bell3a;
+   pure best-first loses the warm start. SCIP's 0.25 plunge quotient behaved
+   like best-first here.
+4. **Objective integrality**: when every costed variable is integer with
+   integral cost, prune nodes whose bound rounds up (to the GCD) to the
+   incumbent. Halved nodes on stein27/mod008.
+
+### Variability is real
+
+Changing how a node LP is re-solved changes which optimal vertex comes back,
+which changes branching, which changes node counts by ±30% (p0201: 15k vs 20k
+nodes) with no algorithmic difference. Compare across many instances, never
+one. MIP sanity tests now verify objective/feasibility/integrality instead of
+pinning one of several optimal vectors.
+
+### Known remaining issues
+
+- Phase 2 ratio test skips rows whose ratio is <= precision, which can drive
+  them negative (netlib e226 now ends as a false "unbounded"; master hung).
+  Patching the rule in isolation broke unrestricted handling — needs a proper
+  Harris-style ratio test with consistent tolerances.
+- Phase 2's "accept after Bland stall" exit can return a suboptimal LP.
+- The big remaining structural win is a bounded-variable dual simplex:
+  variable bounds and branching bounds as column bounds instead of rows
+  (bell3a's tableau is ~224 rows for 123 real constraints).
