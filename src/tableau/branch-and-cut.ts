@@ -15,6 +15,7 @@
 import type Tableau from "./tableau";
 import type { Branch, BranchCut } from "./types";
 import { BranchMinHeap } from "./min-heap";
+import { lowerBoundOf, setVariableBounds, upperBoundOf } from "./bounds";
 
 /**
  * Interface for branch-and-cut solver services.
@@ -62,12 +63,54 @@ export function createBranchAndCutService(): BranchAndCutService {
         }
     };
 
+    // Branching bounds become column bounds (bounds.ts) instead of added
+    // rows: the tableau keeps its size at every depth and the parent basis
+    // stays dual feasible. MIR cuts read raw tableau rows and optional
+    // objectives carry extra pivoted state, so those keep the row path.
+    const usesBoundBranching = (tableau: Tableau): boolean => {
+        const model = tableau.model;
+        if (!model || model.useMIRCuts || tableau.optionalObjectives.length > 0) return false;
+        const integerVariables = model.integerVariables;
+        for (let i = 0; i < integerVariables.length; i++) {
+            if (tableau.unrestrictedVars[integerVariables[i].index] === true) return false;
+        }
+        return true;
+    };
+
+    /** Tighten one variable bound; false if the bounds became empty. */
+    const tightenBound = (tableau: Tableau, cut: BranchCut): boolean => {
+        let lb = lowerBoundOf(tableau, cut.varIndex);
+        let ub = upperBoundOf(tableau, cut.varIndex);
+        if (cut.type === "min") {
+            lb = Math.max(lb, cut.value);
+        } else {
+            ub = Math.min(ub, cut.value);
+        }
+        return setVariableBounds(tableau, cut.varIndex, lb, ub);
+    };
+
+    const solveNode = (tableau: Tableau, boundsOk: boolean): void => {
+        if (!boundsOk) {
+            tableau.feasible = false;
+            return;
+        }
+        tableau.simplex();
+        applyMIRCuts(tableau);
+    };
+
     const applyCuts = (tableau: Tableau, branchingCuts: BranchCut[]): void => {
         tableau.restore();
 
+        if (usesBoundBranching(tableau)) {
+            let boundsOk = true;
+            for (let c = 0; boundsOk && c < branchingCuts.length; c++) {
+                boundsOk = tightenBound(tableau, branchingCuts[c]);
+            }
+            solveNode(tableau, boundsOk);
+            return;
+        }
         tableau.addCutConstraints(branchingCuts);
-        tableau.simplex();
-        applyMIRCuts(tableau);
+        solveNode(tableau, true);
     };
 
     // Plunging: solve one child directly from its parent's optimal tableau by
@@ -75,9 +118,12 @@ export function createBranchAndCutService(): BranchAndCutService {
     // phase 1 runs as a dual simplex and usually needs a pivot or two, instead
     // of restoring the root and re-solving every bound on the path.
     const applyCutInPlace = (tableau: Tableau, cut: BranchCut): void => {
+        if (usesBoundBranching(tableau)) {
+            solveNode(tableau, tightenBound(tableau, cut));
+            return;
+        }
         tableau.addCutConstraints([cut]);
-        tableau.simplex();
-        applyMIRCuts(tableau);
+        solveNode(tableau, true);
     };
 
     const branchAndCut = (tableau: Tableau): void => {
