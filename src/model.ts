@@ -595,6 +595,9 @@ class Model {
         }
         const unrestricted = jsonModel.unrestricted ?? {};
         const integers = { ...(jsonModel.ints ?? {}), ...(jsonModel.binaries ?? {}) };
+        // Bounds pay off through branching; on pure LPs the row form measured
+        // faster (netlib scagr25 45ms vs 325ms), so LPs keep their rows.
+        if (Object.keys(integers).length === 0) return skip;
         for (const id of Object.keys(integers)) {
             if (unrestricted[id]) return skip;
         }
