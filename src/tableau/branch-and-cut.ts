@@ -105,19 +105,35 @@ export function createBranchAndCutService(): BranchAndCutService {
         // Objective integrality: if every variable with a nonzero objective
         // coefficient is integer and every such coefficient is integral, any
         // integer-feasible objective value is integral, so a node whose LP
-        // bound rounds up to the incumbent cannot improve on it.
+        // bound rounds up to the incumbent cannot improve on it. Rounding is
+        // to multiples of the coefficients' GCD (e.g. all costs multiples of 5).
         let objectiveIsIntegral = nOptionalObjectives === 0;
+        let objectiveStep = 0;
+        const gcd = (a: number, b: number): number => {
+            while (b !== 0) {
+                const t = a % b;
+                a = b;
+                b = t;
+            }
+            return a;
+        };
         const modelVariables = tableau.model?.variables ?? [];
         for (let v = 0; objectiveIsIntegral && v < modelVariables.length; v++) {
             const variable = modelVariables[v];
-            if (variable.cost !== 0 && (!variable.isInteger || !Number.isInteger(variable.cost))) {
+            if (variable.cost === 0) continue;
+            if (!variable.isInteger || !Number.isInteger(variable.cost)) {
                 objectiveIsIntegral = false;
+            } else {
+                objectiveStep = gcd(objectiveStep, Math.abs(variable.cost));
             }
         }
-        const cannotImprove = (bound: number): boolean =>
-            objectiveIsIntegral
-                ? Math.ceil(bound - 1e-6) >= bestEvaluation
-                : bound >= bestEvaluation;
+        if (objectiveStep === 0) objectiveIsIntegral = false;
+        const cannotImprove = (bound: number): boolean => {
+            if (!objectiveIsIntegral) return bound >= bestEvaluation;
+            // Subtracting a tolerance only makes the rounding more conservative.
+            const slack = 1e-6 * Math.max(1, Math.abs(bound));
+            return Math.ceil((bound - slack) / objectiveStep) * objectiveStep >= bestEvaluation;
+        };
 
         const branch = createBranch(-Infinity, []);
         let acceptableThreshold: number;
