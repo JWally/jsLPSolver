@@ -480,7 +480,7 @@ function isDualFeasible(tableau: Tableau): boolean {
  *
  * @returns Number of pivot iterations performed.
  */
-export function phase1Robust(this: Tableau): number {
+function phase1Robust(this: Tableau): number {
     const matrix = this.matrix;
     const width = this.width;
     const rhsColumn = this.rhsColumn;

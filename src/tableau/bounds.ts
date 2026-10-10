@@ -44,12 +44,7 @@ function ensureCapacity(tableau: Tableau, varIndex: number): void {
  * Substitute s = alpha + beta * s' for the variable at varIndex (beta = +/-1).
  * Updates the tableau rows and the variable's offset/sign.
  */
-export function substituteVariable(
-    tableau: Tableau,
-    varIndex: number,
-    alpha: number,
-    beta: number
-): void {
+function substituteVariable(tableau: Tableau, varIndex: number, alpha: number, beta: number): void {
     const matrix = tableau.matrix;
     const width = tableau.width;
     const rhsColumn = tableau.rhsColumn;

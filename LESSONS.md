@@ -547,7 +547,7 @@ past its bound makes the step negative and fakes an unbounded ray (lotfi).
 ### Column bounds instead of rows (perf/bounded-simplex)
 
 Upper-bounding technique (Dantzig 1955; Chvátal ch. 8) in tableau form:
-x = offset + sign * s, 0 <= s <= range, so "nonbasic = 0" still holds and
+x = offset + sign \* s, 0 <= s <= range, so "nonbasic = 0" still holds and
 bound changes are substitutions (bounds.ts). Branching cuts and
 single-variable JSON constraints (incl. binary <= 1) become column bounds.
 
