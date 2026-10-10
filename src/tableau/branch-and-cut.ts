@@ -197,24 +197,27 @@ export function createBranchAndCutService(): BranchAndCutService {
         const useSnapshots = nOptionalObjectives === 0;
 
         // Whether a snapshot pays off depends on how pivot cost compares with
-        // a matrix copy, which varies with size and sparsity. Measure both
-        // routes as we go: average cost per path row when re-solving from the
-        // root, and the full cost of the snapshot route (copy, load, in-place
-        // solve). Snapshot a sibling only when re-solving its path is expected
-        // to cost more. Until both are measured, alternate to sample each.
-        const now = typeof performance !== "undefined" ? () => performance.now() : () => Date.now();
+        // a matrix copy, which varies with size and sparsity. Estimate both
+        // routes as we go, in deterministic work units (never the clock, so
+        // the tree does not depend on machine speed): a pivot costs one unit
+        // per tableau cell, a copy COPY_COST per cell. Track the average cost
+        // per path row when re-solving from the root, and the full cost of the
+        // snapshot route (copy, load, in-place solve). Snapshot a sibling only
+        // when re-solving its path is expected to cost more. Until both are
+        // measured, alternate to sample each.
+        const COPY_COST = 0.1;
         const EMA_WEIGHT = 0.1;
-        let restoreMsPerCut = -1;
-        let snapshotRouteMs = -1;
+        let restoreWorkPerCut = -1;
+        let snapshotRouteWork = -1;
         let explorationToggle = false;
         const ema = (avg: number, sample: number): number =>
             avg < 0 ? sample : avg + EMA_WEIGHT * (sample - avg);
         const shouldSnapshot = (depth: number): boolean => {
-            if (restoreMsPerCut < 0 || snapshotRouteMs < 0) {
+            if (restoreWorkPerCut < 0 || snapshotRouteWork < 0) {
                 explorationToggle = !explorationToggle;
                 return explorationToggle;
             }
-            return restoreMsPerCut * depth > snapshotRouteMs;
+            return restoreWorkPerCut * depth > snapshotRouteWork;
         };
         let snapshotBytes = 0;
 
@@ -280,20 +283,24 @@ export function createBranchAndCutService(): BranchAndCutService {
                 if (cannotImprove(activeBranch.relaxedEvaluation)) {
                     continue;
                 }
-                const startedAt = now();
+                const pivotsBefore = tableau.pivotCount;
                 if (parentSnapshot) {
                     tableau.loadSnapshot(parentSnapshot);
                     applyCutInPlace(tableau, activeBranch.lastCut!);
-                    snapshotRouteMs = ema(
-                        snapshotRouteMs,
-                        now() - startedAt + (activeBranch.snapshotMs ?? 0)
+                    const cells = tableau.height * tableau.width;
+                    // snapshot taken at push + loaded now, then the in-place solve
+                    snapshotRouteWork = ema(
+                        snapshotRouteWork,
+                        2 * COPY_COST * cells + (tableau.pivotCount - pivotsBefore) * cells
                     );
                 } else {
                     applyCuts(tableau, activeBranch.cuts);
                     if (activeBranch.cuts.length > 0) {
-                        restoreMsPerCut = ema(
-                            restoreMsPerCut,
-                            (now() - startedAt) / activeBranch.cuts.length
+                        const cells = tableau.height * tableau.width;
+                        restoreWorkPerCut = ema(
+                            restoreWorkPerCut,
+                            (COPY_COST * cells + (tableau.pivotCount - pivotsBefore) * cells) /
+                                activeBranch.cuts.length
                         );
                     }
                 }
@@ -412,9 +419,7 @@ export function createBranchAndCutService(): BranchAndCutService {
                     snapshotBytes < SNAPSHOT_BUDGET_BYTES &&
                     shouldSnapshot(sibling.cuts.length)
                 ) {
-                    const snapshotStartedAt = now();
                     const parentSnapshot = tableau.snapshot();
-                    sibling.snapshotMs = now() - snapshotStartedAt;
                     snapshotBytes += parentSnapshot.matrix.byteLength;
                     sibling.parentSnapshot = parentSnapshot;
                 }
