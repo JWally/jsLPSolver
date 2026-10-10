@@ -125,3 +125,66 @@ export function restore(this: Tableau): void {
         }
     }
 }
+
+/**
+ * Lightweight copy of the LP state at a branch-and-cut node: the live rows
+ * of the matrix plus the basis bookkeeping. Variables, model and optional
+ * objectives are shared with the tableau and not captured.
+ */
+export interface NodeSnapshot {
+    matrix: Float64Array;
+    height: number;
+    nVars: number;
+    lastElementIndex: number;
+    varIndexByRow: number[];
+    varIndexByCol: number[];
+    rowByVarIndex: number[];
+    colByVarIndex: number[];
+    availableIndexes: number[];
+}
+
+/**
+ * Capture the current node's LP state so a queued child can later resume
+ * from it instead of re-solving from the root.
+ */
+export function snapshot(this: Tableau): NodeSnapshot {
+    return {
+        matrix: this.matrix.slice(0, this.height * this.width),
+        height: this.height,
+        nVars: this.nVars,
+        lastElementIndex: this.lastElementIndex,
+        varIndexByRow: this.varIndexByRow.slice(0, this.height),
+        varIndexByCol: this.varIndexByCol.slice(0, this.width),
+        rowByVarIndex: this.rowByVarIndex.slice(0, this.nVars),
+        colByVarIndex: this.colByVarIndex.slice(0, this.nVars),
+        availableIndexes: this.availableIndexes.slice(),
+    };
+}
+
+/**
+ * Load a state captured by `snapshot`. The width must not have changed.
+ */
+export function loadSnapshot(this: Tableau, snap: NodeSnapshot): void {
+    if (this.matrix.length < snap.matrix.length) {
+        this.matrix = new Float64Array(Math.ceil(snap.matrix.length * 1.5));
+    }
+    this.matrix.set(snap.matrix);
+    this.height = snap.height;
+    this.nVars = snap.nVars;
+    this.lastElementIndex = snap.lastElementIndex;
+
+    const varIndexByRow = this.varIndexByRow;
+    for (let r = 0; r < snap.height; r++) varIndexByRow[r] = snap.varIndexByRow[r];
+    varIndexByRow.length = snap.height;
+
+    const varIndexByCol = this.varIndexByCol;
+    for (let c = 0; c < snap.varIndexByCol.length; c++) varIndexByCol[c] = snap.varIndexByCol[c];
+
+    const rowByVarIndex = this.rowByVarIndex;
+    const colByVarIndex = this.colByVarIndex;
+    for (let v = 0; v < snap.nVars; v++) {
+        rowByVarIndex[v] = snap.rowByVarIndex[v];
+        colByVarIndex[v] = snap.colByVarIndex[v];
+    }
+    this.availableIndexes = snap.availableIndexes.slice();
+}

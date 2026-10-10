@@ -40,7 +40,11 @@ function assertSolution(file: string, model: Model, result: SolveResult): void {
     }
 
     const expected = expectedResult(model);
-    if (expected !== undefined && Math.abs((result.result ?? NaN) - expected) > 1e-6) {
+    // Models with a relative `tolerance` option may stop at any incumbent within it.
+    const tolerance =
+        (model as Model & { options?: { tolerance?: number } }).options?.tolerance ?? 0;
+    const allowed = Math.max(1e-6, tolerance * Math.abs(expected ?? 0));
+    if (expected !== undefined && Math.abs((result.result ?? NaN) - expected) > allowed) {
         throw new Error(`${file}: expected result ${expected}, got ${result.result}`);
     }
 }

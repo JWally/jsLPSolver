@@ -319,6 +319,16 @@ export default class Tableau {
         backupOps.restore.call(this);
     }
 
+    /** Capture the current node's LP state (see backup.snapshot). */
+    snapshot(): backupOps.NodeSnapshot {
+        return backupOps.snapshot.call(this);
+    }
+
+    /** Load a node LP state captured by snapshot(). */
+    loadSnapshot(snap: backupOps.NodeSnapshot): void {
+        backupOps.loadSnapshot.call(this, snap);
+    }
+
     // ========== Debug ==========
 
     /** Print the tableau matrix to console for debugging. */

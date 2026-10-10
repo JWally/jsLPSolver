@@ -530,9 +530,7 @@ export function phase1Robust(this: Tableau): number {
             if (
                 ratio < minRatio - 1e-12 ||
                 (ratio <= minRatio + 1e-12 &&
-                    (useBland
-                        ? varIndexByRow[r] < varIndexByRow[leavingRow]
-                        : absA > leavingPivot))
+                    (useBland ? varIndexByRow[r] < varIndexByRow[leavingRow] : absA > leavingPivot))
             ) {
                 minRatio = ratio;
                 leavingRow = r;
