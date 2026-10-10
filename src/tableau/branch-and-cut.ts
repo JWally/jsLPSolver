@@ -15,6 +15,7 @@
 import type Tableau from "./tableau";
 import type { Branch, BranchCut } from "./types";
 import { BranchMinHeap } from "./min-heap";
+import { lowerBoundOf, setVariableBounds, upperBoundOf } from "./bounds";
 
 /**
  * Interface for branch-and-cut solver services.
@@ -46,11 +47,7 @@ function createBranch(relaxedEvaluation: number, cuts: BranchCut[]): Branch {
  * @returns A BranchAndCutService with applyCuts and branchAndCut methods.
  */
 export function createBranchAndCutService(): BranchAndCutService {
-    const applyCuts = (tableau: Tableau, branchingCuts: BranchCut[]): void => {
-        tableau.restore();
-
-        tableau.addCutConstraints(branchingCuts);
-        tableau.simplex();
+    const applyMIRCuts = (tableau: Tableau): void => {
         if (tableau.model?.useMIRCuts) {
             // Optimization: reuse previous "after" as next "before" to avoid redundant computation
             let fractionalVolume = tableau.computeFractionalVolume(true);
@@ -64,6 +61,69 @@ export function createBranchAndCutService(): BranchAndCutService {
                 fractionalVolume = fractionalVolumeAfter;
             }
         }
+    };
+
+    // Branching bounds become column bounds (bounds.ts) instead of added
+    // rows: the tableau keeps its size at every depth and the parent basis
+    // stays dual feasible. MIR cuts read raw tableau rows and optional
+    // objectives carry extra pivoted state, so those keep the row path.
+    const usesBoundBranching = (tableau: Tableau): boolean => {
+        const model = tableau.model;
+        if (!model || model.useMIRCuts || tableau.optionalObjectives.length > 0) return false;
+        const integerVariables = model.integerVariables;
+        for (let i = 0; i < integerVariables.length; i++) {
+            if (tableau.unrestrictedVars[integerVariables[i].index] === true) return false;
+        }
+        return true;
+    };
+
+    /** Tighten one variable bound; false if the bounds became empty. */
+    const tightenBound = (tableau: Tableau, cut: BranchCut): boolean => {
+        let lb = lowerBoundOf(tableau, cut.varIndex);
+        let ub = upperBoundOf(tableau, cut.varIndex);
+        if (cut.type === "min") {
+            lb = Math.max(lb, cut.value);
+        } else {
+            ub = Math.min(ub, cut.value);
+        }
+        return setVariableBounds(tableau, cut.varIndex, lb, ub);
+    };
+
+    const solveNode = (tableau: Tableau, boundsOk: boolean): void => {
+        if (!boundsOk) {
+            tableau.feasible = false;
+            return;
+        }
+        tableau.simplex();
+        applyMIRCuts(tableau);
+    };
+
+    const applyCuts = (tableau: Tableau, branchingCuts: BranchCut[]): void => {
+        tableau.restore();
+
+        if (usesBoundBranching(tableau)) {
+            let boundsOk = true;
+            for (let c = 0; boundsOk && c < branchingCuts.length; c++) {
+                boundsOk = tightenBound(tableau, branchingCuts[c]);
+            }
+            solveNode(tableau, boundsOk);
+            return;
+        }
+        tableau.addCutConstraints(branchingCuts);
+        solveNode(tableau, true);
+    };
+
+    // Plunging: solve one child directly from its parent's optimal tableau by
+    // adding only the new bound row. The parent basis stays dual feasible, so
+    // phase 1 runs as a dual simplex and usually needs a pivot or two, instead
+    // of restoring the root and re-solving every bound on the path.
+    const applyCutInPlace = (tableau: Tableau, cut: BranchCut): void => {
+        if (usesBoundBranching(tableau)) {
+            solveNode(tableau, tightenBound(tableau, cut));
+            return;
+        }
+        tableau.addCutConstraints([cut]);
+        solveNode(tableau, true);
     };
 
     const branchAndCut = (tableau: Tableau): void => {
@@ -88,12 +148,104 @@ export function createBranchAndCutService(): BranchAndCutService {
             bestOptionalObjectivesEvaluations.push(Infinity);
         }
 
+        // Objective integrality: if every variable with a nonzero objective
+        // coefficient is integer and every such coefficient is integral, any
+        // integer-feasible objective value is integral, so a node whose LP
+        // bound rounds up to the incumbent cannot improve on it. Rounding is
+        // to multiples of the coefficients' GCD (e.g. all costs multiples of 5).
+        let objectiveIsIntegral = nOptionalObjectives === 0;
+        let objectiveStep = 0;
+        const gcd = (a: number, b: number): number => {
+            while (b !== 0) {
+                const t = a % b;
+                a = b;
+                b = t;
+            }
+            return a;
+        };
+        const modelVariables = tableau.model?.variables ?? [];
+        for (let v = 0; objectiveIsIntegral && v < modelVariables.length; v++) {
+            const variable = modelVariables[v];
+            if (variable.cost === 0) continue;
+            if (!variable.isInteger || !Number.isInteger(variable.cost)) {
+                objectiveIsIntegral = false;
+            } else {
+                objectiveStep = gcd(objectiveStep, Math.abs(variable.cost));
+            }
+        }
+        if (objectiveStep === 0) objectiveIsIntegral = false;
+        const cannotImprove = (bound: number): boolean => {
+            if (!objectiveIsIntegral) return bound >= bestEvaluation;
+            // Subtracting a tolerance only makes the rounding more conservative.
+            const slack = 1e-6 * Math.max(1, Math.abs(bound));
+            return Math.ceil((bound - slack) / objectiveStep) * objectiveStep >= bestEvaluation;
+        };
+
         const branch = createBranch(-Infinity, []);
         let acceptableThreshold: number;
 
         branches.push(branch);
+
+        // Child to solve next in place (see applyCutInPlace), with its new cut.
+        let diveBranch: Branch | null = null;
+        let diveCut: BranchCut | null = null;
+
+        // Queued siblings keep a snapshot of their parent's optimal tableau so
+        // they resume with one added row instead of re-solving from the root.
+        // Optional objectives carry extra pivoted state, so they opt out.
+        const SNAPSHOT_BUDGET_BYTES = 256 * 1024 * 1024;
+        const useSnapshots = nOptionalObjectives === 0;
+
+        // Whether a snapshot pays off depends on how pivot cost compares with
+        // a matrix copy, which varies with size and sparsity. Measure both
+        // routes as we go: average cost per path row when re-solving from the
+        // root, and the full cost of the snapshot route (copy, load, in-place
+        // solve). Snapshot a sibling only when re-solving its path is expected
+        // to cost more. Until both are measured, alternate to sample each.
+        const now = typeof performance !== "undefined" ? () => performance.now() : () => Date.now();
+        const EMA_WEIGHT = 0.1;
+        let restoreMsPerCut = -1;
+        let snapshotRouteMs = -1;
+        let explorationToggle = false;
+        const ema = (avg: number, sample: number): number =>
+            avg < 0 ? sample : avg + EMA_WEIGHT * (sample - avg);
+        const shouldSnapshot = (depth: number): boolean => {
+            if (restoreMsPerCut < 0 || snapshotRouteMs < 0) {
+                explorationToggle = !explorationToggle;
+                return explorationToggle;
+            }
+            return restoreMsPerCut * depth > snapshotRouteMs;
+        };
+        let snapshotBytes = 0;
+
+        // Node selection: plunge, then backtrack to the most recent sibling
+        // (cheap, since its parent snapshot is fresh), and every
+        // BEST_BOUND_EVERY selections jump to the best-bound node so the
+        // global bound keeps moving. Pure depth-first is fast on some
+        // instances but stalls badly on others (MIPLIB bell3a); pure
+        // best-first loses the warm start. Siblings live in both the heap
+        // and this stack; `done` marks the copy already processed.
+        const BEST_BOUND_EVERY = 100;
+        const recentSiblings: Branch[] = [];
+        let selections = 0;
+        const nextFromHeap = (): Branch | undefined => {
+            let b = branches.pop();
+            while (b !== undefined && b.done) b = branches.pop();
+            return b;
+        };
+        const selectNode = (): Branch | undefined => {
+            selections++;
+            if (selections % BEST_BOUND_EVERY !== 0) {
+                while (recentSiblings.length > 0) {
+                    const candidate = recentSiblings.pop()!;
+                    if (!candidate.done) return candidate;
+                }
+            }
+            return nextFromHeap();
+        };
+
         while (
-            !branches.isEmpty() &&
+            (diveBranch !== null || !branches.isEmpty() || recentSiblings.length > 0) &&
             toleranceFlag === true &&
             (!hasTimeout || Date.now() < terminalTime)
         ) {
@@ -109,13 +261,45 @@ export function createBranchAndCutService(): BranchAndCutService {
                 }
             }
 
-            const activeBranch = branches.pop()!;
-            if (activeBranch.relaxedEvaluation >= bestEvaluation) {
-                continue;
+            let activeBranch: Branch;
+            if (diveBranch !== null) {
+                activeBranch = diveBranch;
+                applyCutInPlace(tableau, diveCut!);
+                diveBranch = null;
+                diveCut = null;
+            } else {
+                const selected = selectNode();
+                if (selected === undefined) break;
+                activeBranch = selected;
+                activeBranch.done = true;
+                const parentSnapshot = activeBranch.parentSnapshot;
+                if (parentSnapshot) {
+                    snapshotBytes -= parentSnapshot.matrix.byteLength;
+                    activeBranch.parentSnapshot = null;
+                }
+                if (cannotImprove(activeBranch.relaxedEvaluation)) {
+                    continue;
+                }
+                const startedAt = now();
+                if (parentSnapshot) {
+                    tableau.loadSnapshot(parentSnapshot);
+                    applyCutInPlace(tableau, activeBranch.lastCut!);
+                    snapshotRouteMs = ema(
+                        snapshotRouteMs,
+                        now() - startedAt + (activeBranch.snapshotMs ?? 0)
+                    );
+                } else {
+                    applyCuts(tableau, activeBranch.cuts);
+                    if (activeBranch.cuts.length > 0) {
+                        restoreMsPerCut = ema(
+                            restoreMsPerCut,
+                            (now() - startedAt) / activeBranch.cuts.length
+                        );
+                    }
+                }
             }
 
             const cuts = activeBranch.cuts;
-            applyCuts(tableau, cuts);
 
             iterations++;
             if (tableau.feasible === false) {
@@ -124,6 +308,9 @@ export function createBranchAndCutService(): BranchAndCutService {
 
             const evaluation = tableau.evaluation;
             if (evaluation > bestEvaluation) {
+                continue;
+            }
+            if (objectiveIsIntegral && cannotImprove(evaluation)) {
                 continue;
             }
 
@@ -204,8 +391,35 @@ export function createBranchAndCutService(): BranchAndCutService {
                 const cutLow = createCut("max", varIndex, Math.floor(varValue));
                 cutsLow.push(cutLow);
 
-                branches.push(createBranch(evaluation, cutsHigh));
-                branches.push(createBranch(evaluation, cutsLow));
+                const branchHigh = createBranch(evaluation, cutsHigh);
+                branchHigh.lastCut = cutHigh;
+                const branchLow = createBranch(evaluation, cutsLow);
+                branchLow.lastCut = cutLow;
+
+                // Dive toward the nearer integer; queue the sibling.
+                let sibling: Branch;
+                if (varValue - Math.floor(varValue) >= 0.5) {
+                    diveBranch = branchHigh;
+                    diveCut = cutHigh;
+                    sibling = branchLow;
+                } else {
+                    diveBranch = branchLow;
+                    diveCut = cutLow;
+                    sibling = branchHigh;
+                }
+                if (
+                    useSnapshots &&
+                    snapshotBytes < SNAPSHOT_BUDGET_BYTES &&
+                    shouldSnapshot(sibling.cuts.length)
+                ) {
+                    const snapshotStartedAt = now();
+                    const parentSnapshot = tableau.snapshot();
+                    sibling.snapshotMs = now() - snapshotStartedAt;
+                    snapshotBytes += parentSnapshot.matrix.byteLength;
+                    sibling.parentSnapshot = parentSnapshot;
+                }
+                branches.push(sibling);
+                recentSiblings.push(sibling);
             }
         }
 

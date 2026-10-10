@@ -99,6 +99,76 @@ function compareSolutions(actual: SolveResult, expected: TestModel["expects"]): 
     }
 }
 
+type Bound = { min?: number; max?: number; equal?: number; weight?: number; priority?: unknown };
+
+/**
+ * Whether a MIP model can be checked by verifying the returned solution
+ * rather than pinning one exact solution vector: single named objective and
+ * hard constraints only.
+ */
+function isVerifiableMip(model: TestModel): boolean {
+    const hasIntegers =
+        Object.keys(model.ints ?? {}).length > 0 || Object.keys(model.binaries ?? {}).length > 0;
+    // A missing objective is a feasibility model: any feasible solution is correct.
+    if (!hasIntegers || (model.optimize !== undefined && typeof model.optimize !== "string")) {
+        return false;
+    }
+    return Object.values(model.constraints as Record<string, Bound>).every(
+        (bound) => bound.weight === undefined && bound.priority === undefined
+    );
+}
+
+/**
+ * MIPs often have several optimal solutions, and branch-and-bound may return
+ * any of them, so instead of pinning the vector: require the expected
+ * objective (or one within the model's relative `tolerance` option) and prove
+ * the returned solution feasible, integral, and consistent with `result`.
+ */
+function verifyMipSolution(actual: SolveResult, model: TestModel): void {
+    const expected = model.expects;
+    expect(actual.feasible).toBe(expected.feasible);
+    if (!expected.feasible) return;
+
+    const value = (name: string): number => Number(actual[name] ?? 0);
+    const tolerance = (model as { options?: { tolerance?: number } }).options?.tolerance ?? 0;
+    const expectedResult = expected.result ?? 0;
+    expect(Math.abs((actual.result ?? NaN) - expectedResult), "objective").toBeLessThanOrEqual(
+        Math.max(1e-6, tolerance * Math.abs(expectedResult))
+    );
+
+    const objectiveKey = model.optimize as string | undefined;
+    let objective = 0;
+    const lhs: Record<string, number> = {};
+    for (const [name, coefficients] of Object.entries(model.variables)) {
+        const x = value(name);
+        if (!model.unrestricted?.[name]) {
+            expect(x, `${name} >= 0`).toBeGreaterThanOrEqual(-1e-6);
+        }
+        if (model.ints?.[name] || model.binaries?.[name]) {
+            expect(Math.abs(x - Math.round(x)), `${name} integral`).toBeLessThan(1e-6);
+        }
+        if (model.binaries?.[name]) {
+            expect(x, `${name} <= 1`).toBeLessThanOrEqual(1 + 1e-6);
+        }
+        objective += (objectiveKey === undefined ? 0 : (coefficients[objectiveKey] ?? 0)) * x;
+        for (const [key, coefficient] of Object.entries(coefficients)) {
+            lhs[key] = (lhs[key] ?? 0) + coefficient * x;
+        }
+    }
+    if (objectiveKey !== undefined) {
+        expect(Math.abs(objective - (actual.result ?? NaN)), "recomputed objective").toBeLessThan(
+            1e-6
+        );
+    }
+
+    for (const [name, bound] of Object.entries(model.constraints as Record<string, Bound>)) {
+        const row = lhs[name] ?? 0;
+        if (bound.equal !== undefined) expect(Math.abs(row - bound.equal), name).toBeLessThan(1e-6);
+        if (bound.min !== undefined) expect(row, name).toBeGreaterThanOrEqual(bound.min - 1e-6);
+        if (bound.max !== undefined) expect(row, name).toBeLessThanOrEqual(bound.max + 1e-6);
+    }
+}
+
 describe("Solver Integration Tests", () => {
     describe("Branch-and-cut service", () => {
         it("does not mutate the Tableau prototype when created", () => {
@@ -282,7 +352,11 @@ describe("Solver Integration Tests", () => {
             const timeout = problem.expects._timeout ?? 30000;
             it(`solves: ${problem.name}`, { timeout }, () => {
                 const result = solver.Solve(problem) as SolveResult;
-                compareSolutions(result, problem.expects);
+                if (isVerifiableMip(problem)) {
+                    verifyMipSolution(result, problem);
+                } else {
+                    compareSolutions(result, problem.expects);
+                }
             });
         }
     });

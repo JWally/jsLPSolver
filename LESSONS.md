@@ -485,3 +485,89 @@ devexNorms[c] = Math.max(1, devexNorms[c] + ratio_sq * pivotColNorm);
 **Why it failed**: The overhead of maintaining and updating Devex norms exceeds any benefit from reduced iterations. Each pivot requires O(width) additional work for norm updates, and the pricing scan has additional division overhead. Modern V8 JIT is very efficient at the simple Dantzig's rule pricing, making sophisticated pricing strategies counterproductive.
 
 **Key insight**: Devex pricing was designed for problems where iteration count dominates runtime. For JS-based LP solving, the per-iteration overhead matters more. Only consider Devex if benchmarks show > 1000 iterations per problem.
+
+## 2026-10 Round: Classic Benchmarks, Phase 1 Robustness, Warm-Started B&B
+
+Measured against 25 Netlib LPs and 30 MIPLIB 3 instances (converted from MPS;
+optima cross-checked with HiGHS), not just the bundled problems, which are
+mostly too small to show anything.
+
+### Phase 1 was a dual simplex only from dual-feasible bases
+
+`phase1` picks the most negative row and the entering column by the dual
+ratio test. From a dual-feasible basis (every B&C node: root optimum + bound
+rows) that is a real dual simplex. From a cold start it is a heuristic: it
+cycled forever on netlib share2b/share1b/brandy/boeing2 and falsely reported
+netlib agg infeasible. Fix: on a cold start, run the fast loop from a saved
+state; if it stalls or claims infeasibility, restore and run `phase1Robust`
+(minimize the sum of infeasibilities, long-step ratio test). Problems the
+fast loop already solved take the exact same path as before.
+
+### Warm-starting B&C nodes (2x-67x on MIPLIB)
+
+Per node the old code restored the root tableau, re-added one row per bound on
+the path and re-solved. Now:
+
+1. **Plunging**: one child is solved in place from its parent's optimum by
+   adding a single row (dual simplex, usually 1-2 pivots).
+2. **Parent snapshots**: queued siblings may carry a copy of the parent
+   tableau. Whether to take one is decided online by measuring both routes
+   (re-solve cost per path row vs snapshot copy+load+solve): snapshots lose on
+   big shallow problems (Monster_II) and win big on deep ones (stein27).
+3. **Node selection**: backtrack to the newest sibling, best-bound jump every
+   100 selections. Pure depth-first was 3x faster on egout but stalled bell3a;
+   pure best-first loses the warm start. SCIP's 0.25 plunge quotient behaved
+   like best-first here.
+4. **Objective integrality**: when every costed variable is integer with
+   integral cost, prune nodes whose bound rounds up (to the GCD) to the
+   incumbent. Halved nodes on stein27/mod008.
+
+### Variability is real
+
+Changing how a node LP is re-solved changes which optimal vertex comes back,
+which changes branching, which changes node counts by ±30% (p0201: 15k vs 20k
+nodes) with no algorithmic difference. Compare across many instances, never
+one. MIP sanity tests now verify objective/feasibility/integrality instead of
+pinning one of several optimal vectors.
+
+### Harris ratio test (perf/harris-ratio)
+
+The phase 2 ratio test skipped rows whose ratio was <= precision. Skipping
+them overshoots and drives rows negative, after which phase 2 optimizes over
+an infeasible point: netlib e226 ended "unbounded", and the old SPY option
+MIPs (test/test-speed in git history) got an LP relaxation of 7.1e9 with a
+constraint violated by 3.7e12 (true bound 0.893), so B&B never found an
+incumbent. Fixed with a Harris two-pass test; unrestricted basic variables no
+longer block; in Bland mode the leaving row also follows Bland's rule
+(Harris's largest-pivot choice can cycle); the Bland stall exit allows a real
+budget instead of lastRow pivots (Chvátal's cycling example was being
+reported optimal). Pass 1 must clamp distances at zero, or a row slightly
+past its bound makes the step negative and fakes an unbounded ray (lotfi).
+
+### Column bounds instead of rows (perf/bounded-simplex)
+
+Upper-bounding technique (Dantzig 1955; Chvátal ch. 8) in tableau form:
+x = offset + sign \* s, 0 <= s <= range, so "nonbasic = 0" still holds and
+bound changes are substitutions (bounds.ts). Branching cuts and
+single-variable JSON constraints (incl. binary <= 1) become column bounds.
+
+- SPY_20151030: 20s (rows) -> 6.1s. MIPLIB p0201 12.7s -> 0.9s.
+- Store bound arrays as dense Float64Arrays: sparse JS arrays written at
+  scattered indices turned `rangeOf` into 35% of runtime.
+- Anything that captures/restores tableau state must capture bounds too: the
+  dual loop's stall rollback silently restored a matrix inconsistent with the
+  bound arrays (netlib brandy went "infeasible").
+- A presolve size rule counted rows; converting rows to bounds flipped its
+  decision, and a failing toBe(null) made vitest pretty-print a huge object
+  and OOM the worker. Count converted bounds as rows.
+- Tried a dual Harris ratio test for warm starts: 2x slower on SPY and broke
+  Sudoku. Reverted.
+
+### Known remaining issues
+
+- Phase 2's Bland stall exit can still accept a suboptimal LP after its
+  (now generous) budget.
+- Ranged rows (min and max on one constraint) are still two rows; a bounded
+  slack would halve SPY's scenario rows.
+- No primal heuristics: HiGHS solves SPY at the root via a sub-MIP heuristic
+  and reduced-cost fixing (223 -> 21 columns).

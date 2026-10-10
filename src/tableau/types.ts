@@ -7,6 +7,7 @@
  * - Branch: Node in the branch-and-bound tree
  * - OptionalObjective: Secondary objective for hierarchical optimization
  */
+import type { NodeSnapshot } from "./backup";
 import type { Solution, MilpSolution } from "./solution";
 
 /** Direction of a variable bound constraint: "min" for lower bound (x >= value), "max" for upper bound (x <= value). */
@@ -34,6 +35,14 @@ export interface Branch {
     relaxedEvaluation: number;
     /** Accumulated bound constraints from root to this node. */
     cuts: BranchCut[];
+    /** Parent LP state to warm-start from; when set, only `lastCut` needs adding. */
+    parentSnapshot?: NodeSnapshot | null;
+    /** The bound added at this node relative to its parent. */
+    lastCut?: BranchCut;
+    /** Time spent taking parentSnapshot, charged to the snapshot route when used. */
+    snapshotMs?: number;
+    /** Set once the node has been taken for processing (it may sit in two queues). */
+    done?: boolean;
     /** Index of the variable that was branched on to create this node. */
     branchVarIndex?: number;
     /** Which direction the branch was taken ("up" = ceil, "down" = floor). */

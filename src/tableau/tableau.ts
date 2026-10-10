@@ -21,6 +21,7 @@ import * as simplexOps from "./simplex";
 import * as cuttingOps from "./cutting-strategies";
 import * as dynamicOps from "./dynamic-modification";
 import * as backupOps from "./backup";
+import { setVariableBounds } from "./bounds";
 import * as mipOps from "./mip-utils";
 import { log as logImpl } from "./log";
 
@@ -110,6 +111,19 @@ export default class Tableau {
 
     /** Saved tableau state for branch-and-cut restoration. */
     savedState: Tableau | null = null;
+
+    /** True once any column bound has been set (see bounds.ts). */
+    hasBounds = false;
+    /**
+     * Per variable index (dense, allocated on first use; see bounds.ts):
+     * x = boundOffset + boundSign * stored, stored in [0, boundRange],
+     * actual bounds [boundLower, boundUpper].
+     */
+    boundOffset: Float64Array = new Float64Array(0);
+    boundSign: Float64Array = new Float64Array(0);
+    boundRange: Float64Array = new Float64Array(0);
+    boundLower: Float64Array = new Float64Array(0);
+    boundUpper: Float64Array = new Float64Array(0);
 
     /** Pool of recycled variable/constraint indices. */
     availableIndexes: number[] = [];
@@ -319,6 +333,16 @@ export default class Tableau {
         backupOps.restore.call(this);
     }
 
+    /** Capture the current node's LP state (see backup.snapshot). */
+    snapshot(): backupOps.NodeSnapshot {
+        return backupOps.snapshot.call(this);
+    }
+
+    /** Load a node LP state captured by snapshot(). */
+    loadSnapshot(snap: backupOps.NodeSnapshot): void {
+        backupOps.loadSnapshot.call(this, snap);
+    }
+
     // ========== Debug ==========
 
     /** Print the tableau matrix to console for debugging. */
@@ -508,6 +532,9 @@ export default class Tableau {
 
         this.initialize(width, height, model.variables, model.unrestrictedVariables);
         this._resetMatrix();
+        for (const [variable, bound] of model.columnBounds) {
+            setVariableBounds(this, variable.index, bound.lb, bound.ub);
+        }
         return this;
     }
 

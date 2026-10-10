@@ -53,6 +53,12 @@ class Model {
     integerVariables: IntegerVariable[];
     /** Set of variable indices that may take negative values. */
     unrestrictedVariables: Record<number, boolean>;
+    /** Column bounds (from single-variable JSON constraints and binaries), applied by the tableau. */
+    columnBounds: Map<Variable, { lb: number; ub: number }> = new Map();
+    /** Bounds collected by id while loading JSON, before variables exist. */
+    private pendingColumnBounds: Map<string, { lb: number; ub: number }> = new Map();
+    /** Whether binaries get a column bound instead of an upper-bound row. */
+    private binariesAsColumnBounds = false;
     /** All constraints in insertion order. */
     constraints: Constraint[];
     /** Current number of constraints. */
@@ -404,8 +410,13 @@ class Model {
         const constraintIds = Object.keys(constraints);
         const nConstraintIds = constraintIds.length;
 
+        const columnBoundRows = this.collectColumnBounds(jsonModel);
+
         for (let c = 0; c < nConstraintIds; c += 1) {
             const constraintId = constraintIds[c];
+            if (columnBoundRows.has(constraintId)) {
+                continue;
+            }
             const constraint = constraints[constraintId] as ConstraintDefinition;
             const equal = (constraint as ConstraintBound).equal;
 
@@ -516,9 +527,18 @@ class Model {
             const isUnrestricted = !!unrestrictedVarIds[variableId];
             const variable = this.addVariable(cost, variableId, isInteger, isUnrestricted);
 
+            const columnBound = this.pendingColumnBounds.get(variableId);
+            if (columnBound !== undefined) {
+                this.columnBounds.set(variable, columnBound);
+            }
             if (isBinary) {
-                // Creating an upperbound constraint for this variable
-                this.smallerThan(1).addTerm(1, variable);
+                if (this.binariesAsColumnBounds) {
+                    const bound = this.columnBounds.get(variable) ?? { lb: 0, ub: Infinity };
+                    this.columnBounds.set(variable, { lb: bound.lb, ub: Math.min(bound.ub, 1) });
+                } else {
+                    // Creating an upperbound constraint for this variable
+                    this.smallerThan(1).addTerm(1, variable);
+                }
             }
 
             const constraintNames = Object.keys(variableConstraints);
@@ -543,6 +563,99 @@ class Model {
         }
 
         return this;
+    }
+
+    /**
+     * Find JSON constraints that touch a single variable and can become
+     * column bounds instead of tableau rows (HiGHS and other solvers do this
+     * in presolve; here it shrinks the dense tableau). Records the bounds in
+     * pendingColumnBounds (by variable id) and returns the constraint ids to
+     * skip. Disabled whenever something still reads raw tableau rows: MIR
+     * cuts, the enhanced/incremental branch-and-cut services, soft
+     * constraints, or unrestricted integer variables.
+     */
+    private collectColumnBounds(jsonModel: JsonModel): Set<string> {
+        const skip = new Set<string>();
+        this.pendingColumnBounds = new Map();
+        this.binariesAsColumnBounds = false;
+
+        const options = jsonModel.options ?? {};
+        if (
+            options.useMIRCuts ||
+            options.nodeSelection ||
+            options.branching ||
+            options.useIncremental
+        ) {
+            return skip;
+        }
+        const constraints = jsonModel.constraints as Record<string, ConstraintBound>;
+        for (const id of Object.keys(constraints)) {
+            const bound = constraints[id];
+            if (bound.weight !== undefined || bound.priority !== undefined) return skip;
+        }
+        const unrestricted = jsonModel.unrestricted ?? {};
+        const integers = { ...(jsonModel.ints ?? {}), ...(jsonModel.binaries ?? {}) };
+        // Bounds pay off through branching; on pure LPs the row form measured
+        // faster (netlib scagr25 45ms vs 325ms), so LPs keep their rows.
+        if (Object.keys(integers).length === 0) return skip;
+        for (const id of Object.keys(integers)) {
+            if (unrestricted[id]) return skip;
+        }
+        this.binariesAsColumnBounds = true;
+
+        // Count terms per constraint (the objective key is not a constraint).
+        const objectiveName = jsonModel.optimize as string;
+        const terms = new Map<string, { variableId: string; coefficient: number; count: number }>();
+        const variables = jsonModel.variables as Record<string, Record<string, number>>;
+        for (const variableId of Object.keys(variables)) {
+            const coefficients = variables[variableId];
+            for (const key of Object.keys(coefficients)) {
+                if (key === objectiveName || constraints[key] === undefined) continue;
+                const entry = terms.get(key);
+                if (entry === undefined) {
+                    terms.set(key, { variableId, coefficient: coefficients[key], count: 1 });
+                } else {
+                    entry.count++;
+                }
+            }
+        }
+
+        const bounds = new Map<string, { lb: number; ub: number }>();
+        const rowsByVariable = new Map<string, string[]>();
+        for (const [constraintId, term] of terms) {
+            if (term.count !== 1 || term.coefficient === 0 || unrestricted[term.variableId])
+                continue;
+            const bound = constraints[constraintId];
+            const a = term.coefficient;
+            let lb = 0;
+            let ub = Infinity;
+            const min = bound.equal ?? bound.min;
+            const max = bound.equal ?? bound.max;
+            if (min !== undefined) {
+                if (a > 0) lb = Math.max(lb, min / a);
+                else ub = Math.min(ub, min / a);
+            }
+            if (max !== undefined) {
+                if (a > 0) ub = Math.min(ub, max / a);
+                else lb = Math.max(lb, max / a);
+            }
+            const current = bounds.get(term.variableId) ?? { lb: 0, ub: Infinity };
+            bounds.set(term.variableId, {
+                lb: Math.max(current.lb, lb),
+                ub: Math.min(current.ub, ub),
+            });
+            const rows = rowsByVariable.get(term.variableId) ?? [];
+            rows.push(constraintId);
+            rowsByVariable.set(term.variableId, rows);
+        }
+
+        for (const [variableId, bound] of bounds) {
+            // Conflicting bounds stay as rows so infeasibility is detected normally.
+            if (bound.lb > bound.ub) continue;
+            this.pendingColumnBounds.set(variableId, bound);
+            for (const constraintId of rowsByVariable.get(variableId)!) skip.add(constraintId);
+        }
+        return skip;
     }
 
     /** @returns The number of integer-constrained variables in this model. */
@@ -611,10 +724,12 @@ class Model {
 
         // Current presolve mostly records reductions instead of rebuilding a
         // smaller tableau. On large dense MIPs that makes it measurable overhead.
+        // Count bounds converted from single-variable constraints too: they
+        // were rows in the original model, which is what this size rule means.
         return !(
             this.integerVariables.length > 0 &&
             this.nVariables > 500 &&
-            this.nConstraints > 500
+            this.nConstraints + this.columnBounds.size > 500
         );
     }
 
