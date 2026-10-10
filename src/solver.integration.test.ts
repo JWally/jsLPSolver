@@ -109,7 +109,10 @@ type Bound = { min?: number; max?: number; equal?: number; weight?: number; prio
 function isVerifiableMip(model: TestModel): boolean {
     const hasIntegers =
         Object.keys(model.ints ?? {}).length > 0 || Object.keys(model.binaries ?? {}).length > 0;
-    if (!hasIntegers || typeof model.optimize !== "string") return false;
+    // A missing objective is a feasibility model: any feasible solution is correct.
+    if (!hasIntegers || (model.optimize !== undefined && typeof model.optimize !== "string")) {
+        return false;
+    }
     return Object.values(model.constraints as Record<string, Bound>).every(
         (bound) => bound.weight === undefined && bound.priority === undefined
     );
@@ -133,7 +136,7 @@ function verifyMipSolution(actual: SolveResult, model: TestModel): void {
         Math.max(1e-6, tolerance * Math.abs(expectedResult))
     );
 
-    const objectiveKey = model.optimize as string;
+    const objectiveKey = model.optimize as string | undefined;
     let objective = 0;
     const lhs: Record<string, number> = {};
     for (const [name, coefficients] of Object.entries(model.variables)) {
@@ -147,12 +150,16 @@ function verifyMipSolution(actual: SolveResult, model: TestModel): void {
         if (model.binaries?.[name]) {
             expect(x, `${name} <= 1`).toBeLessThanOrEqual(1 + 1e-6);
         }
-        objective += (coefficients[objectiveKey] ?? 0) * x;
+        objective += (objectiveKey === undefined ? 0 : (coefficients[objectiveKey] ?? 0)) * x;
         for (const [key, coefficient] of Object.entries(coefficients)) {
             lhs[key] = (lhs[key] ?? 0) + coefficient * x;
         }
     }
-    expect(Math.abs(objective - (actual.result ?? NaN)), "recomputed objective").toBeLessThan(1e-6);
+    if (objectiveKey !== undefined) {
+        expect(Math.abs(objective - (actual.result ?? NaN)), "recomputed objective").toBeLessThan(
+            1e-6
+        );
+    }
 
     for (const [name, bound] of Object.entries(model.constraints as Record<string, Bound>)) {
         const row = lhs[name] ?? 0;

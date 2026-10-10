@@ -10,7 +10,14 @@
  * Uses partial pricing for large problems to improve performance.
  */
 import type Tableau from "./tableau";
-import { flipColumnToUpper, flipRowToUpper, rangeOf } from "./bounds";
+import {
+    captureBounds,
+    flipColumnToUpper,
+    flipRowToUpper,
+    rangeOf,
+    restoreBounds,
+    type BoundState,
+} from "./bounds";
 
 /**
  * Optimized cycle detector using hash-based O(1) lookup.
@@ -261,6 +268,7 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
     let savedVarIndexByCol: number[] | null = null;
     let savedRowByVarIndex: number[] | null = null;
     let savedColByVarIndex: number[] | null = null;
+    let savedBounds: BoundState | null = null;
 
     while (true) {
         // Find leaving row (most negative RHS among restricted basic vars).
@@ -306,6 +314,7 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
                 savedVarIndexByCol = varIndexByCol.slice();
                 savedRowByVarIndex = this.rowByVarIndex.slice();
                 savedColByVarIndex = this.colByVarIndex.slice();
+                savedBounds = captureBounds(this);
             }
             if (iterations >= maxQuotientLimit) {
                 if (!robustFallback) {
@@ -314,9 +323,8 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
                 // Still stuck after generous budget: restore the pre-stall
                 // matrix and finish with the primal-monotone phase 1, which
                 // cannot cycle the way this dual-style loop can.
-                // With column bounds the saved copy would not match the bound
-                // state; any basis is a valid start for phase1Robust anyway.
-                if (savedMatrix && !hasBounds) {
+                if (savedMatrix) {
+                    restoreBounds(this, savedBounds);
                     matrix.set(savedMatrix);
                     for (let i = 0; i < savedVarIndexByRow!.length; i++) {
                         varIndexByRow[i] = savedVarIndexByRow![i];
@@ -616,24 +624,64 @@ export function phase1Robust(this: Tableau): number {
         }
 
         if (hasBounds) {
-            // Conservative step with bounds: first of zero-crossings, hard
-            // blocks, rows reaching their range, or the entering variable's
-            // own range (a bound flip).
-            let minRatio = hardRatio;
-            leavingRow = hardRow;
-            let toUpper = false;
-            for (let i = 0; i < nBreakpoints; i++) {
-                if (breakpointRatios[i] < minRatio) {
-                    minRatio = breakpointRatios[i];
-                    leavingRow = breakpointRows[i];
+            // Conservative step with bounds over every kind of block: rows
+            // falling to zero (feasible a > 0, or infeasible a < 0 rising to
+            // zero), rows rising to their range, and the entering variable's
+            // own range (a bound flip). Harris two-pass so degenerate ties
+            // never pick a tiny pivot; Bland's tie-break once stalled.
+            const enteringRange =
+                direction === 1 ? rangeOf(this, varIndexByCol[enteringColumn]) : Infinity;
+            let maxStep = enteringRange;
+            for (let r = 1; r <= lastRow; r++) {
+                const rowVar = varIndexByRow[r];
+                if (unrestrictedVars[rowVar] === true) continue;
+                const rowOffset = r * width;
+                const a = direction * matrix[rowOffset + enteringColumn];
+                const value = matrix[rowOffset + rhsColumn];
+                if (a > PIVOT_TOL && value >= -precision) {
+                    maxStep = Math.min(maxStep, (Math.max(value, 0) + precision) / a);
+                } else if (a < -PIVOT_TOL) {
+                    if (value < -precision) maxStep = Math.min(maxStep, (value - precision) / a);
+                    const range = rangeOf(this, rowVar);
+                    if (range !== Infinity) {
+                        maxStep = Math.min(maxStep, (Math.max(range - value, 0) + precision) / -a);
+                    }
                 }
             }
-            if (upperRatio < minRatio) {
-                minRatio = upperRatio;
-                leavingRow = upperRow;
-                toUpper = true;
+            let bestPivot = 0;
+            let bestRatio = Infinity;
+            let toUpper = false;
+            leavingRow = 0;
+            for (let r = 1; r <= lastRow; r++) {
+                const rowVar = varIndexByRow[r];
+                if (unrestrictedVars[rowVar] === true) continue;
+                const rowOffset = r * width;
+                const a = direction * matrix[rowOffset + enteringColumn];
+                const value = matrix[rowOffset + rhsColumn];
+                const consider = (ratio: number, size: number, upper: boolean): void => {
+                    const take = useBland
+                        ? ratio < bestRatio - 1e-12 ||
+                          (ratio <= bestRatio + 1e-12 &&
+                              (leavingRow === 0 || rowVar < varIndexByRow[leavingRow]))
+                        : ratio <= maxStep && size > bestPivot;
+                    if (take) {
+                        bestRatio = ratio;
+                        bestPivot = size;
+                        leavingRow = r;
+                        toUpper = upper;
+                    }
+                };
+                if (a > PIVOT_TOL && value >= -precision) {
+                    consider(Math.max(value, 0) / a, a, false);
+                } else if (a < -PIVOT_TOL) {
+                    if (value < -precision) consider(value / a, -a, false);
+                    const range = rangeOf(this, rowVar);
+                    if (range !== Infinity && value >= -precision) {
+                        consider(Math.max(range - value, 0) / -a, -a, true);
+                    }
+                }
             }
-            if (direction === 1 && rangeOf(this, varIndexByCol[enteringColumn]) < minRatio) {
+            if (enteringRange < (leavingRow === 0 ? Infinity : bestRatio)) {
                 flipColumnToUpper(this, enteringColumn);
                 iterations++;
                 continue;
@@ -981,12 +1029,15 @@ export function phase2(this: Tableau): number {
             const colValue = matrix[rowOffset + enteringColumn];
             const a = isReducedCostNegative ? -colValue : colValue;
             let step: number;
+            // Distances are clamped at zero: a row already slightly past its
+            // bound (beyond FEAS_TOL) would otherwise make the step negative,
+            // leave no row eligible in pass 2, and fake an unbounded ray.
             if (a > HARRIS_PIVOT_TOL) {
-                step = (matrix[rowOffset + rhsColumn] + HARRIS_FEAS_TOL) / a;
+                step = (Math.max(matrix[rowOffset + rhsColumn], 0) + HARRIS_FEAS_TOL) / a;
             } else if (hasBounds && a < -HARRIS_PIVOT_TOL) {
                 const range = rangeOf(this, rowVar);
                 if (range === Infinity) continue;
-                step = (range - matrix[rowOffset + rhsColumn] + HARRIS_FEAS_TOL) / -a;
+                step = (Math.max(range - matrix[rowOffset + rhsColumn], 0) + HARRIS_FEAS_TOL) / -a;
             } else {
                 continue;
             }
