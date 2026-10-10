@@ -9,6 +9,7 @@
  *
  * Functions are designed to be bound to a Tableau instance via `this`.
  */
+import { toActual } from "./bounds";
 import type Tableau from "./tableau";
 import type { VariableValue } from "./types";
 
@@ -150,6 +151,11 @@ export function getMostFractionalVar(this: Tableau): VariableValue {
         }
     }
 
+    // Branching bounds are set on actual values (stored values are shifted
+    // or complemented images when column bounds are active).
+    if (selectedVarIndex !== null && this.hasBounds) {
+        selectedVarValue = toActual(this, selectedVarIndex, selectedVarValue);
+    }
     return { index: selectedVarIndex, value: selectedVarValue };
 }
 

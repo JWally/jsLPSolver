@@ -10,6 +10,7 @@
  *
  * Functions are designed to be bound to a Tableau instance via `this`.
  */
+import { actualValue, toActual } from "./bounds";
 import type Tableau from "./tableau";
 import type { Constraint, Variable } from "../expressions";
 
@@ -82,9 +83,9 @@ export function updateVariableValues(this: Tableau): void {
 
         const r = this.rowByVarIndex[varIndex];
         if (r === -1) {
-            variable.value = 0;
+            variable.value = this.hasBounds ? actualValue(this, varIndex) : 0;
         } else {
-            const varValue = matrix[r * width + rhsColumn];
+            const varValue = toActual(this, varIndex, matrix[r * width + rhsColumn]);
             variable.value =
                 Math.round((varValue + Number.EPSILON) * roundingCoeff) / roundingCoeff;
         }

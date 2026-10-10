@@ -111,6 +111,17 @@ export default class Tableau {
     /** Saved tableau state for branch-and-cut restoration. */
     savedState: Tableau | null = null;
 
+    /** True once any column bound has been set (see bounds.ts). */
+    hasBounds = false;
+    /** Per variable index: x = boundOffset + boundSign * stored. */
+    boundOffset: number[] = [];
+    boundSign: number[] = [];
+    /** Per variable index: stored value range [0, boundRange]. */
+    boundRange: number[] = [];
+    /** Per variable index: actual bounds. */
+    boundLower: number[] = [];
+    boundUpper: number[] = [];
+
     /** Pool of recycled variable/constraint indices. */
     availableIndexes: number[] = [];
     /** Next fresh index to assign (when pool is empty). */

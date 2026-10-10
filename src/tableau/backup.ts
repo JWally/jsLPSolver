@@ -9,6 +9,7 @@
  * Functions are designed to be bound to a Tableau instance via `this`.
  */
 import type Tableau from "./tableau";
+import { captureBounds, restoreBounds, type BoundState } from "./bounds";
 
 /**
  * Create a deep copy of this tableau's state.
@@ -51,6 +52,8 @@ export function copy(this: Tableau): Tableau {
 
     // Fast Float64Array copy using constructor
     copy.matrix = new Float64Array(this.matrix);
+
+    restoreBounds(copy, captureBounds(this));
 
     return copy;
 }
@@ -113,6 +116,8 @@ export function restore(this: Tableau): void {
         this.colByVarIndex[v] = savedCols[v];
     }
 
+    restoreBounds(this, captureBounds(save));
+
     if (save.optionalObjectives.length > 0 && this.optionalObjectives.length > 0) {
         this.optionalObjectives = [];
         this.optionalObjectivePerPriority = {};
@@ -141,6 +146,7 @@ export interface NodeSnapshot {
     rowByVarIndex: number[];
     colByVarIndex: number[];
     availableIndexes: number[];
+    bounds: BoundState | null;
 }
 
 /**
@@ -158,6 +164,7 @@ export function snapshot(this: Tableau): NodeSnapshot {
         rowByVarIndex: this.rowByVarIndex.slice(0, this.nVars),
         colByVarIndex: this.colByVarIndex.slice(0, this.nVars),
         availableIndexes: this.availableIndexes.slice(),
+        bounds: captureBounds(this),
     };
 }
 
@@ -187,4 +194,5 @@ export function loadSnapshot(this: Tableau, snap: NodeSnapshot): void {
         colByVarIndex[v] = snap.colByVarIndex[v];
     }
     this.availableIndexes = snap.availableIndexes.slice();
+    restoreBounds(this, snap.bounds);
 }

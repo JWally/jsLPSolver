@@ -8,6 +8,7 @@
  *
  * Solutions include feasibility status, objective value, and variable values.
  */
+import { actualValue, toActual } from "./bounds";
 import type Tableau from "./tableau";
 import type { TableauSolutionSet } from "./types";
 
@@ -70,9 +71,25 @@ export class Solution {
                 continue;
             }
 
-            const varValue = matrix[r * width + rhsColumn];
+            const varValue = toActual(tableau, varIndex, matrix[r * width + rhsColumn]);
             solutionSet[variable.id] =
                 Math.round((Number.EPSILON + varValue) * roundingCoeff) / roundingCoeff;
+        }
+
+        // With column bounds a nonbasic variable rests at a bound that may be nonzero.
+        if (tableau.hasBounds) {
+            const variables = tableau.variables;
+            for (let v = 0; v < variables.length; v++) {
+                const variable = variables[v];
+                if (variable.isSlack === true || tableau.rowByVarIndex[variable.index] !== -1) {
+                    continue;
+                }
+                const value = actualValue(tableau, variable.index);
+                if (value !== 0) {
+                    solutionSet[variable.id] =
+                        Math.round((Number.EPSILON + value) * roundingCoeff) / roundingCoeff;
+                }
+            }
         }
 
         return solutionSet;
