@@ -15,7 +15,8 @@
 import type Tableau from "./tableau";
 import type { Branch, BranchCut } from "./types";
 import { BranchMinHeap } from "./min-heap";
-import { lowerBoundOf, setVariableBounds, upperBoundOf } from "./bounds";
+import { lowerBoundOf, setVariableBounds, toActual, upperBoundOf } from "./bounds";
+import { Pseudocosts, RELIABILITY, productScore } from "./pseudocosts";
 
 /**
  * Interface for branch-and-cut solver services.
@@ -247,6 +248,127 @@ export function createBranchAndCutService(): BranchAndCutService {
             return nextFromHeap();
         };
 
+        // Branching-variable selection: reliability branching (Achterberg,
+        // Koch and Martin 2005). Score fractional candidates by pseudocosts;
+        // a candidate whose pseudocosts rest on fewer than RELIABILITY
+        // observations is strong branched instead: both children are solved
+        // from a snapshot of this node, and the measured gains score it and
+        // seed its pseudocosts. Strong branching stops after LOOKAHEAD
+        // candidates in a row fail to beat the best, and its pivots are
+        // capped relative to the search's (deterministic work, no clock).
+        // The rows path (MIR cuts, optional objectives) keeps the
+        // most-fractional rule.
+        const pseudocosts = new Pseudocosts(tableau.nVars);
+        const strongBranching = usesBoundBranching(tableau);
+        const LOOKAHEAD = 4;
+        const MAX_STRONG_CANDIDATES = 10;
+        let strongPivots = 0;
+        const candidateIndex: number[] = [];
+        const candidateValue: number[] = [];
+        const candidateFraction: number[] = [];
+        const candidateScore: number[] = [];
+        const candidateOrder: number[] = [];
+
+        const strongBranchGain = (cut: BranchCut, nodeEvaluation: number): number => {
+            const pivotsBefore = tableau.pivotCount;
+            applyCutInPlace(tableau, cut);
+            strongPivots += tableau.pivotCount - pivotsBefore;
+            return tableau.feasible ? tableau.evaluation - nodeEvaluation : Infinity;
+        };
+
+        const selectBranchVariable = (
+            nodeEvaluation: number
+        ): { varIndex: number; value: number } | null => {
+            if (!strongBranching) {
+                const variable = tableau.getMostFractionalVar();
+                return { varIndex: variable.index as number, value: variable.value as number };
+            }
+            const integerVariables = tableau.model.integerVariables;
+            const matrix = tableau.matrix;
+            const width = tableau.width;
+            const rowByVarIndex = tableau.rowByVarIndex;
+            const precision = tableau.precision;
+            candidateIndex.length = 0;
+            candidateValue.length = 0;
+            candidateFraction.length = 0;
+            for (let v = 0; v < integerVariables.length; v++) {
+                const varIndex = integerVariables[v].index;
+                const row = rowByVarIndex[varIndex];
+                if (row === -1) continue;
+                const value = toActual(tableau, varIndex, matrix[row * width]);
+                const f = value - Math.floor(value);
+                if (f <= precision || f >= 1 - precision) continue;
+                candidateIndex.push(varIndex);
+                candidateValue.push(value);
+                candidateFraction.push(f);
+            }
+            const n = candidateIndex.length;
+            let best = 0;
+            let bestScore = -Infinity;
+            candidateScore.length = n;
+            candidateOrder.length = 0;
+            for (let i = 0; i < n; i++) {
+                candidateScore[i] = pseudocosts.score(candidateIndex[i], candidateFraction[i]);
+                if (pseudocosts.reliability(candidateIndex[i]) < RELIABILITY) {
+                    candidateOrder.push(i);
+                } else if (candidateScore[i] > bestScore) {
+                    bestScore = candidateScore[i];
+                    best = i;
+                }
+            }
+            const strongBudget = 0.5 * tableau.pivotCount + 1000;
+            if (n > 1 && candidateOrder.length > 0 && strongPivots < strongBudget) {
+                // Most promising unreliable candidates first.
+                candidateOrder.sort((i, j) => candidateScore[j] - candidateScore[i] || i - j);
+                const nodeSnapshot = tableau.snapshot();
+                let sinceImprovement = 0;
+                let tried = 0;
+                for (let k = 0; k < candidateOrder.length; k++) {
+                    if (tried >= MAX_STRONG_CANDIDATES || sinceImprovement >= LOOKAHEAD) break;
+                    if (strongPivots >= strongBudget) break;
+                    const i = candidateOrder[k];
+                    const varIndex = candidateIndex[i];
+                    const value = candidateValue[i];
+                    const f = candidateFraction[i];
+                    tried++;
+                    const downGain = strongBranchGain(
+                        createCut("max", varIndex, Math.floor(value)),
+                        nodeEvaluation
+                    );
+                    tableau.loadSnapshot(nodeSnapshot);
+                    const upGain = strongBranchGain(
+                        createCut("min", varIndex, Math.ceil(value)),
+                        nodeEvaluation
+                    );
+                    tableau.loadSnapshot(nodeSnapshot);
+                    pseudocosts.record(varIndex, false, f, downGain);
+                    pseudocosts.record(varIndex, true, 1 - f, upGain);
+                    if (downGain === Infinity && upGain === Infinity) {
+                        return null;
+                    }
+                    const score = productScore(downGain, upGain);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        best = i;
+                        sinceImprovement = 0;
+                    } else {
+                        sinceImprovement++;
+                    }
+                }
+                tableau.feasible = true;
+                tableau.evaluation = nodeEvaluation;
+            } else {
+                for (let k = 0; k < candidateOrder.length; k++) {
+                    const i = candidateOrder[k];
+                    if (candidateScore[i] > bestScore) {
+                        bestScore = candidateScore[i];
+                        best = i;
+                    }
+                }
+            }
+            return { varIndex: candidateIndex[best], value: candidateValue[best] };
+        };
+
         while (
             (diveBranch !== null || !branches.isEmpty() || recentSiblings.length > 0) &&
             toleranceFlag === true &&
@@ -314,6 +436,17 @@ export function createBranchAndCutService(): BranchAndCutService {
             }
 
             const evaluation = tableau.evaluation;
+            const branchedOn = activeBranch.lastCut;
+            if (branchedOn !== undefined && activeBranch.branchFractionality !== undefined) {
+                const f = activeBranch.branchFractionality;
+                const up = branchedOn.type === "min";
+                pseudocosts.record(
+                    branchedOn.varIndex,
+                    up,
+                    up ? 1 - f : f,
+                    evaluation - activeBranch.relaxedEvaluation
+                );
+            }
             if (evaluation > bestEvaluation) {
                 continue;
             }
@@ -369,10 +502,14 @@ export function createBranchAndCutService(): BranchAndCutService {
                     tableau.save();
                 }
 
-                const variable = tableau.getMostFractionalVar();
-
-                const varIndex = variable.index as number;
-                const varValue = variable.value as number;
+                const choice = selectBranchVariable(evaluation);
+                if (choice === null) {
+                    // Strong branching proved both children of every
+                    // candidate's best split infeasible: prune this node.
+                    continue;
+                }
+                const varIndex = choice.varIndex;
+                const varValue = choice.value;
 
                 const cutsHigh: BranchCut[] = [];
                 const cutsLow: BranchCut[] = [];
@@ -400,8 +537,10 @@ export function createBranchAndCutService(): BranchAndCutService {
 
                 const branchHigh = createBranch(evaluation, cutsHigh);
                 branchHigh.lastCut = cutHigh;
+                branchHigh.branchFractionality = varValue - Math.floor(varValue);
                 const branchLow = createBranch(evaluation, cutsLow);
                 branchLow.lastCut = cutLow;
+                branchLow.branchFractionality = branchHigh.branchFractionality;
 
                 // Dive toward the nearer integer; queue the sibling.
                 let sibling: Branch;
