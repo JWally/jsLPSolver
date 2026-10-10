@@ -563,6 +563,17 @@ single-variable JSON constraints (incl. binary <= 1) become column bounds.
 - Tried a dual Harris ratio test for warm starts: 2x slower on SPY and broke
   Sudoku. Reverted.
 
+### Determinism: never decide from the clock
+
+The snapshot-vs-restore choice compared measured milliseconds, so the tree
+depended on machine load (MIPLIB noswot: 14s on one run, >60s on others).
+It now compares deterministic work units (pivot count x tableau cells, copies
+at 0.1 per cell; results are insensitive to that weight between 0.02 and 1).
+noswot is now 85,903 nodes on every run. A fake clock could not expose the
+bug in a test (both measurements scale together), so
+src/tableau/determinism.test.ts asserts structurally that solving without a
+timeout never reads performance.now or Date.now.
+
 ### Known remaining issues
 
 - Phase 2's Bland stall exit can still accept a suboptimal LP after its

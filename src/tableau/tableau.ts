@@ -112,6 +112,9 @@ export default class Tableau {
     /** Saved tableau state for branch-and-cut restoration. */
     savedState: Tableau | null = null;
 
+    /** Pivots performed so far (deterministic work measure for branch-and-cut). */
+    pivotCount = 0;
+
     /** True once any column bound has been set (see bounds.ts). */
     hasBounds = false;
     /**

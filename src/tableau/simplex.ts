@@ -1156,6 +1156,7 @@ let pivotRowCache = new Float64Array(1024);
  * @param pivotColumnIndex - Column of the entering variable.
  */
 export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: number): void {
+    this.pivotCount++;
     const matrix = this.matrix;
     const width = this.width;
 
