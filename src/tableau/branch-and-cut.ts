@@ -17,6 +17,7 @@ import type { Branch, BranchCut } from "./types";
 import { BranchMinHeap } from "./min-heap";
 import { lowerBoundOf, setVariableBounds, toActual, upperBoundOf } from "./bounds";
 import { Pseudocosts, RELIABILITY, productScore } from "./pseudocosts";
+import { addGomoryCuts, removeSlackCuts } from "./gomory";
 
 /**
  * Interface for branch-and-cut solver services.
@@ -394,6 +395,34 @@ export function createBranchAndCutService(): BranchAndCutService {
             return { varIndex: candidateIndex[best], value: candidateValue[best] };
         };
 
+        // Root cutting planes: up to ROOT_CUT_ROUNDS rounds of Gomory
+        // mixed-integer cuts from the optimal root tableau, re-optimized by
+        // dual simplex, until the bound stops moving; then cuts that ended
+        // up slack are deleted. They are added before the root is saved, so
+        // every node inherits them. Total cuts are capped at the original
+        // row count. More rounds tighten further but enlarge every node's
+        // tableau; 3 had the best shifted geometric mean over MIPLIB 3
+        // (10 rounds lost gt2 entirely).
+        const ROOT_CUT_ROUNDS = 3;
+        const ROOT_CUT_MIN_GAIN = 1e-4;
+        const addRootCuts = (): void => {
+            const firstCutRow = tableau.height;
+            const cutBudget = tableau.height - 1;
+            let total = 0;
+            for (let round = 0; round < ROOT_CUT_ROUNDS && total < cutBudget; round++) {
+                const before = tableau.evaluation;
+                const perRound = Math.min(cutBudget - total, Math.max(10, cutBudget >> 2));
+                const added = addGomoryCuts(tableau, perRound);
+                if (added === 0) break;
+                total += added;
+                tableau.simplex();
+                if (!tableau.feasible) return;
+                const gain = tableau.evaluation - before;
+                if (gain < ROOT_CUT_MIN_GAIN * Math.max(1, Math.abs(tableau.evaluation))) break;
+            }
+            removeSlackCuts(tableau, firstCutRow);
+        };
+
         while (
             (diveBranch !== null || !branches.isEmpty() || recentSiblings.length > 0) &&
             toleranceFlag === true &&
@@ -461,6 +490,12 @@ export function createBranchAndCutService(): BranchAndCutService {
             if (tableau.feasible === false) {
                 continue;
             }
+            if (iterations === 1 && strongBranching) {
+                addRootCuts();
+                // addRootCuts re-solves, so re-read feasibility (TS narrowed it).
+                if ((tableau.feasible as boolean) === false) continue;
+            }
+
             const evaluation = tableau.evaluation;
             const branchedOn = activeBranch.lastCut;
             if (branchedOn !== undefined && activeBranch.branchFractionality !== undefined) {
