@@ -20,6 +20,7 @@ import { lowerBoundOf, rangeOf, setVariableBounds, toActual, upperBoundOf } from
 import { Pseudocosts, RELIABILITY, productScore } from "./pseudocosts";
 import { addGomoryCuts, removeSlackCuts } from "./gomory";
 import { presolveRootTableau } from "./root-presolve";
+import { addMirCuts, captureOriginalRows, type OriginalRows } from "./mir";
 
 /**
  * Interface for branch-and-cut solver services.
@@ -195,12 +196,15 @@ export function createBranchAndCutService(): BranchAndCutService {
         // Root presolve on the fresh tableau (bound propagation and big-M
         // coefficient tightening); only on the column-bounds path, before the
         // first pivot.
+        // The (presolved) original rows are kept for c-MIR separation.
+        let originalRows: OriginalRows | null = null;
         if (usesBoundBranching(tableau) && tableau.pivotCount === 0) {
             if (!presolveRootTableau(tableau).feasible) {
                 tableau.feasible = false;
                 tableau.branchAndCutIterations = 0;
                 return;
             }
+            originalRows = captureOriginalRows(tableau);
         }
 
         const branch = createBranch(-Infinity, []);
@@ -500,7 +504,14 @@ export function createBranchAndCutService(): BranchAndCutService {
             for (let round = 0; round < ROOT_CUT_ROUNDS && total < cutBudget; round++) {
                 const before = tableau.evaluation;
                 const perRound = Math.min(cutBudget - total, Math.max(10, cutBudget >> 2));
-                const added = addGomoryCuts(tableau, perRound);
+                let added = addGomoryCuts(tableau, perRound);
+                if (originalRows !== null && total + added < cutBudget) {
+                    added += addMirCuts(
+                        tableau,
+                        originalRows,
+                        Math.min(cutBudget - total - added, perRound)
+                    );
+                }
                 if (added === 0) break;
                 total += added;
                 tableau.simplex();
