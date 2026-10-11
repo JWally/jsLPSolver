@@ -48,6 +48,7 @@ const MIN_FRACTION = 0.05;
 const MAX_AGGREGATIONS = 3;
 const MAX_DELTAS = 8;
 const MIN_EFFICACY = 1e-4;
+const MAX_PARALLELISM = 0.1;
 const EPS = 1e-9;
 
 /**
@@ -158,9 +159,16 @@ export function addMirCuts(tableau: Tableau, original: OriginalRows, maxCuts: nu
         if (cut !== null) cuts.push(cut);
     }
     cuts.sort((p, q) => q.efficacy - p.efficacy);
+    // Skip cuts nearly parallel to one already taken (HiGHS uses cosine 0.1).
+    const taken: Cut[] = [];
     let added = 0;
     for (let k = 0; k < cuts.length && added < maxCuts; k++) {
-        if (addLinearCut(tableau, cuts[k].alpha, cuts[k].beta)) added++;
+        const cut = cuts[k];
+        if (taken.some((other) => cosine(cut.alpha, other.alpha) > MAX_PARALLELISM)) continue;
+        if (addLinearCut(tableau, cut.alpha, cut.beta)) {
+            taken.push(cut);
+            added++;
+        }
     }
     return added;
 }
@@ -309,19 +317,37 @@ function cmir(
     }
     const betaShifted = beta - shift;
 
-    // Candidate deltas: |a| of integers strictly between their bounds.
+    // Candidate deltas (as in HiGHS's c-MIR): |a| of integers away from
+    // zero; with no continuous part, the gcd of integral coefficients;
+    // delta = 1; and max |a| + 1. On integral rows the |a| deltas alone often
+    // make beta/delta integral and the MIR trivial (MIPLIB qnet1).
     const deltas: number[] = [];
-    for (let k = 0; k < n; k++) {
-        if (y[k] <= EPS || y[k] >= yUb[k] - EPS) continue;
-        const delta = Math.abs(intCoef[k]);
-        if (delta > EPS && !deltas.some((d) => Math.abs(d - delta) < 1e-9 * delta)) {
+    const addDelta = (delta: number): void => {
+        if (delta > 1e-6 && !deltas.some((d) => Math.abs(d - delta) < 1e-9 * Math.max(1, delta))) {
             deltas.push(delta);
-            if (deltas.length >= MAX_DELTAS) break;
         }
+    };
+    let maxAbs = 0;
+    for (let k = 0; k < n; k++) {
+        const magnitude = Math.abs(intCoef[k]);
+        if (magnitude > maxAbs) maxAbs = magnitude;
+        if (y[k] <= EPS || deltas.length >= MAX_DELTAS) continue;
+        addDelta(magnitude);
     }
     if (deltas.length === 0) return null;
+    if (contIndex.length === 0 && deltas.length >= 2 && deltas.every(isNearInteger)) {
+        let g = 0;
+        for (const d of deltas) g = gcd(g, Math.round(d));
+        if (g > 0) addDelta(g);
+    }
+    addDelta(1);
+    addDelta(maxAbs + 1);
 
+    // Start with integers closer to their upper bound complemented.
     const complemented = new Uint8Array(n);
+    for (let k = 0; k < n; k++) {
+        if (yUb[k] !== Infinity && 2 * y[k] > yUb[k]) complemented[k] = 1;
+    }
     const evaluate = (delta: number): Cut | null =>
         mirCut(
             intIndex,
@@ -353,15 +379,13 @@ function cmir(
         const cut = evaluate(bestDelta / divisor);
         if (cut !== null && cut.efficacy > best.efficacy) best = cut;
     }
-    // Complement integers above their midpoint, one at a time, while it helps.
-    const order = Array.from({ length: n }, (_, k) => k)
-        .filter((k) => yUb[k] !== Infinity && y[k] > yUb[k] / 2)
-        .sort((p, q) => yUb[q] - y[q] - (yUb[p] - y[p]) || p - q);
-    for (const k of order) {
-        complemented[k] = 1;
+    // Greedy complement flips: keep a flip only if it raises efficacy.
+    for (let k = 0; k < n; k++) {
+        if (yUb[k] === Infinity || y[k] <= EPS) continue;
+        complemented[k] ^= 1;
         const cut = evaluate(bestDelta);
         if (cut !== null && cut.efficacy > best.efficacy) best = cut;
-        else complemented[k] = 0;
+        else complemented[k] ^= 1;
     }
     return best;
 }
@@ -437,7 +461,15 @@ function mirCut(
     }
     const violation = lhsStar - gamma;
     if (violation <= 1e-6 * Math.max(1, Math.abs(gamma))) return null;
-    for (const value of alpha.values()) normSq += value * value;
+    // Active norm: terms that cannot increase the left-hand side from the LP
+    // point (positive coefficient at the lower bound, negative at the upper)
+    // do not dilute efficacy.
+    for (const [v, value] of alpha) {
+        const d = variableData(v);
+        if (value > 0 && d.x <= d.lb + EPS) continue;
+        if (value < 0 && d.x >= d.ub - EPS) continue;
+        normSq += value * value;
+    }
     if (normSq === 0) return null;
     const efficacy = violation / Math.sqrt(normSq);
     if (efficacy < MIN_EFFICACY) return null;
@@ -497,4 +529,30 @@ function isIntegerForCuts(tableau: Tableau, v: number): boolean {
     const variable = tableau.variablesPerIndex[v];
     if (variable?.isInteger !== true) return false;
     return tableau.model?.impliedIntegers?.has(variable.id) !== true;
+}
+
+function isNearInteger(value: number): boolean {
+    return Math.abs(value - Math.round(value)) < 1e-9 * Math.max(1, Math.abs(value));
+}
+
+function gcd(a: number, b: number): number {
+    while (b !== 0) {
+        const t = a % b;
+        a = b;
+        b = t;
+    }
+    return a;
+}
+
+function cosine(p: Map<number, number>, q: Map<number, number>): number {
+    let dot = 0;
+    let pp = 0;
+    let qq = 0;
+    for (const [v, a] of p) {
+        pp += a * a;
+        const b = q.get(v);
+        if (b !== undefined) dot += a * b;
+    }
+    for (const b of q.values()) qq += b * b;
+    return pp === 0 || qq === 0 ? 0 : Math.abs(dot) / Math.sqrt(pp * qq);
 }
