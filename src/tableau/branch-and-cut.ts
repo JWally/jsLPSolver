@@ -240,6 +240,15 @@ export function createBranchAndCutService(): BranchAndCutService {
             return restoreWorkPerCut * depth > snapshotRouteWork;
         };
         let snapshotBytes = 0;
+        // Consumed or discarded snapshots are recycled: on small tableaus
+        // allocating one per queued sibling made garbage collection ~9% of
+        // the run (MIPLIB mas76, ~300k nodes).
+        const snapshotPool: NodeSnapshot[] = [];
+        const SNAPSHOT_POOL_SIZE = 32;
+        const takeSnapshot = (): NodeSnapshot => tableau.snapshot(snapshotPool.pop() ?? null);
+        const releaseSnapshot = (snap: NodeSnapshot): void => {
+            if (snapshotPool.length < SNAPSHOT_POOL_SIZE) snapshotPool.push(snap);
+        };
 
         // Node selection: plunge, then backtrack to the most recent sibling
         // (cheap, since its parent snapshot is fresh), and every
@@ -362,7 +371,7 @@ export function createBranchAndCutService(): BranchAndCutService {
             if (n > 1 && candidateOrder.length > 0 && strongPivots < strongBudget) {
                 // Most promising unreliable candidates first.
                 candidateOrder.sort((i, j) => candidateScore[j] - candidateScore[i] || i - j);
-                const nodeSnapshot = tableau.snapshot();
+                const nodeSnapshot = takeSnapshot();
                 let sinceImprovement = 0;
                 let tried = 0;
                 for (let k = 0; k < candidateOrder.length; k++) {
@@ -386,6 +395,7 @@ export function createBranchAndCutService(): BranchAndCutService {
                     pseudocosts.record(varIndex, false, f, downGain);
                     pseudocosts.record(varIndex, true, 1 - f, upGain);
                     if (downGain === Infinity && upGain === Infinity) {
+                        releaseSnapshot(nodeSnapshot);
                         return null;
                     }
                     const score = productScore(downGain, upGain);
@@ -399,6 +409,7 @@ export function createBranchAndCutService(): BranchAndCutService {
                         sinceImprovement++;
                     }
                 }
+                releaseSnapshot(nodeSnapshot);
                 tableau.feasible = true;
                 tableau.evaluation = nodeEvaluation;
             } else {
@@ -520,11 +531,13 @@ export function createBranchAndCutService(): BranchAndCutService {
                     activeBranch.parentSnapshot = null;
                 }
                 if (cannotImprove(activeBranch.relaxedEvaluation)) {
+                    if (parentSnapshot) releaseSnapshot(parentSnapshot);
                     continue;
                 }
                 const pivotsBefore = tableau.pivotCount;
                 if (parentSnapshot) {
                     tableau.loadSnapshot(parentSnapshot);
+                    releaseSnapshot(parentSnapshot);
                     applyCutInPlace(tableau, activeBranch.lastCut!);
                     const cells = tableau.height * tableau.width;
                     // snapshot taken at push + loaded now, then the in-place solve
@@ -691,7 +704,7 @@ export function createBranchAndCutService(): BranchAndCutService {
                     snapshotBytes < SNAPSHOT_BUDGET_BYTES &&
                     shouldSnapshot(sibling.cuts.length)
                 ) {
-                    const parentSnapshot = tableau.snapshot();
+                    const parentSnapshot = takeSnapshot();
                     snapshotBytes += parentSnapshot.matrix.byteLength;
                     sibling.parentSnapshot = parentSnapshot;
                 }

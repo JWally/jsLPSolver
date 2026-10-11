@@ -153,18 +153,32 @@ export interface NodeSnapshot {
  * Capture the current node's LP state so a queued child can later resume
  * from it instead of re-solving from the root.
  */
-export function snapshot(this: Tableau): NodeSnapshot {
+export function snapshot(this: Tableau, reuse: NodeSnapshot | null = null): NodeSnapshot {
+    const cells = this.height * this.width;
+    let matrix: Float64Array;
+    if (reuse !== null && reuse.matrix.length === cells) {
+        matrix = reuse.matrix;
+        matrix.set(this.matrix.subarray(0, cells));
+    } else {
+        matrix = this.matrix.slice(0, cells);
+    }
+    const copyInto = (source: number[], length: number, target: number[] | undefined) => {
+        if (target === undefined) return source.slice(0, length);
+        for (let i = 0; i < length; i++) target[i] = source[i];
+        target.length = length;
+        return target;
+    };
     return {
-        matrix: this.matrix.slice(0, this.height * this.width),
+        matrix,
         height: this.height,
         nVars: this.nVars,
         lastElementIndex: this.lastElementIndex,
-        varIndexByRow: this.varIndexByRow.slice(0, this.height),
-        varIndexByCol: this.varIndexByCol.slice(0, this.width),
-        rowByVarIndex: this.rowByVarIndex.slice(0, this.nVars),
-        colByVarIndex: this.colByVarIndex.slice(0, this.nVars),
+        varIndexByRow: copyInto(this.varIndexByRow, this.height, reuse?.varIndexByRow),
+        varIndexByCol: copyInto(this.varIndexByCol, this.width, reuse?.varIndexByCol),
+        rowByVarIndex: copyInto(this.rowByVarIndex, this.nVars, reuse?.rowByVarIndex),
+        colByVarIndex: copyInto(this.colByVarIndex, this.nVars, reuse?.colByVarIndex),
         availableIndexes: this.availableIndexes.slice(),
-        bounds: captureBounds(this),
+        bounds: captureBounds(this, reuse?.bounds ?? null),
     };
 }
 

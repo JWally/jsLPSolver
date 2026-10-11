@@ -1384,8 +1384,10 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
     for (let c = 0; c < width; c++) {
         const idx = pivotRowOffset + c;
         const val = matrix[idx];
-        if (!(val >= -1e-16 && val <= 1e-16)) {
-            const normalized = val / quotient;
+        const normalized = val / quotient;
+        // Entries that are (or normalize to) noise are zeroed here, once,
+        // so the row updates below can run without a branch per entry.
+        if (!(normalized >= -1e-16 && normalized <= 1e-16) && !(val >= -1e-16 && val <= 1e-16)) {
             matrix[idx] = normalized;
             nonZeroColumns[nNonZeroColumns] = c;
             pivotRowCache[nNonZeroColumns] = normalized;
@@ -1407,15 +1409,7 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
                 if (!(coefficient >= -1e-16 && coefficient <= 1e-16)) {
                     // Use cached pivot row values for better cache locality
                     for (let i = 0; i < nNonZeroColumns; i++) {
-                        const c = nonZeroColumns[i];
-                        const v0 = pivotRowCache[i];
-                        // Inner zero check is critical for numerical stability
-                        if (!(v0 >= -1e-16 && v0 <= 1e-16)) {
-                            matrix[rowOffset + c] -= coefficient * v0;
-                        } else if (v0 !== 0) {
-                            // Clean up near-zero values in pivot row
-                            matrix[pivotRowOffset + c] = 0;
-                        }
+                        matrix[rowOffset + nonZeroColumns[i]] -= coefficient * pivotRowCache[i];
                     }
 
                     matrix[rowOffset + pivotColumnIndex] = -coefficient / quotient;

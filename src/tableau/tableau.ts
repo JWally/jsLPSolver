@@ -353,8 +353,8 @@ export default class Tableau {
     }
 
     /** Capture the current node's LP state (see backup.snapshot). */
-    snapshot(): backupOps.NodeSnapshot {
-        return backupOps.snapshot.call(this);
+    snapshot(reuse: backupOps.NodeSnapshot | null = null): backupOps.NodeSnapshot {
+        return backupOps.snapshot.call(this, reuse);
     }
 
     /** Load a node LP state captured by snapshot(). */
