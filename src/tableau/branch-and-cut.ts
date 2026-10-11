@@ -18,6 +18,7 @@ import { BranchMinHeap } from "./min-heap";
 import { lowerBoundOf, setVariableBounds, toActual, upperBoundOf } from "./bounds";
 import { Pseudocosts, RELIABILITY, productScore } from "./pseudocosts";
 import { addGomoryCuts, removeSlackCuts } from "./gomory";
+import { presolveRootTableau } from "./root-presolve";
 
 /**
  * Interface for branch-and-cut solver services.
@@ -182,6 +183,17 @@ export function createBranchAndCutService(): BranchAndCutService {
             const slack = 1e-6 * Math.max(1, Math.abs(bound));
             return Math.ceil((bound - slack) / objectiveStep) * objectiveStep >= bestEvaluation;
         };
+
+        // Root presolve on the fresh tableau (bound propagation and big-M
+        // coefficient tightening); only on the column-bounds path, before the
+        // first pivot.
+        if (usesBoundBranching(tableau) && tableau.pivotCount === 0) {
+            if (!presolveRootTableau(tableau).feasible) {
+                tableau.feasible = false;
+                tableau.branchAndCutIterations = 0;
+                return;
+            }
+        }
 
         const branch = createBranch(-Infinity, []);
         let acceptableThreshold: number;
