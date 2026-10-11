@@ -92,7 +92,7 @@ export function captureOriginalRows(tableau: Tableau): OriginalRows | null {
             for (let k = 0; k < 2; k++) {
                 const x = index[k];
                 const y = index[1 - k];
-                const isInt = (v: number) => tableau.variablesPerIndex[v]?.isInteger === true;
+                const isInt = (v: number) => isIntegerForCuts(tableau, v);
                 if (!isInt(x) && isInt(y) && coef[k] > 0 && coef[1 - k] < 0) {
                     const u = -coef[1 - k] / coef[k];
                     const known = vub.get(x);
@@ -139,7 +139,7 @@ export function addMirCuts(tableau: Tableau, original: OriginalRows, maxCuts: nu
         let d = data.get(v);
         if (d === undefined) {
             const variable = tableau.variablesPerIndex[v];
-            const integer = variable?.isInteger === true;
+            const integer = isIntegerForCuts(tableau, v);
             let lb = lowerBoundOf(tableau, v);
             let ub = upperBoundOf(tableau, v);
             if (integer) {
@@ -486,4 +486,15 @@ export function addLinearCut(tableau: Tableau, alpha: Map<number, number>, beta:
     if (largest === 0 || largest / smallest > 1e8) return false;
     appendCutTableauRow(tableau, rhs, row, largest);
     return true;
+}
+
+/**
+ * Integrality as c-MIR sees it: implied integers count as continuous, so
+ * variable-bound substitutions (flow covers) apply to them; relaxing their
+ * integrality keeps the cuts valid.
+ */
+function isIntegerForCuts(tableau: Tableau, v: number): boolean {
+    const variable = tableau.variablesPerIndex[v];
+    if (variable?.isInteger !== true) return false;
+    return tableau.model?.impliedIntegers?.has(variable.id) !== true;
 }

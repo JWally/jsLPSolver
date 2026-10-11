@@ -101,3 +101,27 @@ describe("c-MIR cuts", () => {
         expect(tightened).toBeGreaterThan(5);
     });
 });
+
+describe("captureOriginalRows", () => {
+    it("finds variable upper bounds on implied-integer flows", () => {
+        // flow f is continuous but implied integer (integer rows only); the
+        // link row f - 7 y <= 0 is still a variable upper bound for c-MIR.
+        const model = {
+            optimize: "cost",
+            opType: "min",
+            constraints: { demand: { min: 3 }, link: { max: 0 } },
+            variables: {
+                f: { cost: 1, demand: 1, link: 1 },
+                y: { cost: 5, link: -7 },
+            },
+            ints: { y: 1 },
+        };
+        const m = new Model().loadJson(model as never);
+        expect(m.impliedIntegers.has("f")).toBe(true);
+        m.tableau.setModel(m);
+        const original = captureOriginalRows(m.tableau)!;
+        const f = m.variables.find((v) => v.id === "f")!;
+        const y = m.variables.find((v) => v.id === "y")!;
+        expect(original.vub.get(f.index)).toEqual({ y: y.index, u: 7 });
+    });
+});
