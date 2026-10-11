@@ -33,6 +33,9 @@ export function findImpliedIntegers(model: JsonModel): Set<string> {
     ]);
     const unrestricted = model.unrestricted ?? {};
     const objective = model.optimize as string;
+    if (!Object.keys(variables).some((id) => !integers.has(id) && !unrestricted[id])) {
+        return implied; // no continuous candidates
+    }
 
     // Terms of each constraint.
     const rows = new Map<string, Array<[string, number]>>();
@@ -104,6 +107,16 @@ export function findIntegralContinuous(model: JsonModel): Set<string> {
     ]);
     const unrestricted = model.unrestricted ?? {};
     const objective = model.optimize as string;
+    // Only worth computing when it can decide objective integrality: every
+    // objective coefficient integral and some continuous variable costed.
+    let costedContinuous = false;
+    for (const [variableId, coefficients] of Object.entries(variables)) {
+        const cost = coefficients[objective] ?? 0;
+        if (cost === 0) continue;
+        if (!Number.isInteger(cost)) return new Set();
+        if (!integers.has(variableId)) costedContinuous = true;
+    }
+    if (!costedContinuous) return new Set();
 
     const rows = new Map<string, Array<[string, number]>>();
     for (const [variableId, coefficients] of Object.entries(variables)) {

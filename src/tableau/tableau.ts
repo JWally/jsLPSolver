@@ -21,7 +21,7 @@ import * as simplexOps from "./simplex";
 import * as cuttingOps from "./cutting-strategies";
 import * as dynamicOps from "./dynamic-modification";
 import * as backupOps from "./backup";
-import { setVariableBounds } from "./bounds";
+import { ensureBoundCapacity, setVariableBounds } from "./bounds";
 import * as mipOps from "./mip-utils";
 import { log as logImpl } from "./log";
 
@@ -546,6 +546,7 @@ export default class Tableau {
 
         this.initialize(width, height, model.variables, model.unrestrictedVariables);
         this._resetMatrix();
+        if (model.columnBounds.size > 0) ensureBoundCapacity(this, this.lastElementIndex);
         for (const [variable, bound] of model.columnBounds) {
             setVariableBounds(this, variable.index, bound.lb, bound.ub);
         }

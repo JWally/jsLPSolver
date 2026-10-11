@@ -290,6 +290,11 @@ export function createBranchAndCutService(): BranchAndCutService {
         // most-fractional rule.
         const pseudocosts = new Pseudocosts(tableau.nVars);
         const strongBranching = usesBoundBranching(tableau);
+        // Feasibility models (no objective) gain nothing from strong
+        // branching (every gain is zero) or from cuts (the bound is always
+        // zero): Sudoku took 4 nodes and 285 pivots with them, 1 and 140
+        // without.
+        const hasObjective = modelVariables.some((variable) => variable.cost !== 0);
         const LOOKAHEAD = 4;
         const MAX_STRONG_CANDIDATES = 10;
         let strongPivots = 0;
@@ -333,7 +338,7 @@ export function createBranchAndCutService(): BranchAndCutService {
         ): { varIndex: number; value: number } | null => {
             chosenDownInfeasible = false;
             chosenUpInfeasible = false;
-            if (!strongBranching) {
+            if (!strongBranching || !hasObjective) {
                 const variable = tableau.getMostFractionalVar();
                 return { varIndex: variable.index as number, value: variable.value as number };
             }
@@ -595,7 +600,7 @@ export function createBranchAndCutService(): BranchAndCutService {
             if (tableau.feasible === false) {
                 continue;
             }
-            if (iterations === 1 && strongBranching) {
+            if (iterations === 1 && strongBranching && hasObjective) {
                 addRootCuts();
                 // addRootCuts re-solves, so re-read feasibility (TS narrowed it).
                 if ((tableau.feasible as boolean) === false) continue;

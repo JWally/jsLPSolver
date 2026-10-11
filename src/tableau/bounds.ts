@@ -23,6 +23,11 @@ import type Tableau from "./tableau";
  * Grow the dense bound arrays to cover varIndex, filling defaults
  * (offset 0, sign +1, range/upper Infinity, lower 0).
  */
+/** Size the bound arrays for variable indices up to `varIndex` in one allocation. */
+export function ensureBoundCapacity(tableau: Tableau, varIndex: number): void {
+    ensureCapacity(tableau, varIndex);
+}
+
 function ensureCapacity(tableau: Tableau, varIndex: number): void {
     const current = tableau.boundRange.length;
     if (varIndex < current) return;
