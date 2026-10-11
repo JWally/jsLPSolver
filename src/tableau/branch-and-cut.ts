@@ -14,8 +14,9 @@
  */
 import type Tableau from "./tableau";
 import type { Branch, BranchCut } from "./types";
+import type { NodeSnapshot } from "./backup";
 import { BranchMinHeap } from "./min-heap";
-import { lowerBoundOf, setVariableBounds, toActual, upperBoundOf } from "./bounds";
+import { lowerBoundOf, rangeOf, setVariableBounds, toActual, upperBoundOf } from "./bounds";
 import { Pseudocosts, RELIABILITY, productScore } from "./pseudocosts";
 import { addGomoryCuts, removeSlackCuts } from "./gomory";
 import { presolveRootTableau } from "./root-presolve";
@@ -142,7 +143,12 @@ export function createBranchAndCutService(): BranchAndCutService {
         }
 
         let bestEvaluation = Infinity;
+        // On the column-bounds path the incumbent's tableau is kept as a
+        // snapshot: re-solving its node from the root by its branching bounds
+        // would miss reduced-cost fixings and could return a fractional
+        // vertex of the same LP. The rows path re-solves as before.
         let bestBranch: Branch | null = null;
+        let bestSnapshot: NodeSnapshot | null = null;
         const bestOptionalObjectivesEvaluations: number[] = [];
         // Cache optionalObjectives reference to avoid repeated property lookups in hot loop
         const optionalObjectives = tableau.optionalObjectives;
@@ -407,6 +413,49 @@ export function createBranchAndCutService(): BranchAndCutService {
             return { varIndex: candidateIndex[best], value: candidateValue[best] };
         };
 
+        // Reduced-cost fixing: at an optimal node LP every nonbasic column c
+        // has reduced cost d_c <= 0, and raising its stored variable s_c by t
+        // raises the node bound by at least |d_c| t. Once an incumbent
+        // exists, any s_c whose move by k units already cannot improve on it
+        // is limited to k - 1 for this subtree. Nonbasic variables sit at
+        // s = 0, so only their range changes (no tableau update), and the LP
+        // stays optimal. Dives and snapshot-resumed siblings inherit the
+        // fixings; nodes re-solved from the root do not, which is weaker but
+        // still valid.
+        const fixByReducedCost = (nodeEvaluation: number): void => {
+            const matrix = tableau.matrix;
+            const lastColumn = tableau.width - 1;
+            const precision = tableau.precision;
+            for (let c = 1; c <= lastColumn; c++) {
+                const d = matrix[c];
+                if (d >= -precision) continue;
+                const v = tableau.varIndexByCol[c];
+                const variable = tableau.variablesPerIndex[v];
+                if (variable?.isInteger !== true || tableau.unrestrictedVars[v] === true) continue;
+                // The stored variable is integral only with an integer offset.
+                if (!Number.isInteger(tableau.boundOffset[v])) continue;
+                const range = rangeOf(tableau, v);
+                if (range <= precision) continue;
+                // Largest integer move k that might still improve.
+                let keep = 0;
+                const limit = Math.min(range, 1e9);
+                while (keep + 1 <= limit && !cannotImprove(nodeEvaluation - d * (keep + 1))) {
+                    keep++;
+                    if (keep > 64) {
+                        keep = limit;
+                        break;
+                    }
+                }
+                if (keep >= range) continue;
+                const offset = tableau.boundOffset[v];
+                if (tableau.boundSign[v] === 1) {
+                    setVariableBounds(tableau, v, lowerBoundOf(tableau, v), offset + keep);
+                } else {
+                    setVariableBounds(tableau, v, offset - keep, upperBoundOf(tableau, v));
+                }
+            }
+        };
+
         // Root cutting planes: up to ROOT_CUT_ROUNDS rounds of Gomory
         // mixed-integer cuts from the optimal root tableau, re-optimized by
         // dual simplex, until the bound stops moving; then cuts that ended
@@ -553,6 +602,7 @@ export function createBranchAndCutService(): BranchAndCutService {
                     return;
                 }
                 bestBranch = activeBranch;
+                if (strongBranching) bestSnapshot = tableau.snapshot();
                 bestEvaluation = evaluation;
                 for (let oCopy = 0; oCopy < nOptionalObjectives; oCopy += 1) {
                     bestOptionalObjectivesEvaluations[oCopy] =
@@ -575,6 +625,9 @@ export function createBranchAndCutService(): BranchAndCutService {
                     tableau.save();
                 }
 
+                if (strongBranching && bestEvaluation < Infinity) {
+                    fixByReducedCost(evaluation);
+                }
                 const choice = selectBranchVariable(evaluation);
                 if (choice === null) {
                     // Strong branching proved both children of every
@@ -647,7 +700,11 @@ export function createBranchAndCutService(): BranchAndCutService {
             }
         }
 
-        if (bestBranch !== null) {
+        if (bestSnapshot !== null) {
+            tableau.loadSnapshot(bestSnapshot);
+            tableau.feasible = true;
+            tableau.evaluation = bestEvaluation;
+        } else if (bestBranch !== null) {
             applyCuts(tableau, bestBranch.cuts);
         }
         tableau.branchAndCutIterations = iterations;
