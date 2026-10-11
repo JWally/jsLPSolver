@@ -16,6 +16,7 @@ import { Constraint, Equality, IntegerVariable, Variable } from "./expressions";
 import type { Priority } from "./expressions";
 import type { BranchAndCutService } from "./tableau/branch-and-cut";
 import type { ConstraintBound, Model as JsonModel } from "./types/solver";
+import { findImpliedIntegers } from "./implied-integers";
 import type { TableauSolution, TableauSolutionSet } from "./tableau";
 import { presolve, type PresolveResult } from "./tableau/presolve";
 
@@ -500,6 +501,11 @@ class Model {
 
         const integerVarIds = jsonModel.ints || {};
         const binaryVarIds = jsonModel.binaries || {};
+        // On the column-bounds path, continuous variables bounded only by
+        // integer rows are treated as integer (see implied-integers.ts).
+        const impliedIntegers = this.binariesAsColumnBounds
+            ? findImpliedIntegers(jsonModel)
+            : new Set<string>();
         const unrestrictedVarIds = jsonModel.unrestricted || {};
 
         // Instantiating variables and constraint terms
@@ -523,7 +529,8 @@ class Model {
                     : 0
                 : variableConstraints[objectiveName] || 0;
             const isBinary = !!binaryVarIds[variableId];
-            const isInteger = !!integerVarIds[variableId] || isBinary;
+            const isInteger =
+                !!integerVarIds[variableId] || isBinary || impliedIntegers.has(variableId);
             const isUnrestricted = !!unrestrictedVarIds[variableId];
             const variable = this.addVariable(cost, variableId, isInteger, isUnrestricted);
 
