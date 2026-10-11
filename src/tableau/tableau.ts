@@ -115,6 +115,14 @@ export default class Tableau {
     /** Pivots performed so far (deterministic work measure for branch-and-cut). */
     pivotCount = 0;
     /**
+     * When positive, a dual phase 1 from a dual-feasible basis stops after
+     * this many iterations and reports its objective (a valid bound) with
+     * iterationLimited set. Used by strong branching, which only needs bounds.
+     */
+    dualIterationLimit = 0;
+    /** Whether the last simplex() stopped at dualIterationLimit. */
+    iterationLimited = false;
+    /**
      * Row equilibration factor per constraint (indexed by the constraint's
      * slack variable index; absent means 1). Each constraint row is stored
      * multiplied by a power of two that brings its largest coefficient near

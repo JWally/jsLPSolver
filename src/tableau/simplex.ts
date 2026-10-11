@@ -95,8 +95,14 @@ class CycleDetector {
  */
 export function simplex(this: Tableau): Tableau {
     this.bounded = true;
+    this.iterationLimited = false;
     this.phase1();
 
+    if (this.iterationLimited) {
+        // Stopped by dualIterationLimit: evaluation is the dual bound reached.
+        this.setEvaluation();
+        return this;
+    }
     if (this.feasible === true) {
         this.phase2();
     }
@@ -259,7 +265,7 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
     const feasTol = Math.max(precision, PRIMAL_FEAS_TOL);
     const SAVE_THRESHOLD = 10;
     const maxQuotientLimit = Math.max(lastRow, lastColumn);
-    const DUAL_MAX_FACTOR = 20;
+    const DUAL_MAX_FACTOR = 4;
     const dualWindow = Math.max(50, lastRow);
     let windowObjective = matrix[rhsColumn];
     let objectiveMoving = robustFallback;
@@ -274,8 +280,16 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
     let savedRowByVarIndex: number[] | null = null;
     let savedColByVarIndex: number[] | null = null;
     let savedBounds: BoundState | null = null;
+    const iterationLimit = robustFallback ? this.dualIterationLimit : 0;
 
     while (true) {
+        if (iterationLimit > 0 && iterations >= iterationLimit) {
+            // Caller only needs a bound (strong branching): from a
+            // dual-feasible start the current objective is a valid one.
+            this.feasible = true;
+            this.iterationLimited = true;
+            return iterations;
+        }
         // Find leaving row (most negative RHS among restricted basic vars).
         // Unrestricted variables can validly have negative values, so rows
         // where the basic variable is unrestricted are not infeasible.
@@ -321,9 +335,11 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
         // gives up on the original budget, before its pivots blow up.
         if (robustFallback && iterations > 0 && iterations % dualWindow === 0) {
             const objective = matrix[rhsColumn];
-            objectiveMoving =
-                Math.abs(objective - windowObjective) > 1e-9 * Math.max(1, Math.abs(objective));
-            windowObjective = objective;
+            // The dual objective only rises; a run that merely oscillates
+            // (the minimum-pivot fallback can give up dual feasibility) must
+            // not count as progress, or it would keep the extended budget.
+            objectiveMoving = objective > windowObjective + 1e-7 * Math.max(1, Math.abs(objective));
+            if (objective > windowObjective) windowObjective = objective;
         }
         const stalledNow = !useBland && iterations > 0 && rhsValue <= initialRHS;
         const giveUp =
