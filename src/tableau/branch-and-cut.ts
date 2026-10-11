@@ -14,8 +14,12 @@
  */
 import type Tableau from "./tableau";
 import type { Branch, BranchCut } from "./types";
+import type { NodeSnapshot } from "./backup";
 import { BranchMinHeap } from "./min-heap";
-import { lowerBoundOf, setVariableBounds, upperBoundOf } from "./bounds";
+import { lowerBoundOf, rangeOf, setVariableBounds, toActual, upperBoundOf } from "./bounds";
+import { Pseudocosts, RELIABILITY, productScore } from "./pseudocosts";
+import { addGomoryCuts, removeSlackCuts } from "./gomory";
+import { presolveRootTableau } from "./root-presolve";
 
 /**
  * Interface for branch-and-cut solver services.
@@ -139,7 +143,12 @@ export function createBranchAndCutService(): BranchAndCutService {
         }
 
         let bestEvaluation = Infinity;
+        // On the column-bounds path the incumbent's tableau is kept as a
+        // snapshot: re-solving its node from the root by its branching bounds
+        // would miss reduced-cost fixings and could return a fractional
+        // vertex of the same LP. The rows path re-solves as before.
         let bestBranch: Branch | null = null;
+        let bestSnapshot: NodeSnapshot | null = null;
         const bestOptionalObjectivesEvaluations: number[] = [];
         // Cache optionalObjectives reference to avoid repeated property lookups in hot loop
         const optionalObjectives = tableau.optionalObjectives;
@@ -167,7 +176,9 @@ export function createBranchAndCutService(): BranchAndCutService {
         for (let v = 0; objectiveIsIntegral && v < modelVariables.length; v++) {
             const variable = modelVariables[v];
             if (variable.cost === 0) continue;
-            if (!variable.isInteger || !Number.isInteger(variable.cost)) {
+            const integral =
+                variable.isInteger || tableau.model?.integralContinuous?.has(variable.id) === true;
+            if (!integral || !Number.isInteger(variable.cost)) {
                 objectiveIsIntegral = false;
             } else {
                 objectiveStep = gcd(objectiveStep, Math.abs(variable.cost));
@@ -180,6 +191,17 @@ export function createBranchAndCutService(): BranchAndCutService {
             const slack = 1e-6 * Math.max(1, Math.abs(bound));
             return Math.ceil((bound - slack) / objectiveStep) * objectiveStep >= bestEvaluation;
         };
+
+        // Root presolve on the fresh tableau (bound propagation and big-M
+        // coefficient tightening); only on the column-bounds path, before the
+        // first pivot.
+        if (usesBoundBranching(tableau) && tableau.pivotCount === 0) {
+            if (!presolveRootTableau(tableau).feasible) {
+                tableau.feasible = false;
+                tableau.branchAndCutIterations = 0;
+                return;
+            }
+        }
 
         const branch = createBranch(-Infinity, []);
         let acceptableThreshold: number;
@@ -204,22 +226,31 @@ export function createBranchAndCutService(): BranchAndCutService {
         // per path row when re-solving from the root, and the full cost of the
         // snapshot route (copy, load, in-place solve). Snapshot a sibling only
         // when re-solving its path is expected to cost more. Until both are
-        // measured, alternate to sample each.
+        // measured, snapshot (see shouldSnapshot).
         const COPY_COST = 0.1;
         const EMA_WEIGHT = 0.1;
         let restoreWorkPerCut = -1;
         let snapshotRouteWork = -1;
-        let explorationToggle = false;
         const ema = (avg: number, sample: number): number =>
             avg < 0 ? sample : avg + EMA_WEIGHT * (sample - avg);
         const shouldSnapshot = (depth: number): boolean => {
-            if (restoreWorkPerCut < 0 || snapshotRouteWork < 0) {
-                explorationToggle = !explorationToggle;
-                return explorationToggle;
-            }
+            // Until both routes are measured, snapshot: a copy costs about
+            // 0.2 pivots' worth of work, while a restore re-solves every bound
+            // on the path. Sampling restores first cost Vendor Selection
+            // (1692x1641) ~600 pivots for nothing.
+            if (restoreWorkPerCut < 0 || snapshotRouteWork < 0) return true;
             return restoreWorkPerCut * depth > snapshotRouteWork;
         };
         let snapshotBytes = 0;
+        // Consumed or discarded snapshots are recycled: on small tableaus
+        // allocating one per queued sibling made garbage collection ~9% of
+        // the run (MIPLIB mas76, ~300k nodes).
+        const snapshotPool: NodeSnapshot[] = [];
+        const SNAPSHOT_POOL_SIZE = 32;
+        const takeSnapshot = (): NodeSnapshot => tableau.snapshot(snapshotPool.pop() ?? null);
+        const releaseSnapshot = (snap: NodeSnapshot): void => {
+            if (snapshotPool.length < SNAPSHOT_POOL_SIZE) snapshotPool.push(snap);
+        };
 
         // Node selection: plunge, then backtrack to the most recent sibling
         // (cheap, since its parent snapshot is fresh), and every
@@ -247,6 +278,259 @@ export function createBranchAndCutService(): BranchAndCutService {
             return nextFromHeap();
         };
 
+        // Branching-variable selection: reliability branching (Achterberg,
+        // Koch and Martin 2005). Score fractional candidates by pseudocosts;
+        // a candidate whose pseudocosts rest on fewer than RELIABILITY
+        // observations is strong branched instead: both children are solved
+        // from a snapshot of this node, and the measured gains score it and
+        // seed its pseudocosts. Strong branching stops after LOOKAHEAD
+        // candidates in a row fail to beat the best, and its pivots are
+        // capped relative to the search's (deterministic work, no clock).
+        // The rows path (MIR cuts, optional objectives) keeps the
+        // most-fractional rule.
+        const pseudocosts = new Pseudocosts(tableau.nVars);
+        const strongBranching = usesBoundBranching(tableau);
+        // Feasibility models (no objective) gain nothing from strong
+        // branching (every gain is zero) or from cuts (the bound is always
+        // zero): Sudoku took 4 nodes and 285 pivots with them, 1 and 140
+        // without.
+        const hasObjective = modelVariables.some((variable) => variable.cost !== 0);
+        const LOOKAHEAD = 4;
+        const MAX_STRONG_CANDIDATES = 10;
+        let strongPivots = 0;
+        const candidateIndex: number[] = [];
+        const candidateValue: number[] = [];
+        const candidateFraction: number[] = [];
+        const candidateScore: number[] = [];
+        const candidateOrder: number[] = [];
+
+        // Strong-branching child LPs stop after STRONG_PIVOT_FACTOR times the
+        // average in-place node solve, at least STRONG_MIN_PIVOTS (SCIP limits
+        // them similarly): from the node's dual-feasible basis the objective
+        // reached is still a valid bound. Tighter caps lose infeasibility
+        // proofs (MIPLIB enigma: 10x the nodes at 2x/10); no cap leaves
+        // mod010-size tableaus spending most pivots in strong branching.
+        // 4x/50 had the best shifted geometric mean over MIPLIB 3.
+        const STRONG_PIVOT_FACTOR = 4;
+        const STRONG_WORK_ALLOWANCE = 2e8;
+        const STRONG_MIN_PIVOTS = 50;
+        let nodePivotAverage = -1;
+        const strongBranchGain = (cut: BranchCut, nodeEvaluation: number): number => {
+            const pivotsBefore = tableau.pivotCount;
+            tableau.dualIterationLimit =
+                nodePivotAverage < 0
+                    ? 0
+                    : Math.max(
+                          STRONG_MIN_PIVOTS,
+                          Math.ceil(STRONG_PIVOT_FACTOR * nodePivotAverage)
+                      );
+            applyCutInPlace(tableau, cut);
+            tableau.dualIterationLimit = 0;
+            strongPivots += tableau.pivotCount - pivotsBefore;
+            return tableau.feasible ? tableau.evaluation - nodeEvaluation : Infinity;
+        };
+
+        // Children strong branching proved infeasible for the chosen variable.
+        let chosenDownInfeasible = false;
+        let chosenUpInfeasible = false;
+        const selectBranchVariable = (
+            nodeEvaluation: number
+        ): { varIndex: number; value: number } | null => {
+            chosenDownInfeasible = false;
+            chosenUpInfeasible = false;
+            if (!strongBranching || !hasObjective) {
+                const variable = tableau.getMostFractionalVar();
+                return { varIndex: variable.index as number, value: variable.value as number };
+            }
+            const integerVariables = tableau.model.integerVariables;
+            const matrix = tableau.matrix;
+            const width = tableau.width;
+            const rowByVarIndex = tableau.rowByVarIndex;
+            const precision = tableau.precision;
+            candidateIndex.length = 0;
+            candidateValue.length = 0;
+            candidateFraction.length = 0;
+            for (let v = 0; v < integerVariables.length; v++) {
+                const varIndex = integerVariables[v].index;
+                const row = rowByVarIndex[varIndex];
+                if (row === -1) continue;
+                const value = toActual(tableau, varIndex, matrix[row * width]);
+                const f = value - Math.floor(value);
+                if (f <= precision || f >= 1 - precision) continue;
+                candidateIndex.push(varIndex);
+                candidateValue.push(value);
+                candidateFraction.push(f);
+            }
+            const n = candidateIndex.length;
+            let best = 0;
+            let bestScore = -Infinity;
+            candidateScore.length = n;
+            candidateOrder.length = 0;
+            for (let i = 0; i < n; i++) {
+                candidateScore[i] = pseudocosts.score(candidateIndex[i], candidateFraction[i]);
+                if (pseudocosts.reliability(candidateIndex[i]) < RELIABILITY) {
+                    candidateOrder.push(i);
+                } else if (candidateScore[i] > bestScore) {
+                    bestScore = candidateScore[i];
+                    best = i;
+                }
+            }
+            // Strong branching may use half the pivots of the rest of the
+            // search plus a fixed allowance of work (pivots x cells), so a
+            // large dense tableau gets proportionally fewer free pivots:
+            // a flat 1000 cost seconds on Vendor Selection (1691x1641).
+            const strongBudget =
+                0.5 * (tableau.pivotCount - strongPivots) +
+                STRONG_WORK_ALLOWANCE / (tableau.height * tableau.width);
+            if (n > 1 && candidateOrder.length > 0 && strongPivots < strongBudget) {
+                // Most promising unreliable candidates first.
+                candidateOrder.sort((i, j) => candidateScore[j] - candidateScore[i] || i - j);
+                const nodeSnapshot = takeSnapshot();
+                let sinceImprovement = 0;
+                let tried = 0;
+                for (let k = 0; k < candidateOrder.length; k++) {
+                    if (tried >= MAX_STRONG_CANDIDATES || sinceImprovement >= LOOKAHEAD) break;
+                    if (strongPivots >= strongBudget) break;
+                    const i = candidateOrder[k];
+                    const varIndex = candidateIndex[i];
+                    const value = candidateValue[i];
+                    const f = candidateFraction[i];
+                    tried++;
+                    const downGain = strongBranchGain(
+                        createCut("max", varIndex, Math.floor(value)),
+                        nodeEvaluation
+                    );
+                    tableau.loadSnapshot(nodeSnapshot);
+                    const upGain = strongBranchGain(
+                        createCut("min", varIndex, Math.ceil(value)),
+                        nodeEvaluation
+                    );
+                    tableau.loadSnapshot(nodeSnapshot);
+                    pseudocosts.record(varIndex, false, f, downGain);
+                    pseudocosts.record(varIndex, true, 1 - f, upGain);
+                    if (downGain === Infinity && upGain === Infinity) {
+                        releaseSnapshot(nodeSnapshot);
+                        return null;
+                    }
+                    const score = productScore(downGain, upGain);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        best = i;
+                        chosenDownInfeasible = downGain === Infinity;
+                        chosenUpInfeasible = upGain === Infinity;
+                        sinceImprovement = 0;
+                    } else {
+                        sinceImprovement++;
+                    }
+                }
+                releaseSnapshot(nodeSnapshot);
+                tableau.feasible = true;
+                tableau.evaluation = nodeEvaluation;
+            } else {
+                for (let k = 0; k < candidateOrder.length; k++) {
+                    const i = candidateOrder[k];
+                    if (candidateScore[i] > bestScore) {
+                        bestScore = candidateScore[i];
+                        best = i;
+                    }
+                }
+            }
+            return { varIndex: candidateIndex[best], value: candidateValue[best] };
+        };
+
+        // Reduced-cost fixing: at an optimal node LP every nonbasic column c
+        // has reduced cost d_c <= 0, and raising its stored variable s_c by t
+        // raises the node bound by at least |d_c| t. Once an incumbent
+        // exists, any s_c whose move by k units already cannot improve on it
+        // is limited to k - 1 for this subtree. Nonbasic variables sit at
+        // s = 0, so only their range changes (no tableau update), and the LP
+        // stays optimal. Dives and snapshot-resumed siblings inherit the
+        // fixings; nodes re-solved from the root do not, which is weaker but
+        // still valid.
+        const fixByReducedCost = (nodeEvaluation: number): void => {
+            const matrix = tableau.matrix;
+            const lastColumn = tableau.width - 1;
+            const precision = tableau.precision;
+            for (let c = 1; c <= lastColumn; c++) {
+                const d = matrix[c];
+                if (d >= -precision) continue;
+                const v = tableau.varIndexByCol[c];
+                const variable = tableau.variablesPerIndex[v];
+                if (variable?.isInteger !== true || tableau.unrestrictedVars[v] === true) continue;
+                // The stored variable is integral only with an integer offset.
+                if (!Number.isInteger(tableau.boundOffset[v])) continue;
+                const range = rangeOf(tableau, v);
+                if (range <= precision) continue;
+                // Largest integer move k that might still improve.
+                let keep = 0;
+                const limit = Math.min(range, 1e9);
+                while (keep + 1 <= limit && !cannotImprove(nodeEvaluation - d * (keep + 1))) {
+                    keep++;
+                    if (keep > 64) {
+                        keep = limit;
+                        break;
+                    }
+                }
+                if (keep >= range) continue;
+                const offset = tableau.boundOffset[v];
+                if (tableau.boundSign[v] === 1) {
+                    setVariableBounds(tableau, v, lowerBoundOf(tableau, v), offset + keep);
+                } else {
+                    setVariableBounds(tableau, v, offset - keep, upperBoundOf(tableau, v));
+                }
+            }
+        };
+
+        // Root cutting planes: up to ROOT_CUT_ROUNDS rounds of Gomory
+        // mixed-integer cuts from the optimal root tableau, re-optimized by
+        // dual simplex, until the bound stops moving; then cuts that ended
+        // up slack are deleted. They are added before the root is saved, so
+        // every node inherits them. Total cuts are capped at the original
+        // row count. More rounds tighten further but enlarge every node's
+        // tableau; 3 had the best shifted geometric mean over MIPLIB 3
+        // (10 rounds lost gt2 entirely).
+        const ROOT_CUT_ROUNDS = 3;
+        const ROOT_CUT_MIN_GAIN = 1e-4;
+        const addRootCuts = (): void => {
+            const firstCutRow = tableau.height;
+            const cutBudget = tableau.height - 1;
+            const rootEvaluation = tableau.evaluation;
+            const beforeCuts = takeSnapshot();
+            let total = 0;
+            for (let round = 0; round < ROOT_CUT_ROUNDS && total < cutBudget; round++) {
+                const before = tableau.evaluation;
+                const perRound = Math.min(cutBudget - total, Math.max(10, cutBudget >> 2));
+                const added = addGomoryCuts(tableau, perRound);
+                if (added === 0) break;
+                total += added;
+                tableau.simplex();
+                if (!tableau.feasible) {
+                    releaseSnapshot(beforeCuts);
+                    return;
+                }
+                const gain = tableau.evaluation - before;
+                if (gain < ROOT_CUT_MIN_GAIN * Math.max(1, Math.abs(tableau.evaluation))) break;
+            }
+            // Cut rows are dense and make every later pivot costlier. With an
+            // integral objective, cuts that leave the rounded bound where it
+            // was cannot prune anything the root bound could not, so they are
+            // dropped (Vendor Selection: 1482.33 -> 1482.79, both round to
+            // 1483). A small relative gain alone is no reason to drop them:
+            // on Monster II it is what closes the problem at the root.
+            const roundedUp = (bound: number): number => {
+                const slack = 1e-6 * Math.max(1, Math.abs(bound));
+                return Math.ceil((bound - slack) / objectiveStep) * objectiveStep;
+            };
+            if (objectiveIsIntegral && roundedUp(tableau.evaluation) <= roundedUp(rootEvaluation)) {
+                tableau.loadSnapshot(beforeCuts);
+                tableau.feasible = true;
+                tableau.evaluation = rootEvaluation;
+            } else {
+                removeSlackCuts(tableau, firstCutRow);
+            }
+            releaseSnapshot(beforeCuts);
+        };
+
         while (
             (diveBranch !== null || !branches.isEmpty() || recentSiblings.length > 0) &&
             toleranceFlag === true &&
@@ -267,7 +551,9 @@ export function createBranchAndCutService(): BranchAndCutService {
             let activeBranch: Branch;
             if (diveBranch !== null) {
                 activeBranch = diveBranch;
+                const pivotsBefore = tableau.pivotCount;
                 applyCutInPlace(tableau, diveCut!);
+                nodePivotAverage = ema(nodePivotAverage, tableau.pivotCount - pivotsBefore);
                 diveBranch = null;
                 diveCut = null;
             } else {
@@ -281,11 +567,13 @@ export function createBranchAndCutService(): BranchAndCutService {
                     activeBranch.parentSnapshot = null;
                 }
                 if (cannotImprove(activeBranch.relaxedEvaluation)) {
+                    if (parentSnapshot) releaseSnapshot(parentSnapshot);
                     continue;
                 }
                 const pivotsBefore = tableau.pivotCount;
                 if (parentSnapshot) {
                     tableau.loadSnapshot(parentSnapshot);
+                    releaseSnapshot(parentSnapshot);
                     applyCutInPlace(tableau, activeBranch.lastCut!);
                     const cells = tableau.height * tableau.width;
                     // snapshot taken at push + loaded now, then the in-place solve
@@ -312,8 +600,24 @@ export function createBranchAndCutService(): BranchAndCutService {
             if (tableau.feasible === false) {
                 continue;
             }
+            if (iterations === 1 && strongBranching && hasObjective) {
+                addRootCuts();
+                // addRootCuts re-solves, so re-read feasibility (TS narrowed it).
+                if ((tableau.feasible as boolean) === false) continue;
+            }
 
             const evaluation = tableau.evaluation;
+            const branchedOn = activeBranch.lastCut;
+            if (branchedOn !== undefined && activeBranch.branchFractionality !== undefined) {
+                const f = activeBranch.branchFractionality;
+                const up = branchedOn.type === "min";
+                pseudocosts.record(
+                    branchedOn.varIndex,
+                    up,
+                    up ? 1 - f : f,
+                    evaluation - activeBranch.relaxedEvaluation
+                );
+            }
             if (evaluation > bestEvaluation) {
                 continue;
             }
@@ -347,6 +651,7 @@ export function createBranchAndCutService(): BranchAndCutService {
                     return;
                 }
                 bestBranch = activeBranch;
+                if (strongBranching) bestSnapshot = tableau.snapshot();
                 bestEvaluation = evaluation;
                 for (let oCopy = 0; oCopy < nOptionalObjectives; oCopy += 1) {
                     bestOptionalObjectivesEvaluations[oCopy] =
@@ -369,10 +674,17 @@ export function createBranchAndCutService(): BranchAndCutService {
                     tableau.save();
                 }
 
-                const variable = tableau.getMostFractionalVar();
-
-                const varIndex = variable.index as number;
-                const varValue = variable.value as number;
+                if (strongBranching && bestEvaluation < Infinity) {
+                    fixByReducedCost(evaluation);
+                }
+                const choice = selectBranchVariable(evaluation);
+                if (choice === null) {
+                    // Strong branching proved both children of every
+                    // candidate's best split infeasible: prune this node.
+                    continue;
+                }
+                const varIndex = choice.varIndex;
+                const varValue = choice.value;
 
                 const cutsHigh: BranchCut[] = [];
                 const cutsLow: BranchCut[] = [];
@@ -400,11 +712,20 @@ export function createBranchAndCutService(): BranchAndCutService {
 
                 const branchHigh = createBranch(evaluation, cutsHigh);
                 branchHigh.lastCut = cutHigh;
+                branchHigh.branchFractionality = varValue - Math.floor(varValue);
                 const branchLow = createBranch(evaluation, cutsLow);
                 branchLow.lastCut = cutLow;
+                branchLow.branchFractionality = branchHigh.branchFractionality;
 
                 // Dive toward the nearer integer; queue the sibling.
                 let sibling: Branch;
+                if (chosenDownInfeasible || chosenUpInfeasible) {
+                    // Strong branching already proved the other child
+                    // infeasible: create only the feasible one.
+                    diveBranch = chosenDownInfeasible ? branchHigh : branchLow;
+                    diveCut = chosenDownInfeasible ? cutHigh : cutLow;
+                    continue;
+                }
                 if (varValue - Math.floor(varValue) >= 0.5) {
                     diveBranch = branchHigh;
                     diveCut = cutHigh;
@@ -419,7 +740,7 @@ export function createBranchAndCutService(): BranchAndCutService {
                     snapshotBytes < SNAPSHOT_BUDGET_BYTES &&
                     shouldSnapshot(sibling.cuts.length)
                 ) {
-                    const parentSnapshot = tableau.snapshot();
+                    const parentSnapshot = takeSnapshot();
                     snapshotBytes += parentSnapshot.matrix.byteLength;
                     sibling.parentSnapshot = parentSnapshot;
                 }
@@ -428,7 +749,11 @@ export function createBranchAndCutService(): BranchAndCutService {
             }
         }
 
-        if (bestBranch !== null) {
+        if (bestSnapshot !== null) {
+            tableau.loadSnapshot(bestSnapshot);
+            tableau.feasible = true;
+            tableau.evaluation = bestEvaluation;
+        } else if (bestBranch !== null) {
             applyCuts(tableau, bestBranch.cuts);
         }
         tableau.branchAndCutIterations = iterations;

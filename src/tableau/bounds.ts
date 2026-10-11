@@ -23,6 +23,11 @@ import type Tableau from "./tableau";
  * Grow the dense bound arrays to cover varIndex, filling defaults
  * (offset 0, sign +1, range/upper Infinity, lower 0).
  */
+/** Size the bound arrays for variable indices up to `varIndex` in one allocation. */
+export function ensureBoundCapacity(tableau: Tableau, varIndex: number): void {
+    ensureCapacity(tableau, varIndex);
+}
+
 function ensureCapacity(tableau: Tableau, varIndex: number): void {
     const current = tableau.boundRange.length;
     if (varIndex < current) return;
@@ -190,15 +195,25 @@ export interface BoundState {
 }
 
 /** Capture the bound state (cheap when no bounds were ever set). */
-export function captureBounds(tableau: Tableau): BoundState | null {
+export function captureBounds(
+    tableau: Tableau,
+    reuse: BoundState | null = null
+): BoundState | null {
     if (!tableau.hasBounds) return null;
+    const copy = (source: Float64Array, target: Float64Array | undefined): Float64Array => {
+        if (target !== undefined && target.length === source.length) {
+            target.set(source);
+            return target;
+        }
+        return source.slice();
+    };
     return {
         hasBounds: true,
-        offset: tableau.boundOffset.slice(),
-        sign: tableau.boundSign.slice(),
-        range: tableau.boundRange.slice(),
-        lower: tableau.boundLower.slice(),
-        upper: tableau.boundUpper.slice(),
+        offset: copy(tableau.boundOffset, reuse?.offset),
+        sign: copy(tableau.boundSign, reuse?.sign),
+        range: copy(tableau.boundRange, reuse?.range),
+        lower: copy(tableau.boundLower, reuse?.lower),
+        upper: copy(tableau.boundUpper, reuse?.upper),
     };
 }
 
@@ -216,9 +231,17 @@ export function restoreBounds(tableau: Tableau, state: BoundState | null): void 
         return;
     }
     tableau.hasBounds = true;
-    tableau.boundOffset = state.offset.slice();
-    tableau.boundSign = state.sign.slice();
-    tableau.boundRange = state.range.slice();
-    tableau.boundLower = state.lower.slice();
-    tableau.boundUpper = state.upper.slice();
+    // Copy into the live arrays when sizes match (no allocation per node).
+    const copy = (source: Float64Array, target: Float64Array): Float64Array => {
+        if (target.length === source.length) {
+            target.set(source);
+            return target;
+        }
+        return source.slice();
+    };
+    tableau.boundOffset = copy(state.offset, tableau.boundOffset);
+    tableau.boundSign = copy(state.sign, tableau.boundSign);
+    tableau.boundRange = copy(state.range, tableau.boundRange);
+    tableau.boundLower = copy(state.lower, tableau.boundLower);
+    tableau.boundUpper = copy(state.upper, tableau.boundUpper);
 }

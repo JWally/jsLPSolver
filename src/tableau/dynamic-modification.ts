@@ -14,6 +14,16 @@ import { actualValue, toActual } from "./bounds";
 import type Tableau from "./tableau";
 import type { Constraint, Variable } from "../expressions";
 
+/** Equilibration factor a constraint row is stored with (Tableau.rowScale; 1 if none). */
+function rowScaleOf(tableau: Tableau, constraintIndex: number): number {
+    const rowScale = tableau.rowScale;
+    return rowScale !== undefined &&
+        constraintIndex < rowScale.length &&
+        rowScale[constraintIndex] > 0
+        ? rowScale[constraintIndex]
+        : 1;
+}
+
 /**
  * Ensure a variable is in the basis (basic). If non-basic, pivot it in.
  *
@@ -111,6 +121,8 @@ export function updateRightHandSide(
     const rhsColumn = this.rhsColumn;
     const lastRow = this.height - 1;
     const constraintRow = this.rowByVarIndex[constraint.index];
+    // The row is stored equilibrated (see Tableau.rowScale).
+    difference *= rowScaleOf(this, constraint.index);
     if (constraintRow === -1) {
         const slackColumn = this.colByVarIndex[constraint.index];
 
@@ -157,6 +169,8 @@ export function updateConstraintCoefficient(
     const width = this.width;
     const matrix = this.matrix;
     const r = this.putInBase(constraint.index);
+    // The row is stored equilibrated (see Tableau.rowScale).
+    difference *= rowScaleOf(this, constraint.index);
     const rowOffset = r * width;
 
     const colVar = this.colByVarIndex[variable.index];

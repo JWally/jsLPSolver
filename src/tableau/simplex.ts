@@ -95,8 +95,14 @@ class CycleDetector {
  */
 export function simplex(this: Tableau): Tableau {
     this.bounded = true;
+    this.iterationLimited = false;
     this.phase1();
 
+    if (this.iterationLimited) {
+        // Stopped by dualIterationLimit: evaluation is the dual bound reached.
+        this.setEvaluation();
+        return this;
+    }
     if (this.feasible === true) {
         this.phase2();
     }
@@ -256,8 +262,13 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
     // we restore the clean matrix and switch to Bland's rule. The lazy
     // save avoids the copy cost on the vast majority of phase1 calls
     // that converge quickly.
+    const feasTol = Math.max(precision, PRIMAL_FEAS_TOL);
     const SAVE_THRESHOLD = 10;
     const maxQuotientLimit = Math.max(lastRow, lastColumn);
+    const DUAL_MAX_FACTOR = 4;
+    const dualWindow = Math.max(50, lastRow);
+    let windowObjective = matrix[rhsColumn];
+    let objectiveMoving = robustFallback;
 
     let iterations = 0;
     let useBland = false;
@@ -269,13 +280,23 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
     let savedRowByVarIndex: number[] | null = null;
     let savedColByVarIndex: number[] | null = null;
     let savedBounds: BoundState | null = null;
+    const iterationLimit = robustFallback ? this.dualIterationLimit : 0;
 
     while (true) {
+        if (iterationLimit > 0 && iterations >= iterationLimit) {
+            // Caller only needs a bound (strong branching): from a
+            // dual-feasible start the current objective is a valid one.
+            this.feasible = true;
+            this.iterationLimited = true;
+            return iterations;
+        }
         // Find leaving row (most negative RHS among restricted basic vars).
         // Unrestricted variables can validly have negative values, so rows
         // where the basic variable is unrestricted are not infeasible.
         let leavingRowIndex = 0;
-        let rhsValue = negPrecision;
+        // Rows within PRIMAL_FEAS_TOL count as feasible: the Harris ratio
+        // tests let basic variables overshoot their bounds by that much.
+        let rhsValue = -feasTol;
         let leavesAboveRange = false;
         for (let r = 1; r <= lastRow; r++) {
             if (unrestrictedVars[varIndexByRow[r]] === true) continue;
@@ -305,8 +326,26 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
             flipRowToUpper(this, leavingRowIndex);
         }
 
-        // Detect non-convergence and apply anti-cycling.
-        if (!useBland && iterations > 0 && rhsValue <= initialRHS) {
+        // Detect non-convergence and apply anti-cycling: stalled while the
+        // worst rhs is no better than the first. From a dual-feasible start
+        // this loop is a dual simplex, whose objective moves monotonically,
+        // so the budget is extended while the objective keeps moving (qnet1
+        // climbs to its optimum for ~2000 pivots while the worst rhs
+        // wanders). A degenerate run whose objective is stuck (brandy) still
+        // gives up on the original budget, before its pivots blow up.
+        if (robustFallback && iterations > 0 && iterations % dualWindow === 0) {
+            const objective = matrix[rhsColumn];
+            // The dual objective only rises; a run that merely oscillates
+            // (the minimum-pivot fallback can give up dual feasibility) must
+            // not count as progress, or it would keep the extended budget.
+            objectiveMoving = objective > windowObjective + 1e-7 * Math.max(1, Math.abs(objective));
+            if (objective > windowObjective) windowObjective = objective;
+        }
+        const stalledNow = !useBland && iterations > 0 && rhsValue <= initialRHS;
+        const giveUp =
+            iterations >= maxQuotientLimit &&
+            (!objectiveMoving || iterations >= DUAL_MAX_FACTOR * maxQuotientLimit);
+        if (stalledNow) {
             if (iterations >= SAVE_THRESHOLD && savedMatrix === null) {
                 // Stalling detected: save matrix for potential rollback
                 savedMatrix = matrix.slice();
@@ -316,7 +355,7 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
                 savedColByVarIndex = this.colByVarIndex.slice();
                 savedBounds = captureBounds(this);
             }
-            if (iterations >= maxQuotientLimit) {
+            if (giveUp) {
                 if (!robustFallback) {
                     return -1;
                 }
@@ -367,6 +406,71 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
                 }
             }
             // Fallback: unrestricted with non-zero coefficient (swap infeasibility)
+            if (enteringColumn === 0) {
+                for (let c = 1; c <= lastColumn; c++) {
+                    const coefficient = matrix[leavingRowOffset + c];
+                    if (
+                        unrestrictedVars[varIndexByCol[c]] === true &&
+                        (coefficient < negPrecision || coefficient > precision)
+                    ) {
+                        enteringColumn = c;
+                        break;
+                    }
+                }
+            }
+        } else if (robustFallback) {
+            // Dual-feasible start: a genuine dual simplex, so use the Harris
+            // two-pass dual ratio test (Harris 1973; Koberstein 2005, ch. 6).
+            // Pass 1 bounds the dual step over every candidate, letting
+            // reduced costs overshoot zero by at most DUAL_FEAS_TOL; pass 2
+            // takes the largest pivot within that step. The textbook
+            // min-ratio rule took whichever entry gave the smallest ratio,
+            // however tiny, and blew the tableau up (MIPLIB blend2 nodes
+            // reached rhs ~ -1e6 and then reported infeasible).
+            let maxStep = Infinity;
+            let rowMax = 0;
+            for (let c = 1; c <= lastColumn; c++) {
+                const coefficient = matrix[leavingRowOffset + c];
+                if (-coefficient > rowMax) rowMax = -coefficient;
+                if (coefficient >= -DUAL_PIVOT_TOL) continue;
+                if (hasBounds && rangeOf(this, varIndexByCol[c]) <= precision) continue;
+                const reducedCost = matrix[c];
+                const slack = reducedCost < 0 ? -reducedCost : 0;
+                const step = (slack + DUAL_FEAS_TOL) / -coefficient;
+                if (step < maxStep) maxStep = step;
+            }
+            let bestPivot = 0;
+            for (let c = 1; c <= lastColumn; c++) {
+                const coefficient = matrix[leavingRowOffset + c];
+                if (coefficient >= -DUAL_PIVOT_TOL) continue;
+                if (hasBounds && rangeOf(this, varIndexByCol[c]) <= precision) continue;
+                const reducedCost = matrix[c];
+                const ratio = (reducedCost < 0 ? -reducedCost : 0) / -coefficient;
+                if (ratio <= maxStep && -coefficient > bestPivot) {
+                    bestPivot = -coefficient;
+                    enteringColumn = c;
+                }
+            }
+            const minPivot = Math.max(DUAL_MIN_PIVOT, DUAL_RELATIVE_MIN_PIVOT * rowMax);
+            if (bestPivot < minPivot) {
+                // Every candidate inside the Harris bound is tiny (blend2
+                // pivoted on -2e-7 and the tableau lost all consistency).
+                // Take the smallest-ratio candidate that is large enough,
+                // accepting a small dual infeasibility; phase 2 removes it.
+                let minRatio = Infinity;
+                for (let c = 1; c <= lastColumn; c++) {
+                    const coefficient = matrix[leavingRowOffset + c];
+                    if (coefficient > -minPivot) continue;
+                    if (hasBounds && rangeOf(this, varIndexByCol[c]) <= precision) continue;
+                    const reducedCost = matrix[c];
+                    const ratio = (reducedCost < 0 ? -reducedCost : 0) / -coefficient;
+                    if (ratio < minRatio) {
+                        minRatio = ratio;
+                        enteringColumn = c;
+                    }
+                }
+            }
+            // Fallback: unrestricted with non-zero coefficient
             if (enteringColumn === 0) {
                 for (let c = 1; c <= lastColumn; c++) {
                     const coefficient = matrix[leavingRowOffset + c];
@@ -507,6 +611,8 @@ function phase1Robust(this: Tableau): number {
     let stalled = 0;
 
     const hasBounds = this.hasBounds;
+    // Rows within PRIMAL_FEAS_TOL count as feasible (see phase1Fast).
+    const feasTol = Math.max(precision, PRIMAL_FEAS_TOL);
 
     while (iterations < maxIterations) {
         let nInfeasible = 0;
@@ -515,13 +621,13 @@ function phase1Robust(this: Tableau): number {
             if (unrestrictedVars[varIndexByRow[r]] === true) continue;
             if (
                 hasBounds &&
-                matrix[r * width + rhsColumn] > rangeOf(this, varIndexByRow[r]) + precision
+                matrix[r * width + rhsColumn] > rangeOf(this, varIndexByRow[r]) + feasTol
             ) {
                 // Above its range: complement so the excess reads as a negative rhs.
                 flipRowToUpper(this, r);
             }
             const value = matrix[r * width + rhsColumn];
-            if (value < -precision) {
+            if (value < -feasTol) {
                 infeasibleRows[nInfeasible++] = r;
                 infeasibility -= value;
             }
@@ -652,32 +758,47 @@ function phase1Robust(this: Tableau): number {
             let bestRatio = Infinity;
             let toUpper = false;
             leavingRow = 0;
-            for (let r = 1; r <= lastRow; r++) {
-                const rowVar = varIndexByRow[r];
-                if (unrestrictedVars[rowVar] === true) continue;
-                const rowOffset = r * width;
-                const a = direction * matrix[rowOffset + enteringColumn];
-                const value = matrix[rowOffset + rhsColumn];
-                const consider = (ratio: number, size: number, upper: boolean): void => {
-                    const take = useBland
-                        ? ratio < bestRatio - 1e-12 ||
-                          (ratio <= bestRatio + 1e-12 &&
-                              (leavingRow === 0 || rowVar < varIndexByRow[leavingRow]))
-                        : ratio <= maxStep && size > bestPivot;
-                    if (take) {
-                        bestRatio = ratio;
-                        bestPivot = size;
-                        leavingRow = r;
-                        toUpper = upper;
-                    }
-                };
-                if (a > PIVOT_TOL && value >= -precision) {
-                    consider(Math.max(value, 0) / a, a, false);
-                } else if (a < -PIVOT_TOL) {
-                    if (value < -precision) consider(value / a, -a, false);
-                    const range = rangeOf(this, rowVar);
-                    if (range !== Infinity && value >= -precision) {
-                        consider(Math.max(range - value, 0) / -a, -a, true);
+            // Bland's tie-break ignores pivot size, so keep it off pivots that
+            // are tiny relative to the column (they blow up the dense tableau).
+            let columnMax = 0;
+            if (useBland) {
+                for (let r = 1; r <= lastRow; r++) {
+                    const a = Math.abs(matrix[r * width + enteringColumn]);
+                    if (a > columnMax) columnMax = a;
+                }
+            }
+            const blandMinPivot = Math.max(PIVOT_TOL, 1e-7 * columnMax);
+            // If no Bland candidate passes the size gate, use the Harris choice.
+            for (let pass = useBland ? 0 : 1; pass < 2 && leavingRow === 0; pass++) {
+                const bland = pass === 0;
+                for (let r = 1; r <= lastRow; r++) {
+                    const rowVar = varIndexByRow[r];
+                    if (unrestrictedVars[rowVar] === true) continue;
+                    const rowOffset = r * width;
+                    const a = direction * matrix[rowOffset + enteringColumn];
+                    const value = matrix[rowOffset + rhsColumn];
+                    const consider = (ratio: number, size: number, upper: boolean): void => {
+                        const take = bland
+                            ? size >= blandMinPivot &&
+                              (ratio < bestRatio - 1e-12 ||
+                                  (ratio <= bestRatio + 1e-12 &&
+                                      (leavingRow === 0 || rowVar < varIndexByRow[leavingRow])))
+                            : ratio <= maxStep && size > bestPivot;
+                        if (take) {
+                            bestRatio = ratio;
+                            bestPivot = size;
+                            leavingRow = r;
+                            toUpper = upper;
+                        }
+                    };
+                    if (a > PIVOT_TOL && value >= -precision) {
+                        consider(Math.max(value, 0) / a, a, false);
+                    } else if (a < -PIVOT_TOL) {
+                        if (value < -precision) consider(value / a, -a, false);
+                        const range = rangeOf(this, rowVar);
+                        if (range !== Infinity && value >= -precision) {
+                            consider(Math.max(range - value, 0) / -a, -a, true);
+                        }
                     }
                 }
             }
@@ -802,6 +923,16 @@ export function phase2(this: Tableau): number {
     // For small problems, just scan everything (no benefit from partial pricing)
     const usePartialPricing = nColumns > batchSize * 2;
 
+    // Devex pricing (Harris 1973; Forrest and Goldfarb 1992): price columns
+    // by d_j^2 / w_j, where w_j approximates the squared norm of column j's
+    // edge direction relative to a reference framework. Dantzig's rule
+    // (largest d_j) depends on how each column happens to be scaled and can
+    // take many times more pivots. The dense tableau has the whole pivot row
+    // at hand, so the weights update exactly as the method prescribes, in
+    // O(width) per pivot. Optional objectives keep Dantzig pricing.
+    const useDevex = nOptionalObjectives === 0;
+    const devexWeights = useDevex ? new Float64Array(width).fill(1) : null;
+
     while (true) {
         if (nOptionalObjectives > 0) {
             optionalCostsColumns = [];
@@ -871,6 +1002,32 @@ export function phase2(this: Tableau): number {
                     enteringValue = reducedCost;
                     isReducedCostNegative = false;
                     break;
+                }
+            }
+        } else if (devexWeights !== null) {
+            let bestScore = 0;
+            for (let c = 1; c <= lastColumn; c++) {
+                reducedCost = matrix[c];
+                let magnitude: number;
+                let negative = false;
+                if (reducedCost > precision) {
+                    magnitude = reducedCost;
+                } else if (
+                    reducedCost < negPrecision &&
+                    unrestrictedVars[varIndexByCol[c]] === true
+                ) {
+                    magnitude = -reducedCost;
+                    negative = true;
+                } else {
+                    continue;
+                }
+                if (hasBounds && rangeOf(this, varIndexByCol[c]) <= precision) continue;
+                const score = (magnitude * magnitude) / devexWeights[c];
+                if (score > bestScore) {
+                    bestScore = score;
+                    enteringColumn = c;
+                    enteringValue = magnitude;
+                    isReducedCostNegative = negative;
                 }
             }
         } else if (usePartialPricing) {
@@ -1131,15 +1288,53 @@ export function phase2(this: Tableau): number {
             }
         }
 
+        if (devexWeights !== null) {
+            // Devex update from the pivot row: w_j = max(w_j, (a_rj/a_rq)^2 w_q);
+            // the leaving variable takes column q with max(w_q / a_rq^2, 1).
+            const pivotRowOffset = leavingRow * width;
+            const pivotElement = matrix[pivotRowOffset + enteringColumn];
+            const enteringWeight = devexWeights[enteringColumn];
+            let largest = 0;
+            for (let c = 1; c <= lastColumn; c++) {
+                const a = matrix[pivotRowOffset + c];
+                if (a === 0 || c === enteringColumn) continue;
+                const ratio = a / pivotElement;
+                const candidate = ratio * ratio * enteringWeight;
+                if (candidate > devexWeights[c]) devexWeights[c] = candidate;
+                if (devexWeights[c] > largest) largest = devexWeights[c];
+            }
+            devexWeights[enteringColumn] = Math.max(
+                enteringWeight / (pivotElement * pivotElement),
+                1
+            );
+            // Weights only grow; restart the reference framework when they
+            // drift far from 1 so the approximation stays meaningful.
+            if (largest > DEVEX_RESET) devexWeights.fill(1);
+        }
+
         this.pivot(leavingRow, enteringColumn);
         iterations += 1;
     }
 }
 
+/** Devex: reset the reference weights once any exceeds this. */
+const DEVEX_RESET = 1e6;
+
+/** Dual ratio test: smallest leaving-row entry ever accepted as a pivot. */
+const DUAL_PIVOT_TOL = 1e-9;
+/** Dual ratio test: pivots smaller than this are avoided when a larger one exists. */
+const DUAL_MIN_PIVOT = 1e-7;
+/** Dual ratio test: likewise for pivots below this fraction of the row's largest entry. */
+const DUAL_RELATIVE_MIN_PIVOT = 1e-6;
+/** Dual Harris test: how far a reduced cost may overshoot zero in pass 1. */
+const DUAL_FEAS_TOL = 1e-7;
+
 /** Harris ratio test: smallest entering-column entry accepted as a pivot. */
 const HARRIS_PIVOT_TOL = 1e-9;
 /** Harris ratio test: how far a basic variable may dip below zero in pass 1. */
-const HARRIS_FEAS_TOL = 1e-9;
+const HARRIS_FEAS_TOL = 1e-7;
+/** Phase 1: basic variables this close to their bounds count as feasible. */
+const PRIMAL_FEAS_TOL = HARRIS_FEAS_TOL;
 
 // Pre-allocated typed arrays for pivot optimization (better cache locality)
 let nonZeroColumns = new Int32Array(1024);
@@ -1189,8 +1384,10 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
     for (let c = 0; c < width; c++) {
         const idx = pivotRowOffset + c;
         const val = matrix[idx];
-        if (!(val >= -1e-16 && val <= 1e-16)) {
-            const normalized = val / quotient;
+        const normalized = val / quotient;
+        // Entries that are (or normalize to) noise are zeroed here, once,
+        // so the row updates below can run without a branch per entry.
+        if (!(normalized >= -1e-16 && normalized <= 1e-16) && !(val >= -1e-16 && val <= 1e-16)) {
             matrix[idx] = normalized;
             nonZeroColumns[nNonZeroColumns] = c;
             pivotRowCache[nNonZeroColumns] = normalized;
@@ -1212,15 +1409,7 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
                 if (!(coefficient >= -1e-16 && coefficient <= 1e-16)) {
                     // Use cached pivot row values for better cache locality
                     for (let i = 0; i < nNonZeroColumns; i++) {
-                        const c = nonZeroColumns[i];
-                        const v0 = pivotRowCache[i];
-                        // Inner zero check is critical for numerical stability
-                        if (!(v0 >= -1e-16 && v0 <= 1e-16)) {
-                            matrix[rowOffset + c] -= coefficient * v0;
-                        } else if (v0 !== 0) {
-                            // Clean up near-zero values in pivot row
-                            matrix[pivotRowOffset + c] = 0;
-                        }
+                        matrix[rowOffset + nonZeroColumns[i]] -= coefficient * pivotRowCache[i];
                     }
 
                     matrix[rowOffset + pivotColumnIndex] = -coefficient / quotient;

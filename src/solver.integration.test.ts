@@ -102,15 +102,20 @@ function compareSolutions(actual: SolveResult, expected: TestModel["expects"]): 
 type Bound = { min?: number; max?: number; equal?: number; weight?: number; priority?: unknown };
 
 /**
- * Whether a MIP model can be checked by verifying the returned solution
- * rather than pinning one exact solution vector: single named objective and
- * hard constraints only.
+ * Whether a model can be checked by verifying the returned solution rather
+ * than pinning one exact solution vector: single named objective and hard
+ * constraints only. LPs qualify too (degenerate LPs have several optimal
+ * vertices, e.g. Cycling Fletcher), except unbounded or infeasible
+ * expectations, which stay pinned.
  */
-function isVerifiableMip(model: TestModel): boolean {
+function isVerifiable(model: TestModel): boolean {
     const hasIntegers =
         Object.keys(model.ints ?? {}).length > 0 || Object.keys(model.binaries ?? {}).length > 0;
     // A missing objective is a feasibility model: any feasible solution is correct.
-    if (!hasIntegers || (model.optimize !== undefined && typeof model.optimize !== "string")) {
+    if (model.optimize !== undefined && typeof model.optimize !== "string") {
+        return false;
+    }
+    if (!hasIntegers && (model.expects.feasible !== true || model.expects.bounded === false)) {
         return false;
     }
     return Object.values(model.constraints as Record<string, Bound>).every(
@@ -119,12 +124,14 @@ function isVerifiableMip(model: TestModel): boolean {
 }
 
 /**
- * MIPs often have several optimal solutions, and branch-and-bound may return
- * any of them, so instead of pinning the vector: require the expected
- * objective (or one within the model's relative `tolerance` option) and prove
- * the returned solution feasible, integral, and consistent with `result`.
+ * MIPs and degenerate LPs often have several optimal solutions, and the
+ * solver may return any of them, so instead of pinning the vector: require
+ * the expected objective (or one within the model's relative `tolerance`
+ * option) and prove the returned solution feasible, integral, and consistent
+ * with `result`. Reported values are rounded to 8 decimals, so row checks
+ * use a tolerance relative to the row's magnitude.
  */
-function verifyMipSolution(actual: SolveResult, model: TestModel): void {
+function verifySolution(actual: SolveResult, model: TestModel): void {
     const expected = model.expects;
     expect(actual.feasible).toBe(expected.feasible);
     if (!expected.feasible) return;
@@ -139,6 +146,7 @@ function verifyMipSolution(actual: SolveResult, model: TestModel): void {
     const objectiveKey = model.optimize as string | undefined;
     let objective = 0;
     const lhs: Record<string, number> = {};
+    const magnitude: Record<string, number> = {};
     for (const [name, coefficients] of Object.entries(model.variables)) {
         const x = value(name);
         if (!model.unrestricted?.[name]) {
@@ -153,19 +161,21 @@ function verifyMipSolution(actual: SolveResult, model: TestModel): void {
         objective += (objectiveKey === undefined ? 0 : (coefficients[objectiveKey] ?? 0)) * x;
         for (const [key, coefficient] of Object.entries(coefficients)) {
             lhs[key] = (lhs[key] ?? 0) + coefficient * x;
+            magnitude[key] = (magnitude[key] ?? 0) + Math.abs(coefficient * x);
         }
     }
     if (objectiveKey !== undefined) {
         expect(Math.abs(objective - (actual.result ?? NaN)), "recomputed objective").toBeLessThan(
-            1e-6
+            1e-6 * Math.max(1, magnitude[objectiveKey] ?? 0)
         );
     }
 
     for (const [name, bound] of Object.entries(model.constraints as Record<string, Bound>)) {
         const row = lhs[name] ?? 0;
-        if (bound.equal !== undefined) expect(Math.abs(row - bound.equal), name).toBeLessThan(1e-6);
-        if (bound.min !== undefined) expect(row, name).toBeGreaterThanOrEqual(bound.min - 1e-6);
-        if (bound.max !== undefined) expect(row, name).toBeLessThanOrEqual(bound.max + 1e-6);
+        const tol = 1e-6 * Math.max(1, magnitude[name] ?? 0);
+        if (bound.equal !== undefined) expect(Math.abs(row - bound.equal), name).toBeLessThan(tol);
+        if (bound.min !== undefined) expect(row, name).toBeGreaterThanOrEqual(bound.min - tol);
+        if (bound.max !== undefined) expect(row, name).toBeLessThanOrEqual(bound.max + tol);
     }
 }
 
@@ -352,8 +362,8 @@ describe("Solver Integration Tests", () => {
             const timeout = problem.expects._timeout ?? 30000;
             it(`solves: ${problem.name}`, { timeout }, () => {
                 const result = solver.Solve(problem) as SolveResult;
-                if (isVerifiableMip(problem)) {
-                    verifyMipSolution(result, problem);
+                if (isVerifiable(problem)) {
+                    verifySolution(result, problem);
                 } else {
                     compareSolutions(result, problem.expects);
                 }

@@ -4,3 +4,4 @@ node_modules/
 package-lock.json
 test/test-sanity/
 test/netlib/
+test/miplib/*.json

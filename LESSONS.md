@@ -576,9 +576,119 @@ timeout never reads performance.now or Date.now.
 
 ### Known remaining issues
 
+- (Round 2) MIPLIB fiber, gesa2, mod010, noswot, qnet1 and vpm2 still time
+  out at 60 s (HiGHS-WASM: 0.4-1.7 s, noswot 52 s); they need cut families
+  beyond GMI (flow cover, c-MIR, knapsack cover) and stronger presolve.
+- (Round 2) Vendor Selection 347 ms vs v1.0.3's 160 ms (5 lucky nodes).
 - Phase 2's Bland stall exit can still accept a suboptimal LP after its
   (now generous) budget.
 - Ranged rows (min and max on one constraint) are still two rows; a bounded
   slack would halve SPY's scenario rows.
 - No primal heuristics: HiGHS solves SPY at the root via a sub-MIP heuristic
   and reduced-cost fixing (223 -> 21 columns).
+
+## 2026-10 Round 2: LP Numerics, Branching, Cuts, Presolve (perf/core-mip)
+
+Goal: close the gap to HiGHS compiled to WebAssembly (npm `highs`). Every
+change was measured on MIPLIB 3 (30 MIPs, 60 s limit, solutions checked
+against HiGHS optima), the bundled sanity problems, the SPY option MIP and
+four youth-soccer rotation models. Node counts and pivots are deterministic,
+so they are the primary metric; wall time on a laptop that sleeps between
+bursts is not (see "Benchmarking" below).
+
+### Verify node LPs against an independent solver
+
+MIPLIB blend2 returned 13.86 (optimum 7.599) and was "solved" only because
+better branching finished its tree. Cross-checking each warm-started node LP
+against a cold re-solve, and both against HiGHS with the node's bounds,
+found three bugs that a final-answer check never localizes:
+
+- **Dual ratio test without a pivot tolerance.** The fast phase 1 took the
+  min-ratio column however tiny its entry; the tableau lost consistency
+  (rows predicted values off by 8e5) and reported infeasible or too-high
+  bounds. Fixed with a Harris two-pass dual test: pass 1 bounds the step over
+  every candidate (excluding small entries from pass 1 is wrong: it lets
+  their reduced costs go positive), pass 2 takes the largest pivot, and
+  pivots below 1e-7 or 1e-6 of the row maximum are avoided when a larger one
+  exists.
+- **Tolerances that disagree.** Harris lets rows overshoot by its tolerance,
+  so phase 1 must count rows within that tolerance as feasible; it declared
+  infeasibility over -3.8e-8. Harris tolerances went 1e-9 -> 1e-7 (1e-9 left
+  no room to choose a good pivot).
+- **No scaling.** A row with coefficients up to 7243 hid an improving column
+  under the 1e-8 optimality tolerance (reduced cost 7.7e-9 on a slack that
+  could move 4e5). Rows are now equilibrated by powers of two (exact in
+  floating point).
+
+A useful invariant for this kind of debugging: every tableau row is an
+identity of the equality system, so it must hold exactly at _any_ point
+satisfying the constraints (e.g. HiGHS's solution). Checking it before and
+after each pivot pinpointed the pivot that broke the tableau.
+
+### What now pays off (and why earlier attempts "failed")
+
+Earlier rounds rejected Devex, pseudocost branching and removing the pivot's
+inner zero check because tests pinned one optimal vector and the bundled
+problems are tiny. The sanity suite now verifies solutions (feasible,
+integral, optimal objective) instead, and the larger benchmarks show:
+
+- **Devex pricing** cut the blend2 root from 2015 to 688 phase-2 pivots once
+  rows were scaled. The weights update from the pivot row the dense tableau
+  already holds.
+- **Reliability branching** (pseudocosts + strong branching until each
+  candidate has 4 observations per direction): MIPLIB 14 -> 19 solved;
+  egout 65k -> 8.5k nodes. Strong-branching child LPs are capped at 4x the
+  average dive solve (at least 50 pivots); tighter caps lose infeasibility
+  proofs (enigma 10x the nodes), no cap starves big tableaus. Its budget is
+  half the other pivots plus a fixed _work_ allowance (pivots x cells): a
+  flat pivot allowance is free on small tableaus and seconds on big ones.
+- **Branch-free pivot updates**: zero noise once, when caching the pivot
+  row, and the update loop needs no per-entry test (mas76 11.8 -> 9.8 s, same
+  tree). Recycling snapshot arrays took GC from 9% to 3%.
+
+### Cuts, presolve and integrality
+
+- **Root GMI cuts** are cheap with a dense tableau (each fractional integer
+  row is a cut). 3 rounds, slack cuts deleted afterwards: shifted geometric
+  mean -18%, vpm1 timeout -> 68 ms, egout 7769 -> 115 nodes. More rounds
+  enlarge every node's tableau (10 rounds lost gt2 entirely).
+- **Root presolve** (activity bound propagation + Savelsbergh coefficient
+  tightening): fixnet6 and p0548 solved. Implied bounds of _continuous_
+  variables must stay private to presolve: making 1600 redundant y <= 1
+  explicit made Vendor Selection 3x slower.
+- **Reduced-cost fixing**, and keeping the incumbent as a tableau snapshot:
+  re-solving the incumbent's node from the root misses the fixings and
+  returned fractional vertices.
+- **Implied integers**: a continuous variable bounded only by integer rows
+  (a max-min "floor", a makespan) can be treated as integer. The soccer
+  models went from 3 of 4 timing out to 0.2-2.4 s.
+- **Integral objectives by total unimodularity**: in facility location the
+  costed variables are continuous but integral once the integers are fixed,
+  so the root bound 1482.33 already means 1483. Used for objective rounding
+  only (never branch on them).
+
+### Bundled problems are a separate constraint
+
+The MIPLIB-driven changes made Vendor Selection 29x slower (160 ms -> 4.6 s)
+before it was noticed: re-run the bundled problems after every change, not
+only the big sets. Its fixes (private continuous bounds, TU integrality,
+dropping cuts that leave the rounded bound unchanged, snapshot-first resume)
+brought it to 347 ms; v1.0.3's 5-node tree was partly luck. Feasibility-only
+models (no objective) skip strong branching and cuts entirely.
+
+### Benchmarking
+
+- macOS sleeps between bursts even under `caffeinate -i` with the lid
+  closed: processes showed 45 min elapsed for 50 s of CPU, and wall-clock
+  results were garbage. Check `ps -o etime,time` when a suite runs long.
+- Node writes stderr to pipes asynchronously: when killing a process by
+  timeout, use `fs.writeSync(2, ...)` for traces or they are lost.
+- The MPS loader dropped `BV` bounds (no value field), turning vpm2, misc03,
+  misc07, gesa2 and qnet1 into partial LPs; reference optima must come from
+  an independent solver on the same file.
+- **Verify the returned vector, not the reported objective.** The previous
+  round's README claimed noswot solved in 76 s at -43 (the MIPLIB-listed
+  optimum). HiGHS proves -41 for this file, and the returned vector
+  recomputes to -19 with rows violated by 14.9: a wrong answer that matched a
+  wrong reference. Every solved instance on this branch is now checked by
+  recomputing feasibility, integrality and objective with HiGHS.
