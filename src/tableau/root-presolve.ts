@@ -70,6 +70,12 @@ export function presolveRootTableau(tableau: Tableau): RootPresolveResult {
     for (let c = 1; c < width; c++) {
         if (tableau.unrestrictedVars[tableau.varIndexByCol[c]] === true) freeColumns.push(c);
     }
+    // Implied upper bounds (stored-variable space) of continuous columns.
+    // They are only used here, to propagate and to tighten coefficients:
+    // making them explicit bounds changed nothing in the feasible set but
+    // gave the simplex redundant bounded columns (Vendor Selection: 1600
+    // y <= 1 implied by assignment rows, 3x slower).
+    const implied = new Float64Array(width).fill(Infinity);
     const usableRow = (r: number): boolean => {
         const v = tableau.varIndexByRow[r];
         if (tableau.unrestrictedVars[v] === true || rangeOf(tableau, v) !== Infinity) return false;
@@ -86,7 +92,9 @@ export function presolveRootTableau(tableau: Tableau): RootPresolveResult {
             if (!usableRow(r)) continue;
             // Each call applies at most one bound (the row's data then changes).
             for (let k = 0; k < MAX_CHANGES_PER_ROW; k++) {
-                if (!propagateRow(tableau, r, isInteger, result) || !result.feasible) break;
+                if (!propagateRow(tableau, r, isInteger, implied, result) || !result.feasible) {
+                    break;
+                }
                 changed = true;
             }
         }
@@ -96,7 +104,7 @@ export function presolveRootTableau(tableau: Tableau): RootPresolveResult {
 
     for (let r = 1; r < height; r++) {
         if (!usableRow(r)) continue;
-        tightenRowCoefficients(tableau, r, isInteger, result);
+        tightenRowCoefficients(tableau, r, isInteger, implied, result);
     }
     return result;
 }
@@ -106,6 +114,7 @@ function propagateRow(
     tableau: Tableau,
     r: number,
     isInteger: Uint8Array,
+    implied: Float64Array,
     result: RootPresolveResult
 ): boolean {
     const width = tableau.width;
@@ -118,7 +127,7 @@ function propagateRow(
     for (let c = 1; c < width; c++) {
         const a = matrix[rowOffset + c];
         if (a >= -MIN_COEFFICIENT) continue;
-        const range = rangeOf(tableau, tableau.varIndexByCol[c]);
+        const range = Math.min(rangeOf(tableau, tableau.varIndexByCol[c]), implied[c]);
         if (range === Infinity || range > HUGE) infinite++;
         else minActivity += a * range;
     }
@@ -129,7 +138,7 @@ function propagateRow(
         const a = matrix[rowOffset + c];
         if (a < MIN_COEFFICIENT && a > -MIN_COEFFICIENT) continue;
         const v = tableau.varIndexByCol[c];
-        const range = rangeOf(tableau, v);
+        const range = Math.min(rangeOf(tableau, v), implied[c]);
         const ownInfinite = a < 0 && (range === Infinity || range > HUGE);
         if (infinite - (ownInfinite ? 1 : 0) > 0) continue;
         const rest = minActivity - (a < 0 && !ownInfinite ? a * range : 0);
@@ -144,6 +153,13 @@ function propagateRow(
         }
         const raiseLower = lower > MIN_IMPROVEMENT * Math.max(1, Math.abs(lower));
         const cutUpper = upper < range - MIN_IMPROVEMENT * Math.max(1, Math.abs(upper));
+        if (!isInteger[c]) {
+            // Continuous: record the implied upper bound only.
+            if (!cutUpper) continue;
+            implied[c] = Math.max(upper, 0);
+            changed = true;
+            continue;
+        }
         if (!raiseLower && !cutUpper) continue;
         if (lower > upper + 1e-9) {
             result.feasible = false;
@@ -179,6 +195,7 @@ function tightenRowCoefficients(
     tableau: Tableau,
     r: number,
     isInteger: Uint8Array,
+    implied: Float64Array,
     result: RootPresolveResult
 ): void {
     const width = tableau.width;
@@ -190,7 +207,7 @@ function tightenRowCoefficients(
         for (let c = 1; c < width; c++) {
             const a = matrix[rowOffset + c];
             if (a <= MIN_COEFFICIENT) continue;
-            const range = rangeOf(tableau, tableau.varIndexByCol[c]);
+            const range = Math.min(rangeOf(tableau, tableau.varIndexByCol[c]), implied[c]);
             if (range === Infinity || range > HUGE) return;
             maxActivity += a * range;
         }

@@ -16,7 +16,7 @@ import { Constraint, Equality, IntegerVariable, Variable } from "./expressions";
 import type { Priority } from "./expressions";
 import type { BranchAndCutService } from "./tableau/branch-and-cut";
 import type { ConstraintBound, Model as JsonModel } from "./types/solver";
-import { findImpliedIntegers } from "./implied-integers";
+import { findImpliedIntegers, findIntegralContinuous } from "./implied-integers";
 import type { TableauSolution, TableauSolutionSet } from "./tableau";
 import { presolve, type PresolveResult } from "./tableau/presolve";
 
@@ -56,6 +56,12 @@ class Model {
     unrestrictedVariables: Record<number, boolean>;
     /** Column bounds (from single-variable JSON constraints and binaries), applied by the tableau. */
     columnBounds: Map<Variable, { lb: number; ub: number }> = new Map();
+    /**
+     * Continuous variables integral at some optimum once the integers are
+     * fixed (implied-integers.ts). Used only to recognize an integral
+     * objective, never for branching.
+     */
+    integralContinuous: Set<string> = new Set();
     /** Bounds collected by id while loading JSON, before variables exist. */
     private pendingColumnBounds: Map<string, { lb: number; ub: number }> = new Map();
     /** Whether binaries get a column bound instead of an upper-bound row. */
@@ -505,6 +511,9 @@ class Model {
         // integer rows are treated as integer (see implied-integers.ts).
         const impliedIntegers = this.binariesAsColumnBounds
             ? findImpliedIntegers(jsonModel)
+            : new Set<string>();
+        this.integralContinuous = this.binariesAsColumnBounds
+            ? findIntegralContinuous(jsonModel)
             : new Set<string>();
         const unrestrictedVarIds = jsonModel.unrestricted || {};
 

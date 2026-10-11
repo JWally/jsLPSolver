@@ -176,7 +176,9 @@ export function createBranchAndCutService(): BranchAndCutService {
         for (let v = 0; objectiveIsIntegral && v < modelVariables.length; v++) {
             const variable = modelVariables[v];
             if (variable.cost === 0) continue;
-            if (!variable.isInteger || !Number.isInteger(variable.cost)) {
+            const integral =
+                variable.isInteger || tableau.model?.integralContinuous?.has(variable.id) === true;
+            if (!integral || !Number.isInteger(variable.cost)) {
                 objectiveIsIntegral = false;
             } else {
                 objectiveStep = gcd(objectiveStep, Math.abs(variable.cost));
@@ -224,19 +226,19 @@ export function createBranchAndCutService(): BranchAndCutService {
         // per path row when re-solving from the root, and the full cost of the
         // snapshot route (copy, load, in-place solve). Snapshot a sibling only
         // when re-solving its path is expected to cost more. Until both are
-        // measured, alternate to sample each.
+        // measured, snapshot (see shouldSnapshot).
         const COPY_COST = 0.1;
         const EMA_WEIGHT = 0.1;
         let restoreWorkPerCut = -1;
         let snapshotRouteWork = -1;
-        let explorationToggle = false;
         const ema = (avg: number, sample: number): number =>
             avg < 0 ? sample : avg + EMA_WEIGHT * (sample - avg);
         const shouldSnapshot = (depth: number): boolean => {
-            if (restoreWorkPerCut < 0 || snapshotRouteWork < 0) {
-                explorationToggle = !explorationToggle;
-                return explorationToggle;
-            }
+            // Until both routes are measured, snapshot: a copy costs about
+            // 0.2 pivots' worth of work, while a restore re-solves every bound
+            // on the path. Sampling restores first cost Vendor Selection
+            // (1692x1641) ~600 pivots for nothing.
+            if (restoreWorkPerCut < 0 || snapshotRouteWork < 0) return true;
             return restoreWorkPerCut * depth > snapshotRouteWork;
         };
         let snapshotBytes = 0;
@@ -305,6 +307,7 @@ export function createBranchAndCutService(): BranchAndCutService {
         // mod010-size tableaus spending most pivots in strong branching.
         // 4x/50 had the best shifted geometric mean over MIPLIB 3.
         const STRONG_PIVOT_FACTOR = 4;
+        const STRONG_WORK_ALLOWANCE = 2e8;
         const STRONG_MIN_PIVOTS = 50;
         let nodePivotAverage = -1;
         const strongBranchGain = (cut: BranchCut, nodeEvaluation: number): number => {
@@ -367,7 +370,13 @@ export function createBranchAndCutService(): BranchAndCutService {
                     best = i;
                 }
             }
-            const strongBudget = 0.5 * tableau.pivotCount + 1000;
+            // Strong branching may use half the pivots of the rest of the
+            // search plus a fixed allowance of work (pivots x cells), so a
+            // large dense tableau gets proportionally fewer free pivots:
+            // a flat 1000 cost seconds on Vendor Selection (1691x1641).
+            const strongBudget =
+                0.5 * (tableau.pivotCount - strongPivots) +
+                STRONG_WORK_ALLOWANCE / (tableau.height * tableau.width);
             if (n > 1 && candidateOrder.length > 0 && strongPivots < strongBudget) {
                 // Most promising unreliable candidates first.
                 candidateOrder.sort((i, j) => candidateScore[j] - candidateScore[i] || i - j);
@@ -480,6 +489,8 @@ export function createBranchAndCutService(): BranchAndCutService {
         const addRootCuts = (): void => {
             const firstCutRow = tableau.height;
             const cutBudget = tableau.height - 1;
+            const rootEvaluation = tableau.evaluation;
+            const beforeCuts = takeSnapshot();
             let total = 0;
             for (let round = 0; round < ROOT_CUT_ROUNDS && total < cutBudget; round++) {
                 const before = tableau.evaluation;
@@ -488,11 +499,31 @@ export function createBranchAndCutService(): BranchAndCutService {
                 if (added === 0) break;
                 total += added;
                 tableau.simplex();
-                if (!tableau.feasible) return;
+                if (!tableau.feasible) {
+                    releaseSnapshot(beforeCuts);
+                    return;
+                }
                 const gain = tableau.evaluation - before;
                 if (gain < ROOT_CUT_MIN_GAIN * Math.max(1, Math.abs(tableau.evaluation))) break;
             }
-            removeSlackCuts(tableau, firstCutRow);
+            // Cut rows are dense and make every later pivot costlier. With an
+            // integral objective, cuts that leave the rounded bound where it
+            // was cannot prune anything the root bound could not, so they are
+            // dropped (Vendor Selection: 1482.33 -> 1482.79, both round to
+            // 1483). A small relative gain alone is no reason to drop them:
+            // on Monster II it is what closes the problem at the root.
+            const roundedUp = (bound: number): number => {
+                const slack = 1e-6 * Math.max(1, Math.abs(bound));
+                return Math.ceil((bound - slack) / objectiveStep) * objectiveStep;
+            };
+            if (objectiveIsIntegral && roundedUp(tableau.evaluation) <= roundedUp(rootEvaluation)) {
+                tableau.loadSnapshot(beforeCuts);
+                tableau.feasible = true;
+                tableau.evaluation = rootEvaluation;
+            } else {
+                removeSlackCuts(tableau, firstCutRow);
+            }
+            releaseSnapshot(beforeCuts);
         };
 
         while (
