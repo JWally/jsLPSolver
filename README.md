@@ -174,20 +174,21 @@ worker.postMessage(model);
 
 Measured on an Apple M4 Max, Node.js 24. "v1.0.3" is the release before the
 2026-10 solver work; "#169" is master after the first round (PRs #168, #169);
-"Now" adds the second round (see [LESSONS.md](./LESSONS.md)). The reference
+"#170" adds the second round; "Now" adds the third (c-MIR cuts; see
+[LESSONS.md](./LESSONS.md)). The reference
 is [HiGHS](https://highs.dev) compiled to WebAssembly (the npm `highs`
 package, single thread), the strongest solver that runs in the same place.
 
 **Bundled problems** (`test/test-sanity`, median of repeated runs):
 
-| Problem          | Variables | Constraints | Integers | v1.0.3  | #169    | Now     |
-| ---------------- | --------- | ----------- | -------- | ------- | ------- | ------- |
-| Vendor Selection | 1640      | 1641        | 40       | 155 ms  | 156 ms  | 348 ms  |
-| Monster II MIP   | 924       | 888         | 112      | 19.8 ms | 11.3 ms | 4.0 ms  |
-| Large Farm MIP\* | 100       | 35          | 100      | 19.2 ms | 11.7 ms | 2.0 ms  |
-| Knapsack 1       | 50        | 1           | 50       | -       | 0.45 ms | 0.17 ms |
-| Monster LP       | 552       | 600         | 0        | 1.0 ms  | 1.1 ms  | 1.1 ms  |
-| Stock Cutting    | 31        | 5           | 31       | 0.72 ms | 0.05 ms | 0.08 ms |
+| Problem          | Variables | Constraints | Integers | v1.0.3  | #169    | #170    | Now     |
+| ---------------- | --------- | ----------- | -------- | ------- | ------- | ------- | ------- |
+| Vendor Selection | 1640      | 1641        | 40       | 155 ms  | 156 ms  | 348 ms  | 362 ms  |
+| Monster II MIP   | 924       | 888         | 112      | 19.8 ms | 11.3 ms | 4.0 ms  | 5.2 ms  |
+| Large Farm MIP\* | 100       | 35          | 100      | 19.2 ms | 11.7 ms | 2.0 ms  | 2.1 ms  |
+| Knapsack 1       | 50        | 1           | 50       | -       | 0.45 ms | 0.17 ms | 0.17 ms |
+| Monster LP       | 552       | 600         | 0        | 1.0 ms  | 1.1 ms  | 1.1 ms  | 1.0 ms  |
+| Stock Cutting    | 31        | 5           | 31       | 0.72 ms | 0.05 ms | 0.08 ms | 0.08 ms |
 
 \* Runs with `tolerance: 0.005`, so every version stops at a solution within 0.5% of the bound.
 
@@ -195,36 +196,47 @@ package, single thread), the strongest solver that runs in the same place.
 counts as solved only if the returned solution vector is feasible, integral
 and optimal when recomputed independently with HiGHS:
 
-| Test set              | v1.0.3                                  | #169                             | Now            |
-| --------------------- | --------------------------------------- | -------------------------------- | -------------- |
-| 25 Netlib LPs         | 19 correct (5 hang, 1 false infeasible) | 25 correct                       | **25 correct** |
-| 30 MIPLIB 3 MIPs      | 9 solved                                | 12 solved (2 more wrong vectors) | **21 solved**  |
-| SPY option-spread MIP | did not finish in 120 s                 | 5.4 s                            | **2.3 s**      |
-| 4 soccer rotations    | none finish in 60 s                     | none finish in 60 s              | **0.2-2.2 s**  |
+| Test set              | v1.0.3                                  | #169                             | #170       | Now            |
+| --------------------- | --------------------------------------- | -------------------------------- | ---------- | -------------- |
+| 25 Netlib LPs         | 19 correct (5 hang, 1 false infeasible) | 25 correct                       | 25 correct | **25 correct** |
+| 30 MIPLIB 3 MIPs      | 9 solved                                | 12 solved (2 more wrong vectors) | 21 solved  | **23 solved**  |
+| ... within 60 s       |                                         |                                  | 23 solved  | **27 solved**  |
+| SPY option-spread MIP | did not finish in 120 s                 | 5.4 s                            | 2.3 s      | **0.4 s**      |
+| 4 soccer rotations    | none finish in 60 s                     | none finish in 60 s              | 0.2-2.2 s  | **0.2-2.4 s**  |
 
 The first round's README also listed MIPLIB noswot as solved; that answer was
 wrong (its vector recomputes to -19 with violated rows, while HiGHS proves -41).
 
-| MIPLIB 3 instance | v1.0.3 | #169   | Now    | HiGHS-WASM |
-| ----------------- | ------ | ------ | ------ | ---------- |
-| stein27           | 10.8 s | 0.1 s  | 0.1 s  | 0.43 s     |
-| p0201             | 26.6 s | wrong  | 0.5 s  | 0.52 s     |
-| mod008            | 8.0 s  | 0.5 s  | 0.2 s  | 0.71 s     |
-| egout             | 13.8 s | 1.7 s  | 0.03 s | 0.06 s     |
-| lseu              | 7.0 s  | 1.8 s  | 0.2 s  | 0.16 s     |
-| khb05250          | 4.8 s  | 1.6 s  | 0.2 s  | 0.26 s     |
-| bell3a            | > 30 s | 10.2 s | 0.8 s  | 0.58 s     |
-| dcmulti           | > 30 s | 11.7 s | 1.7 s  | 1.13 s     |
-| enigma            | > 30 s | wrong  | 1.9 s  | 0.31 s     |
-| bell5             | > 30 s | > 30 s | 3.1 s  | 0.29 s     |
-| fixnet6           | > 30 s | > 30 s | 3.5 s  | 1.66 s     |
-| p0548             | > 30 s | > 30 s | 5.5 s  | 0.12 s     |
-| mas76             | > 30 s | > 30 s | 9.6 s  | > 120 s    |
-| pk1 (60 s limit)  | > 30 s | > 30 s | 54 s   | > 120 s    |
+| MIPLIB 3 instance | v1.0.3 | #169   | #170   | Now    | HiGHS-WASM |
+| ----------------- | ------ | ------ | ------ | ------ | ---------- |
+| stein27           | 10.8 s | 0.1 s  | 0.1 s  | 0.1 s  | 0.43 s     |
+| p0201             | 26.6 s | wrong  | 0.5 s  | 0.5 s  | 0.52 s     |
+| mod008            | 8.0 s  | 0.5 s  | 0.2 s  | 0.2 s  | 0.71 s     |
+| egout             | 13.8 s | 1.7 s  | 0.03 s | 0.03 s | 0.06 s     |
+| lseu              | 7.0 s  | 1.8 s  | 0.2 s  | 0.1 s  | 0.16 s     |
+| khb05250          | 4.8 s  | 1.6 s  | 0.2 s  | 0.2 s  | 0.26 s     |
+| bell3a            | > 30 s | 10.2 s | 0.8 s  | 1.3 s  | 0.58 s     |
+| dcmulti           | > 30 s | 11.7 s | 1.7 s  | 2.5 s  | 1.13 s     |
+| enigma            | > 30 s | wrong  | 1.9 s  | 2.0 s  | 0.31 s     |
+| bell5             | > 30 s | > 30 s | 3.1 s  | 2.6 s  | 0.29 s     |
+| fixnet6           | > 30 s | > 30 s | 3.5 s  | 4.2 s  | 1.66 s     |
+| p0548             | > 30 s | > 30 s | 5.5 s  | 2.0 s  | 0.12 s     |
+| gesa2             | > 30 s | > 30 s | > 30 s | 9.4 s  | 0.42 s     |
+| blend2            | > 30 s | > 30 s | > 30 s | 12.7 s | 1.08 s     |
+| mas76             | > 30 s | > 30 s | 9.6 s  | 9.6 s  | > 120 s    |
+| 60 s limit:       |        |        |        |        |            |
+| mod010            | > 60 s | > 60 s | > 60 s | 31 s   | 0.48 s     |
+| fiber             | > 60 s | > 60 s | > 60 s | 49 s   | 0.69 s     |
+| misc07            | > 60 s | > 60 s | 48 s   | 49 s   | 17.0 s     |
+| pk1               | > 60 s | > 60 s | 54 s   | 56 s   | > 120 s    |
 
-Still out of reach at 30 s: blend2 and misc07 (13-48 s depending on the
-run), fiber, gesa2, mod010, noswot, qnet1 and vpm2 (HiGHS-WASM: 0.4-1.7 s,
-noswot 52 s).
+Still out of reach: noswot, qnet1 and vpm2 (HiGHS-WASM: noswot 52 s, the
+others 0.4-1.3 s).
+
+What changed in the third round: root c-MIR cuts on the original rows
+(Marchand-Wolsey, with variable-upper-bound substitution and refinements
+following HiGHS's separator), whose cuts are checked against sampled
+feasible points in the tests.
 
 What changed in the second round: LP numerics (a Harris dual ratio test,
 consistent tolerances, row equilibration), Devex pricing, reliability

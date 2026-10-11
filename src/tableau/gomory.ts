@@ -123,10 +123,28 @@ export function addGomoryCuts(tableau: Tableau, maxCuts: number): number {
 
 /**
  * Append sum_j g_j s_j >= 1 as a tableau row with a new basic slack
- * t = sum_j g_j s_j - 1, i.e. t = -1 - sum_j (-g_j) s_j, equilibrated by a
- * power of two so its largest coefficient is near 1.
+ * t = sum_j g_j s_j - 1, i.e. t = -1 - sum_j (-g_j) s_j.
  */
 function appendCutRow(tableau: Tableau, cut: Float64Array, largest: number): void {
+    const row = new Float64Array(tableau.width);
+    for (let c = 1; c < tableau.width; c++) row[c] = cut[c] === 0 ? 0 : -cut[c];
+    appendCutTableauRow(tableau, -1, row, largest);
+}
+
+/**
+ * Append a cut row in tableau form, t = rhs - sum_c row[c] s_c with a new
+ * basic slack t >= 0 (row[0] is ignored), equilibrated by a power of two so
+ * its largest coefficient is near 1. Its slack is registered as a cut slack,
+ * so removeSlackCuts may delete the row later.
+ *
+ * @param largest - Largest |row[c]| (computed by the caller).
+ */
+export function appendCutTableauRow(
+    tableau: Tableau,
+    rhs: number,
+    rowCoefficients: Float64Array,
+    largest: number
+): void {
     const width = tableau.width;
     const row = tableau.height;
     const required = (row + 1) * width;
@@ -138,9 +156,10 @@ function appendCutRow(tableau: Tableau, cut: Float64Array, largest: number): voi
     const matrix = tableau.matrix;
     const scale = Math.pow(2, -Math.ceil(Math.log2(largest)));
     const rowOffset = row * width;
-    matrix[rowOffset] = -scale;
+    matrix[rowOffset] = scale * rhs;
     for (let c = 1; c < width; c++) {
-        matrix[rowOffset + c] = cut[c] === 0 ? 0 : -scale * cut[c];
+        const a = rowCoefficients[c];
+        matrix[rowOffset + c] = a === 0 ? 0 : scale * a;
     }
     tableau.height = row + 1;
 

@@ -576,9 +576,9 @@ timeout never reads performance.now or Date.now.
 
 ### Known remaining issues
 
-- (Round 2) MIPLIB fiber, gesa2, mod010, noswot, qnet1 and vpm2 still time
-  out at 60 s (HiGHS-WASM: 0.4-1.7 s, noswot 52 s); they need cut families
-  beyond GMI (flow cover, c-MIR, knapsack cover) and stronger presolve.
+- (Round 3) MIPLIB noswot, qnet1 and vpm2 still time out at 60 s
+  (HiGHS-WASM: noswot 52 s, others 0.4-1.3 s); their root bounds trail
+  HiGHS's (vpm2 11.8 vs 13.0, qnet1 14716 vs 16024).
 - (Round 2) Vendor Selection 347 ms vs v1.0.3's 160 ms (5 lucky nodes).
 - Phase 2's Bland stall exit can still accept a suboptimal LP after its
   (now generous) budget.
@@ -692,3 +692,45 @@ models (no objective) skip strong branching and cuts entirely.
   recomputes to -19 with rows violated by 14.9: a wrong answer that matched a
   wrong reference. Every solved instance on this branch is now checked by
   recomputing feasibility, integrality and objective with HiGHS.
+
+## 2026-10 Round 3: c-MIR Cuts (perf/cuts-presolve)
+
+HiGHS's root bound after cuts was the gap on the remaining timeouts (fiber
+397k vs our 196k; vpm2 13.0 vs 11.1; qnet1 16024 vs 14569). HiGHS is MIT
+licensed; reading its separators (HighsCutGeneration.cpp,
+HighsTransformedLp.cpp, HighsPathSeparator.cpp) gave the concrete rules.
+
+### What worked
+
+- **c-MIR on the original rows** (captured in x-space after root presolve,
+  aggregated along continuous variables) with **variable-upper-bound
+  substitution** (x = u y - x', the flow-cover step; for negative
+  coefficients x' is relaxed away). mod010 solved.
+- **HiGHS's delta list**: |a| of every integer away from zero, the gcd of
+  integral coefficients, 1 and max|a| + 1. With only the |a| deltas,
+  integral rows (qnet1) made beta/delta integral and every MIR trivial.
+  With initial complementation (u < 2x\*), greedy complement flips, the
+  active norm and a 0.1 cosine parallelism filter: fiber's root 282k ->
+  377k; verified MIPLIB 24 -> 27; SPY 2.4 -> 0.4 s.
+- **Implied integers count as continuous for cuts**: detection for
+  branching had hidden fiber's continuous flows from VUB substitution.
+
+### What did not (measured, reverted)
+
+- **Lifted knapsack covers** (ported from HiGHS, tested valid): preferred
+  over c-MIR (HiGHS's additive rule) or only as a fallback, they cost SPY
+  0.4 -> 4.1 s and fiber its solve; root bounds moved by +-1%.
+- **Tableau c-MIR** (B^-1 rows through the c-MIR pipeline, row slacks kept
+  as variables and expanded only in the final cut; expanding them in the row
+  reproduces 0 = 0): at most +1.5 on mod010's bound, weaker than GMI alone.
+- **More root rounds**, even with non-binding cuts aged out every round:
+  10 and 20 rounds lost 2-3 instances and SPY. HiGHS's many rounds rely on a
+  cut pool, LP aging and an LP-movement stall rule we do not have.
+
+### Testing cuts
+
+A bound-only check (the bound after cuts never passes the optimum) missed a
+sign error: some wrong cuts are valid-but-weak combinations. Cuts are now
+checked directly at sampled feasible points (each integer assignment, LPs
+over the continuous part in six directions); mutations that tighten a cut
+are caught, mutations that only weaken it are (correctly) not.

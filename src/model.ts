@@ -62,6 +62,12 @@ class Model {
      * objective, never for branching.
      */
     integralContinuous: Set<string> = new Set();
+    /**
+     * Continuous variables treated as integer because they are implied
+     * integer (implied-integers.ts). Cut separators may treat them as
+     * continuous again (relaxing integrality keeps cuts valid).
+     */
+    impliedIntegers: Set<string> = new Set();
     /** Bounds collected by id while loading JSON, before variables exist. */
     private pendingColumnBounds: Map<string, { lb: number; ub: number }> = new Map();
     /** Whether binaries get a column bound instead of an upper-bound row. */
@@ -512,6 +518,7 @@ class Model {
         const impliedIntegers = this.binariesAsColumnBounds
             ? findImpliedIntegers(jsonModel)
             : new Set<string>();
+        this.impliedIntegers = impliedIntegers;
         this.integralContinuous = this.binariesAsColumnBounds
             ? findIntegralContinuous(jsonModel)
             : new Set<string>();
