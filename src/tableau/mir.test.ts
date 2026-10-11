@@ -6,7 +6,7 @@
 import { describe, it, expect } from "vitest";
 import Model from "../model";
 import solver from "../solver";
-import { addMirCuts, captureOriginalRows } from "./mir";
+import { addMirCuts, captureOriginalRows, separateMirCuts } from "./mir";
 
 let seed = 4242;
 const random = (): number => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -15,7 +15,11 @@ const randInt = (lo: number, hi: number): number => lo + Math.floor(random() * (
 type Json = Record<string, any>;
 
 /** max c.x + d.z, A x + B z <= b, x in {0..3}^3 integer, z in [0, 5]^2. */
-function randomMixed(): { model: Json; optimum: number } {
+function randomMixed(): {
+    model: Json;
+    optimum: number;
+    points: Array<Record<string, number>>;
+} {
     const c = [randInt(1, 9), randInt(1, 9), randInt(1, 9)];
     const d = [randInt(1, 6), randInt(1, 6)];
     const A = Array.from({ length: 3 }, () => [randInt(1, 9), randInt(1, 9), randInt(1, 9)]);
@@ -63,7 +67,34 @@ function randomMixed(): { model: Json; optimum: number } {
             }
         }
     }
-    return { model: build(null), optimum };
+    // Feasible points: every integer assignment completed by LPs over z
+    // with several objectives (vertices of each continuous slice).
+    const points: Array<Record<string, number>> = [];
+    for (let x0 = 0; x0 <= 3; x0++) {
+        for (let x1 = 0; x1 <= 3; x1++) {
+            for (let x2 = 0; x2 <= 3; x2++) {
+                const x = [x0, x1, x2];
+                for (const [w0, w1] of [
+                    [1, 0],
+                    [0, 1],
+                    [-1, 0],
+                    [0, -1],
+                    [1, 1],
+                    [1, -1],
+                ]) {
+                    const lp = build(x);
+                    lp.variables.z0.obj = w0;
+                    lp.variables.z1.obj = w1;
+                    const sol = solver.Solve(lp as never) as Record<string, number> & {
+                        feasible: boolean;
+                    };
+                    if (!sol.feasible) break;
+                    points.push({ x0, x1, x2, z0: sol.z0 ?? 0, z1: sol.z1 ?? 0 });
+                }
+            }
+        }
+    }
+    return { model: build(null), optimum, points };
 }
 
 function boundsWithMir(model: Json, rounds: number) {
@@ -99,6 +130,31 @@ describe("c-MIR cuts", () => {
         }
         expect(tested).toBeGreaterThan(30);
         expect(tightened).toBeGreaterThan(5);
+    });
+});
+
+describe("c-MIR cut validity", () => {
+    it("every cut holds at every sampled mixed-integer feasible point", () => {
+        let checked = 0;
+        for (let k = 0; k < 25; k++) {
+            const { model, points } = randomMixed();
+            if (points.length === 0) continue;
+            const m = new Model().loadJson(model as never);
+            const tableau = m.tableau;
+            tableau.setModel(m);
+            const original = captureOriginalRows(tableau)!;
+            tableau.simplex();
+            const id = new Map(m.variables.map((v) => [v.index, v.id]));
+            for (const cut of separateMirCuts(tableau, original)) {
+                for (const point of points) {
+                    let lhs = 0;
+                    for (const [v, a] of cut.alpha) lhs += a * point[id.get(v)!];
+                    expect(lhs, `problem ${k}`).toBeLessThanOrEqual(cut.beta + 1e-6);
+                    checked++;
+                }
+            }
+        }
+        expect(checked).toBeGreaterThan(100);
     });
 });
 

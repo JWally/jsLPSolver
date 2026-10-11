@@ -120,7 +120,7 @@ interface VariableData {
 }
 
 /** A cut sum alpha_j x_j <= beta with its efficacy at the LP point. */
-interface Cut {
+export interface Cut {
     alpha: Map<number, number>;
     beta: number;
     efficacy: number;
@@ -133,8 +133,26 @@ interface Cut {
  * @returns The number of cuts added.
  */
 export function addMirCuts(tableau: Tableau, original: OriginalRows, maxCuts: number): number {
-    const model = tableau.model;
-    if (!model || maxCuts <= 0) return 0;
+    if (maxCuts <= 0) return 0;
+    const cuts = separateMirCuts(tableau, original);
+    cuts.sort((p, q) => q.efficacy - p.efficacy);
+    // Skip cuts nearly parallel to one already taken (HiGHS uses cosine 0.1).
+    const taken: Cut[] = [];
+    let added = 0;
+    for (let k = 0; k < cuts.length && added < maxCuts; k++) {
+        const cut = cuts[k];
+        if (taken.some((other) => cosine(cut.alpha, other.alpha) > MAX_PARALLELISM)) continue;
+        if (addLinearCut(tableau, cut.alpha, cut.beta)) {
+            taken.push(cut);
+            added++;
+        }
+    }
+    return added;
+}
+
+/** c-MIR cuts from the captured original rows at the current LP optimum. */
+export function separateMirCuts(tableau: Tableau, original: OriginalRows): Cut[] {
+    if (!tableau.model) return [];
     const data = new Map<number, VariableData>();
     const variableData = (v: number): VariableData => {
         let d = data.get(v);
@@ -158,19 +176,7 @@ export function addMirCuts(tableau: Tableau, original: OriginalRows, maxCuts: nu
         const cut = separateFromRow(original, r, variableData);
         if (cut !== null) cuts.push(cut);
     }
-    cuts.sort((p, q) => q.efficacy - p.efficacy);
-    // Skip cuts nearly parallel to one already taken (HiGHS uses cosine 0.1).
-    const taken: Cut[] = [];
-    let added = 0;
-    for (let k = 0; k < cuts.length && added < maxCuts; k++) {
-        const cut = cuts[k];
-        if (taken.some((other) => cosine(cut.alpha, other.alpha) > MAX_PARALLELISM)) continue;
-        if (addLinearCut(tableau, cut.alpha, cut.beta)) {
-            taken.push(cut);
-            added++;
-        }
-    }
-    return added;
+    return cuts;
 }
 
 /** Best c-MIR cut from row r, aggregating along continuous variables if needed. */
@@ -483,7 +489,7 @@ function mirCut(
  *
  * @returns False if the cut is numerically unusable.
  */
-export function addLinearCut(tableau: Tableau, alpha: Map<number, number>, beta: number): boolean {
+function addLinearCut(tableau: Tableau, alpha: Map<number, number>, beta: number): boolean {
     const width = tableau.width;
     const matrix = tableau.matrix;
     const row = new Float64Array(width);
