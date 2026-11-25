@@ -11,7 +11,7 @@
 - **Mixed-Integer Programming (MIP)**: Handle integer and binary variables via branch-and-cut
 - **Multi-Objective Optimization**: Find compromise solutions across multiple objectives
 - **JSON Model Format**: Define problems as simple JavaScript objects
-- **Zero Dependencies**: Pure JavaScript/TypeScript with no external solver required
+- **Zero Dependencies**: Pure JavaScript/TypeScript with no external solver required (a 262-byte embedded WebAssembly SIMD kernel speeds up pivots where available, with a JS fallback)
 - **Universal**: Works in Node.js, browsers, and Web Workers
 
 ## Installation

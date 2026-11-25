@@ -10,6 +10,7 @@
  * Uses partial pricing for large problems to improve performance.
  */
 import type Tableau from "./tableau";
+import { kernelOf } from "./kernel";
 import {
     captureBounds,
     flipColumnToUpper,
@@ -429,26 +430,38 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
             // reached rhs ~ -1e6 and then reported infeasible).
             let maxStep = Infinity;
             let rowMax = 0;
+            // Pass 1 keeps its candidates so pass 2 need not rescan the row.
+            if (lastColumn >= ratioColumns.length) {
+                ratioColumns = new Int32Array(lastColumn * 2);
+                ratioPivots = new Float64Array(lastColumn * 2);
+                ratioSlacks = new Float64Array(lastColumn * 2);
+            }
+            let nCandidates = 0;
+            const ranges = this.boundRange;
+            const nRanges = hasBounds ? ranges.length : 0;
             for (let c = 1; c <= lastColumn; c++) {
                 const coefficient = matrix[leavingRowOffset + c];
                 if (-coefficient > rowMax) rowMax = -coefficient;
                 if (coefficient >= -DUAL_PIVOT_TOL) continue;
-                if (hasBounds && rangeOf(this, varIndexByCol[c]) <= precision) continue;
+                if (hasBounds) {
+                    const v = varIndexByCol[c];
+                    if (v < nRanges && ranges[v] <= precision) continue;
+                }
                 const reducedCost = matrix[c];
                 const slack = reducedCost < 0 ? -reducedCost : 0;
                 const step = (slack + DUAL_FEAS_TOL) / -coefficient;
                 if (step < maxStep) maxStep = step;
+                ratioColumns[nCandidates] = c;
+                ratioPivots[nCandidates] = -coefficient;
+                ratioSlacks[nCandidates] = slack;
+                nCandidates++;
             }
             let bestPivot = 0;
-            for (let c = 1; c <= lastColumn; c++) {
-                const coefficient = matrix[leavingRowOffset + c];
-                if (coefficient >= -DUAL_PIVOT_TOL) continue;
-                if (hasBounds && rangeOf(this, varIndexByCol[c]) <= precision) continue;
-                const reducedCost = matrix[c];
-                const ratio = (reducedCost < 0 ? -reducedCost : 0) / -coefficient;
-                if (ratio <= maxStep && -coefficient > bestPivot) {
-                    bestPivot = -coefficient;
-                    enteringColumn = c;
+            for (let i = 0; i < nCandidates; i++) {
+                const pivotSize = ratioPivots[i];
+                if (pivotSize > bestPivot && ratioSlacks[i] / pivotSize <= maxStep) {
+                    bestPivot = pivotSize;
+                    enteringColumn = ratioColumns[i];
                 }
             }
             const minPivot = Math.max(DUAL_MIN_PIVOT, DUAL_RELATIVE_MIN_PIVOT * rowMax);
@@ -1340,12 +1353,22 @@ const PRIMAL_FEAS_TOL = HARRIS_FEAS_TOL;
 let nonZeroColumns = new Int32Array(1024);
 let pivotRowCache = new Float64Array(1024);
 let pivotRowDense = new Float64Array(1024);
+// Dual ratio test candidates of the current leaving row (phase 1).
+let ratioColumns = new Int32Array(1024);
+let ratioPivots = new Float64Array(1024);
+let ratioSlacks = new Float64Array(1024);
 /**
  * Pivot rows more than 80% non-zero take the dense update. Measured on MIPLIB:
  * dense wins on mas76/stein45 (-15 to -20%), the indexed update on blend2,
  * p0548 and fixnet6, and this threshold keeps both.
  */
 const DENSE_ROW_RATIO = 1.25;
+/**
+ * With the WebAssembly kernel the dense update pays off for pivot rows more
+ * than 1/8 non-zero (measured flat from 1/2 down to always; the floor is
+ * there for huge, very sparse rows).
+ */
+const KERNEL_ROW_RATIO = 8;
 
 /**
  * Perform a single simplex pivot operation.
@@ -1406,6 +1429,31 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
     }
     matrix[pivotRowOffset + pivotColumnIndex] = invQuotient;
 
+    // A matrix in WebAssembly memory gets the SIMD kernel, which does every
+    // row in one call and wins down to much sparser pivot rows.
+    const kernel = kernelOf(matrix);
+    if (
+        kernel !== undefined &&
+        width <= kernel.pivotRow.length &&
+        nNonZeroColumns * KERNEL_ROW_RATIO > width
+    ) {
+        const kernelRow = kernel.pivotRow;
+        kernelRow.fill(0, 0, width);
+        for (let i = 0; i < nNonZeroColumns; i++) {
+            kernelRow[nonZeroColumns[i]] = pivotRowCache[i];
+        }
+        kernel.update(
+            kernel.pivotRowOffset,
+            width,
+            height,
+            pivotRowIndex,
+            pivotColumnIndex,
+            quotient
+        );
+        updateOptionalObjectives(this, pivotColumnIndex, nNonZeroColumns, invQuotient);
+        return;
+    }
+
     const dense = nNonZeroColumns * DENSE_ROW_RATIO > width;
     if (dense) {
         pivotRowDense.fill(0, 0, width);
@@ -1461,20 +1509,27 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
         }
     }
 
-    // Update optional objectives using cached pivot row values
-    const optionalObjectives = this.optionalObjectives;
+    updateOptionalObjectives(this, pivotColumnIndex, nNonZeroColumns, invQuotient);
+}
+
+/** Apply the pivot to the optional objectives' reduced costs (cached pivot row). */
+function updateOptionalObjectives(
+    tableau: Tableau,
+    pivotColumnIndex: number,
+    nNonZeroColumns: number,
+    invQuotient: number
+): void {
+    const optionalObjectives = tableau.optionalObjectives;
     const nOptionalObjectives = optionalObjectives.length;
-    if (nOptionalObjectives > 0) {
-        for (let o = 0; o < nOptionalObjectives; o++) {
-            const reducedCosts = optionalObjectives[o].reducedCosts;
-            const coefficient = reducedCosts[pivotColumnIndex];
-            if (coefficient !== 0) {
-                for (let i = 0; i < nNonZeroColumns; i++) {
-                    const c = nonZeroColumns[i];
-                    reducedCosts[c] -= coefficient * pivotRowCache[i];
-                }
-                reducedCosts[pivotColumnIndex] = -coefficient * invQuotient;
+    for (let o = 0; o < nOptionalObjectives; o++) {
+        const reducedCosts = optionalObjectives[o].reducedCosts;
+        const coefficient = reducedCosts[pivotColumnIndex];
+        if (coefficient !== 0) {
+            for (let i = 0; i < nNonZeroColumns; i++) {
+                const c = nonZeroColumns[i];
+                reducedCosts[c] -= coefficient * pivotRowCache[i];
             }
+            reducedCosts[pivotColumnIndex] = -coefficient * invQuotient;
         }
     }
 }

@@ -22,6 +22,7 @@
 import type Tableau from "./tableau";
 import { SlackVariable } from "../expressions";
 import { rangeOf } from "./bounds";
+import { allocMatrix } from "./kernel";
 
 /** Slack indices created for cut rows, per tableau (only those rows may be removed). */
 const cutSlacks = new WeakMap<Tableau, Set<number>>();
@@ -149,7 +150,7 @@ export function appendCutTableauRow(
     const row = tableau.height;
     const required = (row + 1) * width;
     if (tableau.matrix.length < required) {
-        const grown = new Float64Array(Math.ceil(required * 1.5));
+        const grown = allocMatrix(Math.ceil(required * 1.5), tableau.width);
         grown.set(tableau.matrix);
         tableau.matrix = grown;
     }
