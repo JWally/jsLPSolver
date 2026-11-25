@@ -358,7 +358,9 @@ export function presolve(model: Model): PresolveResult {
             let activeTermsLength = 0;
             let activeTerm = constraint.terms[0];
             for (const term of constraint.terms) {
-                if (!result.fixedVariables.has(term.variable)) {
+                // A zero coefficient adds nothing to the row, so it must not
+                // count as an active term (dividing rhs by it gives ±Infinity/NaN).
+                if (term.coefficient !== 0 && !result.fixedVariables.has(term.variable)) {
                     activeTermsLength++;
                     activeTerm = term;
                     if (activeTermsLength > 1) {

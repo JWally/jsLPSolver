@@ -156,6 +156,35 @@ describe("Solver Options", () => {
             expect(result.feasible).toBe(true);
             expect(solver.lastSolvedModel?.presolveResult).not.toBe(null);
         });
+
+        it("ignores explicit zero coefficients in singleton rows", () => {
+            // 0x <= 2 is always true; it must not be read as a bound on x
+            const result = solve({
+                optimize: "obj",
+                opType: "max",
+                constraints: { a: { max: 2 }, b: { max: 1 } },
+                variables: { x: { obj: 3, a: 0, b: 2 } },
+            });
+
+            expect(result.feasible).toBe(true);
+            expect(result.result).toBeCloseTo(1.5);
+            expect(result.x).toBeCloseTo(0.5);
+            expect(solver.lastSolvedModel?.presolveResult?.isInfeasible).toBe(false);
+        });
+
+        it("still detects rows with only zero coefficients that cannot hold", () => {
+            // 0x <= -1 and 0x >= 1 can never hold
+            for (const bound of [{ max: -1 }, { min: 1 }]) {
+                const result = solve({
+                    optimize: "obj",
+                    opType: "max",
+                    constraints: { a: bound, b: { max: 1 } },
+                    variables: { x: { obj: 3, a: 0, b: 2 } },
+                });
+
+                expect(result.feasible).toBe(false);
+            }
+        });
     });
 
     describe("tolerance", () => {
