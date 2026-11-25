@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-11-25
+
+### Performance
+
+- **Warm-started branch and bound** - Nodes are solved from their parent's tableau (plunging and parent snapshots) instead of from the root, and branching changes column bounds instead of adding rows. Single-variable constraints and binaries on MIPs become column bounds too. ([#168](https://github.com/JWally/jsLPSolver/pull/168))
+- **Deterministic search** - The choice between resuming a node and re-solving it is costed in work units, not wall-clock time, so the same model always explores the same tree. ([#169](https://github.com/JWally/jsLPSolver/pull/169))
+- **Reliability branching, Devex pricing, root presolve and Gomory cuts** ([#170](https://github.com/JWally/jsLPSolver/pull/170))
+- **Root c-MIR cuts** with variable-upper-bound substitution ([#171](https://github.com/JWally/jsLPSolver/pull/171))
+- **Faster pivot** - Dense pivot rows take a straight, unrolled row update: 5-29% faster on MIPLIB with identical node counts. ([#177](https://github.com/JWally/jsLPSolver/pull/177))
+
+### Fixed
+
+- **Simplex hangs, false infeasibility and false unboundedness** on several Netlib LPs (share1b, share2b, brandy, boeing2, e226, agg): cold starts fall back to a sum-of-infeasibilities phase 1, and phase 2 uses a Harris two-pass ratio test. ([#168](https://github.com/JWally/jsLPSolver/pull/168), [#170](https://github.com/JWally/jsLPSolver/pull/170))
+- **Explicit `0` coefficient makes a feasible model infeasible** - Presolve read `0x <= 2` as a bound on `x`. ([#174](https://github.com/JWally/jsLPSolver/issues/174), fixed in [#175](https://github.com/JWally/jsLPSolver/pull/175) by [@bardrop](https://github.com/bardrop), reported by [@trackoor](https://github.com/trackoor))
+- **Presolve dropped fixed variables from the objective** - A variable fixed by presolve (e.g. by `x = 1` plus a redundant row) had its cost zeroed, so the reported `result` missed `cost * value`. ([#176](https://github.com/JWally/jsLPSolver/pull/176))
+
+### Changed
+
+- MIPs with several optimal solutions may return a different optimal vector than 1.0.3 (same objective value).
+- Added a CI workflow and seeded property tests that check results against brute force.
+
 ## [1.0.3] - 2026-01-24
 
 ### Fixed
