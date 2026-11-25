@@ -662,7 +662,9 @@ export function createBranchAndCutService(): BranchAndCutService {
                     return;
                 }
                 bestBranch = activeBranch;
-                if (strongBranching) bestSnapshot = tableau.snapshot();
+                // Keep the incumbent's tableau: re-solving its cuts from the
+                // root can stop at another optimal vertex that is not integral.
+                bestSnapshot = tableau.snapshot();
                 bestEvaluation = evaluation;
                 for (let oCopy = 0; oCopy < nOptionalObjectives; oCopy += 1) {
                     bestOptionalObjectivesEvaluations[oCopy] =

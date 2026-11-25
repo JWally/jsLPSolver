@@ -48,7 +48,6 @@
         "eslint-plugin-unicorn": "55.0.0",
         "knip": "^5.82.1",
         "lefthook": "^2.0.14",
-        "mocha": "12.0.3",
         "prettier": "3.4.2",
         "rollup": "4.22.4",
         "rollup-plugin-dts": "6.1.1",

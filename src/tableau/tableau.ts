@@ -133,6 +133,8 @@ export default class Tableau {
 
     /** True once any column bound has been set (see bounds.ts). */
     hasBounds = false;
+    /** A column bound from the model had an empty range (lb > ub). */
+    hasEmptyColumnBound = false;
     /**
      * Per variable index (dense, allocated on first use; see bounds.ts):
      * x = boundOffset + boundSign * stored, stored in [0, boundRange],
@@ -389,6 +391,10 @@ export default class Tableau {
      * @returns The complete solution object.
      */
     solve(): TableauSolution {
+        if (this.hasEmptyColumnBound) {
+            this.feasible = false;
+            return this.getSolution();
+        }
         if ((this.model?.getNumberOfIntegerVariables() ?? 0) > 0) {
             this.branchAndCut();
         } else {
@@ -547,8 +553,12 @@ export default class Tableau {
         this.initialize(width, height, model.variables, model.unrestrictedVariables);
         this._resetMatrix();
         if (model.columnBounds.size > 0) ensureBoundCapacity(this, this.lastElementIndex);
+        this.hasEmptyColumnBound = false;
         for (const [variable, bound] of model.columnBounds) {
-            setVariableBounds(this, variable.index, bound.lb, bound.ub);
+            // An empty range (lb > ub) cannot be stored; the model is infeasible.
+            if (!setVariableBounds(this, variable.index, bound.lb, bound.ub)) {
+                this.hasEmptyColumnBound = true;
+            }
         }
         return this;
     }
