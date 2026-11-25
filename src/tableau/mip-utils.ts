@@ -64,7 +64,9 @@ export function isIntegral(this: Tableau): boolean {
         const varIndex = integerVariables[v].index;
         const row = rowByVarIndex[varIndex];
         if (row !== -1) {
-            const value = matrix[row * width + rhsColumn];
+            // Judge the actual value, as strong branching does: with column
+            // bounds the stored value is shifted or complemented.
+            const value = toActual(this, varIndex, matrix[row * width + rhsColumn]);
             if (integerDistance(value) > precision) {
                 return false;
             }
@@ -141,7 +143,9 @@ export function getMostFractionalVar(this: Tableau): VariableValue {
         const varIndex = integerVars[v].index;
         const row = rowByVarIndex[varIndex];
         if (row !== -1) {
-            const varValue = matrix[row * width + rhsColumn];
+            // Branching bounds are set on actual values (stored values are
+            // shifted or complemented images when column bounds are active).
+            const varValue = toActual(this, varIndex, matrix[row * width + rhsColumn]);
             const fraction = integerDistance(varValue);
             if (fraction > biggestFraction) {
                 biggestFraction = fraction;
@@ -149,12 +153,6 @@ export function getMostFractionalVar(this: Tableau): VariableValue {
                 selectedVarValue = varValue;
             }
         }
-    }
-
-    // Branching bounds are set on actual values (stored values are shifted
-    // or complemented images when column bounds are active).
-    if (selectedVarIndex !== null && this.hasBounds) {
-        selectedVarValue = toActual(this, selectedVarIndex, selectedVarValue);
     }
     return { index: selectedVarIndex, value: selectedVarValue };
 }

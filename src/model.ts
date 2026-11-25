@@ -672,8 +672,19 @@ class Model {
             rowsByVariable.set(term.variableId, rows);
         }
 
+        const binaries = jsonModel.binaries ?? {};
         for (const [variableId, bound] of bounds) {
-            // Conflicting bounds stay as rows so infeasibility is detected normally.
+            // Integer columns get integral bounds (3x >= 7 is x >= 3). Branch
+            // and cut tests integrality on basic variables only, so a nonbasic
+            // integer column resting at a fractional bound would be accepted
+            // as integral.
+            if (integers[variableId]) {
+                if (binaries[variableId]) bound.ub = Math.min(bound.ub, 1);
+                bound.lb = Math.ceil(bound.lb - 1e-9);
+                bound.ub = Math.floor(bound.ub + 1e-9);
+            }
+            // Conflicting bounds (including a binary forced above 1) stay as
+            // rows so infeasibility is detected normally.
             if (bound.lb > bound.ub) continue;
             this.pendingColumnBounds.set(variableId, bound);
             for (const constraintId of rowsByVariable.get(variableId)!) skip.add(constraintId);
@@ -723,11 +734,11 @@ class Model {
      * Sets fixed variable values and removes redundant constraints.
      */
     private applyPresolveReductions(result: PresolveResult): void {
-        // Set fixed variable values
+        // Set fixed variable values. The cost stays: the variable and its rows
+        // remain in the tableau, so zeroing it would drop cost * value from
+        // the reported objective.
         for (const [variable, value] of result.fixedVariables) {
             variable.value = value;
-            // Zero out the cost since variable is fixed
-            variable.cost = 0;
         }
 
         // Note: We don't actually remove constraints/variables from the model
