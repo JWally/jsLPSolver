@@ -10,6 +10,7 @@
  */
 import type Tableau from "./tableau";
 import { captureBounds, restoreBounds, type BoundState } from "./bounds";
+import { allocMatrix } from "./kernel";
 
 /**
  * Create a deep copy of this tableau's state.
@@ -51,7 +52,8 @@ export function copy(this: Tableau): Tableau {
     copy.optionalObjectivePerPriority = { ...this.optionalObjectivePerPriority };
 
     // Fast Float64Array copy using constructor
-    copy.matrix = new Float64Array(this.matrix);
+    copy.matrix = allocMatrix(this.matrix.length, this.width);
+    copy.matrix.set(this.matrix);
 
     restoreBounds(copy, captureBounds(this));
 
@@ -187,7 +189,7 @@ export function snapshot(this: Tableau, reuse: NodeSnapshot | null = null): Node
  */
 export function loadSnapshot(this: Tableau, snap: NodeSnapshot): void {
     if (this.matrix.length < snap.matrix.length) {
-        this.matrix = new Float64Array(Math.ceil(snap.matrix.length * 1.5));
+        this.matrix = allocMatrix(Math.ceil(snap.matrix.length * 1.5), this.width);
     }
     this.matrix.set(snap.matrix);
     this.height = snap.height;

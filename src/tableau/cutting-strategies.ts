@@ -12,6 +12,7 @@
 import type Tableau from "./tableau";
 import { SlackVariable } from "../expressions";
 import type { BranchCut } from "./types";
+import { allocMatrix } from "./kernel";
 
 /**
  * Add bound constraints (cuts) to the tableau for branch-and-bound.
@@ -35,7 +36,7 @@ export function addCutConstraints(this: Tableau, cutConstraints: BranchCut[]): v
     if (oldMatrix.length < newSize) {
         // Over-allocate by 50% to reduce future reallocations
         const allocSize = Math.ceil(newSize * 1.5);
-        const newMatrix = new Float64Array(allocSize);
+        const newMatrix = allocMatrix(allocSize, this.width);
         newMatrix.set(oldMatrix);
         this.matrix = newMatrix;
     }
@@ -126,7 +127,7 @@ export function addLowerBoundMIRCut(this: Tableau, rowIndex: number): boolean {
     if (matrix.length < newSize) {
         // Over-allocate by 50% to reduce future reallocations
         const allocSize = Math.ceil(newSize * 1.5);
-        const newMatrix = new Float64Array(allocSize);
+        const newMatrix = allocMatrix(allocSize, this.width);
         newMatrix.set(matrix);
         this.matrix = newMatrix;
     }
@@ -206,7 +207,7 @@ export function addUpperBoundMIRCut(this: Tableau, rowIndex: number): boolean {
     if (matrix.length < newSize) {
         // Over-allocate by 50% to reduce future reallocations
         const allocSize = Math.ceil(newSize * 1.5);
-        const newMatrix = new Float64Array(allocSize);
+        const newMatrix = allocMatrix(allocSize, this.width);
         newMatrix.set(matrix);
         this.matrix = newMatrix;
     }

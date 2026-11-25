@@ -782,3 +782,35 @@ a seeded 1,000-model version of this in the suite.
   lines (`BV`, `FR`, `MI`, `PL`) when a set name was present, leaving gesa2's
   and vpm2's binaries continuous. An objective below the known LP relaxation
   is the tell.
+
+### WebAssembly SIMD kernel for the pivot update (1.3-2.5x, identical results)
+
+Key insight 4 above ("WASM doesn't always win") was about porting the solver.
+Moving only the innermost loop is a different trade. The pivot's rank-1
+update is 60-80% of runtime; V8 runs it scalar with bounds checks. The same
+loop as a hand-written 262-byte WebAssembly module (f64x2 multiply and
+subtract, no FMA, so bit-identical) measured 3.2-4.9x faster in isolation.
+
+- The matrix has to live in WebAssembly memory, so `allocMatrix` (kernel.ts)
+  allocates it there, one Memory + Instance per matrix, with the dense pivot
+  row as scratch behind it. No copies cross the boundary; one call per pivot.
+- Matrices under 2048 cells stay plain arrays (tiny models pay nothing), and
+  any matrix not from `allocMatrix`, or a runtime without WebAssembly SIMD or
+  with a CSP that forbids compilation, takes the JS update. `JSLP_NO_WASM=1`
+  forces the JS path; the test suite passes both ways and a test checks the
+  two paths agree pivot for pivot.
+- With the kernel the dense update wins down to very sparse pivot rows; the
+  threshold was flat from 1/2 to "always" and is set at 1/8.
+
+MIPLIB, same node counts: mod010 21.0 -> 8.5 s, misc07 33.1 -> 14.1 s, fiber
+39.3 -> 17.8 s, blend2 10.2 -> 6.1 s, stein45 5.1 -> 2.1 s, dcmulti 1.83 ->
+0.90 s; pk1 now solves (25 s). Netlib LPs warm: 25-45% faster from israel up.
+Vendor Selection 305 -> 226 ms. gesa2 (1392x1224, very sparse rows) did not
+improve.
+
+Also in this round: the phase 1 dual ratio test keeps its pass-1 candidates
+so pass 2 does not rescan the row (mas76 -11%, enigma -10%).
+
+Measured and dropped: unrolling the indexed update by 4 (blend2 +11%), a
+zero fast path in the pivot-row normalization, and inlining `rangeOf` in the
+phase 1 row scan (both within noise).

@@ -13,6 +13,7 @@
 import { actualValue, toActual } from "./bounds";
 import type Tableau from "./tableau";
 import type { Constraint, Variable } from "../expressions";
+import { allocMatrix } from "./kernel";
 
 /** Equilibration factor a constraint row is stored with (Tableau.rowScale; 1 if none). */
 function rowScaleOf(tableau: Tableau, constraintIndex: number): number {
@@ -244,7 +245,7 @@ export function addConstraint(this: Tableau, constraint: Constraint): void {
         const newCapacity = currentCapacity + minGrowth;
 
         const oldMatrix = this.matrix;
-        const newMatrix = new Float64Array(newCapacity);
+        const newMatrix = allocMatrix(newCapacity, this.width);
         newMatrix.set(oldMatrix);
         this.matrix = newMatrix;
     }
@@ -342,7 +343,7 @@ export function addVariable(this: Tableau, variable: Variable): void {
     // Note: Column capacity optimization would require changing all matrix access
     // to use capacity as stride, which is too invasive. Keep simple reallocation.
     const oldMatrix = this.matrix;
-    const newMatrix = new Float64Array(height * newWidth);
+    const newMatrix = allocMatrix(height * newWidth, newWidth);
 
     // Copy old data with new width
     for (let r = 0; r < height; r++) {

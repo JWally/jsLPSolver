@@ -24,6 +24,7 @@ import * as backupOps from "./backup";
 import { ensureBoundCapacity, setVariableBounds } from "./bounds";
 import * as mipOps from "./mip-utils";
 import { log as logImpl } from "./log";
+import { allocMatrix } from "./kernel";
 
 /**
  * Factory for OptionalObjective instances.
@@ -464,7 +465,7 @@ export default class Tableau {
         this.width = width;
         this.height = height;
 
-        this.matrix = new Float64Array(width * height);
+        this.matrix = allocMatrix(width * height, width);
 
         this.varIndexByRow = new Array<number>(this.height);
         this.varIndexByCol = new Array<number>(this.width);
