@@ -185,6 +185,14 @@ function propagateFixing(
 }
 
 /**
+ * Lower bound of a variable with no tightened bound recorded: 0, or
+ * -Infinity for an unrestricted variable.
+ */
+function defaultLower(model: Model, variable: Variable): number {
+    return model.unrestrictedVariables[variable.index] === true ? -Infinity : 0;
+}
+
+/**
  * Coefficient tightening for knapsack-like constraints.
  * If a coefficient is larger than the remaining capacity, reduce it.
  */
@@ -202,7 +210,8 @@ function tightenCoefficients(model: Model, result: PresolveResult): boolean {
                 minActivity += term.coefficient * result.fixedVariables.get(term.variable)!;
             } else {
                 const bounds = result.tightenedBounds.get(term.variable) ?? {};
-                const lower = bounds.lower ?? 0;
+                if (term.coefficient === 0) continue;
+                const lower = bounds.lower ?? defaultLower(model, term.variable);
                 if (term.coefficient > 0) {
                     minActivity += term.coefficient * lower;
                 } else {
@@ -222,7 +231,7 @@ function tightenCoefficients(model: Model, result: PresolveResult): boolean {
             if (term.coefficient <= 0) continue;
 
             const bounds = result.tightenedBounds.get(term.variable) ?? {};
-            const lower = bounds.lower ?? 0;
+            const lower = bounds.lower ?? defaultLower(model, term.variable);
             const upper = bounds.upper ?? 1;
 
             // For binary variables: if coeff > slack, can reduce to slack
@@ -234,7 +243,7 @@ function tightenCoefficients(model: Model, result: PresolveResult): boolean {
                     const impliedUpper = lower + slack / term.coefficient;
                     if (impliedUpper < upper - 1e-6) {
                         const current = result.tightenedBounds.get(term.variable) ?? {};
-                        if (!current.upper || impliedUpper < current.upper) {
+                        if (current.upper === undefined || impliedUpper < current.upper) {
                             result.tightenedBounds.set(term.variable, {
                                 ...current,
                                 upper: impliedUpper,
@@ -274,7 +283,8 @@ function removeRedundantConstraints(model: Model, result: PresolveResult): boole
             }
 
             const bounds = result.tightenedBounds.get(term.variable) ?? {};
-            const lower = bounds.lower ?? 0;
+            if (term.coefficient === 0) continue;
+            const lower = bounds.lower ?? defaultLower(model, term.variable);
             const upper = bounds.upper ?? Infinity;
 
             if (term.coefficient > 0) {
@@ -415,7 +425,7 @@ export function presolve(model: Model): PresolveResult {
                     if (coeff > 0) {
                         // Upper bound
                         const current = result.tightenedBounds.get(variable);
-                        if (!current?.upper || bound < current.upper) {
+                        if (current?.upper === undefined || bound < current.upper) {
                             result.tightenedBounds.set(variable, {
                                 ...current,
                                 upper: bound,
@@ -426,7 +436,7 @@ export function presolve(model: Model): PresolveResult {
                     } else {
                         // Lower bound (coefficient is negative)
                         const current = result.tightenedBounds.get(variable);
-                        if (!current?.lower || bound > current.lower) {
+                        if (current?.lower === undefined || bound > current.lower) {
                             result.tightenedBounds.set(variable, {
                                 ...current,
                                 lower: bound,
@@ -479,7 +489,7 @@ export function presolve(model: Model): PresolveResult {
 
             // Binary variables with upper bound <= 0.5 are fixed to 0
             if (variable.isInteger && bounds.upper !== undefined && bounds.upper <= 0.5) {
-                const lowerBound = bounds.lower ?? 0;
+                const lowerBound = bounds.lower ?? defaultLower(model, variable);
                 if (lowerBound >= -0.5) {
                     result.fixedVariables.set(variable, 0);
                     result.stats.variablesFixed++;

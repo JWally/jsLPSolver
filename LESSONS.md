@@ -734,3 +734,51 @@ sign error: some wrong cuts are valid-but-weak combinations. Cuts are now
 checked directly at sampled feasible points (each integer assignment, LPs
 over the continuous part in six directions); mutations that tighten a cut
 are caught, mutations that only weaken it are (correctly) not.
+
+## 2026-11 Round: Property Tests, Pivot Update, Redundant Rows
+
+### Fuzzing small models against independent oracles
+
+Random 1-4 variable models, checked three ways that do not trust the solver:
+the returned point is tested against every constraint and integrality, pure
+integer models are brute-forced, and v1.0.3 is run on the same input. That
+found seven bugs the MIPLIB/Netlib suites never showed, because benchmark
+models rarely have fractional single-variable bounds, binaries forced out of
+range, or unrestricted integers:
+
+- fractional column bounds on integer columns (accepted as integral, or a
+  crash); a binary forced above 1 reported feasible and unbounded;
+- presolve zeroing the cost of fixed variables, and assuming unrestricted
+  variables are non-negative (both also in v1.0.3);
+- the row-branching incumbent rebuilt by re-solving from the root, which can
+  stop at another optimal vertex that is not integral.
+
+A solver-vs-itself comparison (presolve on vs off) missed the first of these:
+both paths returned the same wrong answer. `src/solver.property.test.ts` keeps
+a seeded 1,000-model version of this in the suite.
+
+### What worked
+
+- **Dense pivot update**: pivot rows more than 80% non-zero take a straight
+  pass over the row, unrolled by 4; the indexed update is unrolled by 2.
+  Identical arithmetic and node counts; MIPLIB 5-29% faster.
+
+### What did not (measured, reverted)
+
+- **Dropping rows that can never bind** (empty rows, and rows whose activity
+  range from the variable bounds already satisfies them; decided on the JSON
+  so indices stay dense). p0282 243 -> 219 ms and gt2 18.6 -> 15.6 ms, eight
+  Netlib LPs within +-10%, but p0548 1.56 -> 7.07 s. The cause was not traced;
+  root cuts and bound tightening are the likely users of those rows. MIPLIB
+  models have few such rows anyway (p0282 20 of 241 is the most); on LPs the
+  removable rows are almost all single-variable bounds, which are faster as
+  rows (see the column-bounds round).
+- Removing constraint objects after loadJson (instead of never creating them)
+  broke MIPs outright: element indices are assumed dense.
+
+### Benchmark harness
+
+- `scratch/mps.ts` took the bound-set name as the column on valueless bound
+  lines (`BV`, `FR`, `MI`, `PL`) when a set name was present, leaving gesa2's
+  and vpm2's binaries continuous. An objective below the known LP relaxation
+  is the tell.
