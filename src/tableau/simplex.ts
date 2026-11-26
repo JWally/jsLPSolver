@@ -1410,48 +1410,63 @@ export function pivot(this: Tableau, pivotRowIndex: number, pivotColumnIndex: nu
     this.colByVarIndex[enteringBasicIndex] = -1;
     this.colByVarIndex[leavingBasicIndex] = pivotColumnIndex;
 
-    // Normalize pivot row, track non-zero columns, and cache values for locality
-    let nNonZeroColumns = 0;
-    for (let c = 0; c < width; c++) {
-        const idx = pivotRowOffset + c;
-        const val = matrix[idx];
-        const normalized = val / quotient;
-        // Entries that are (or normalize to) noise are zeroed here, once,
-        // so the row updates below can run without a branch per entry.
-        if (!(normalized >= -1e-16 && normalized <= 1e-16) && !(val >= -1e-16 && val <= 1e-16)) {
-            matrix[idx] = normalized;
-            nonZeroColumns[nNonZeroColumns] = c;
-            pivotRowCache[nNonZeroColumns] = normalized;
-            nNonZeroColumns++;
-        } else {
-            matrix[idx] = 0;
-        }
-    }
-    matrix[pivotRowOffset + pivotColumnIndex] = invQuotient;
-
-    // A matrix in WebAssembly memory gets the SIMD kernel, which does every
-    // row in one call and wins down to much sparser pivot rows.
+    // A matrix in WebAssembly memory gets the SIMD kernel: it normalizes the
+    // pivot row and then updates every other row in one call, which wins
+    // down to much sparser pivot rows than the JS update.
     const kernel = kernelOf(matrix);
-    if (
-        kernel !== undefined &&
-        width <= kernel.pivotRow.length &&
-        nNonZeroColumns * KERNEL_ROW_RATIO > width
-    ) {
-        const kernelRow = kernel.pivotRow;
-        kernelRow.fill(0, 0, width);
-        for (let i = 0; i < nNonZeroColumns; i++) {
-            kernelRow[nonZeroColumns[i]] = pivotRowCache[i];
+    let nNonZeroColumns = 0;
+    if (kernel !== undefined && width <= kernel.pivotRow.length) {
+        const kept = kernel.normalize(pivotRowOffset * 8, width, quotient, kernel.pivotRowOffset);
+        matrix[pivotRowOffset + pivotColumnIndex] = invQuotient;
+        const useKernel = kept * KERNEL_ROW_RATIO > width;
+        const hasOptionalObjectives = this.optionalObjectives.length > 0;
+        if (!useKernel || hasOptionalObjectives) {
+            // The JS update and the optional objectives need the index list.
+            const kernelRow = kernel.pivotRow;
+            for (let c = 0; c < width; c++) {
+                const value = kernelRow[c];
+                if (value !== 0) {
+                    nonZeroColumns[nNonZeroColumns] = c;
+                    pivotRowCache[nNonZeroColumns] = value;
+                    nNonZeroColumns++;
+                }
+            }
         }
-        kernel.update(
-            kernel.pivotRowOffset,
-            width,
-            height,
-            pivotRowIndex,
-            pivotColumnIndex,
-            quotient
-        );
-        updateOptionalObjectives(this, pivotColumnIndex, nNonZeroColumns, invQuotient);
-        return;
+        if (useKernel) {
+            kernel.update(
+                kernel.pivotRowOffset,
+                width,
+                height,
+                pivotRowIndex,
+                pivotColumnIndex,
+                quotient
+            );
+            if (hasOptionalObjectives) {
+                updateOptionalObjectives(this, pivotColumnIndex, nNonZeroColumns, invQuotient);
+            }
+            return;
+        }
+    } else {
+        // Normalize pivot row, track non-zero columns, and cache values for locality
+        for (let c = 0; c < width; c++) {
+            const idx = pivotRowOffset + c;
+            const val = matrix[idx];
+            const normalized = val / quotient;
+            // Entries that are (or normalize to) noise are zeroed here, once,
+            // so the row updates below can run without a branch per entry.
+            if (
+                !(normalized >= -1e-16 && normalized <= 1e-16) &&
+                !(val >= -1e-16 && val <= 1e-16)
+            ) {
+                matrix[idx] = normalized;
+                nonZeroColumns[nNonZeroColumns] = c;
+                pivotRowCache[nNonZeroColumns] = normalized;
+                nNonZeroColumns++;
+            } else {
+                matrix[idx] = 0;
+            }
+        }
+        matrix[pivotRowOffset + pivotColumnIndex] = invQuotient;
     }
 
     const dense = nNonZeroColumns * DENSE_ROW_RATIO > width;
