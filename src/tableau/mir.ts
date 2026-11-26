@@ -25,9 +25,10 @@
 import type Tableau from "./tableau";
 import { actualValue, lowerBoundOf, upperBoundOf } from "./bounds";
 import { appendCutTableauRow } from "./gomory";
+import { separateCoverCut } from "./cover";
 
 /** A row sum_j coef[k] x_{index[k]} <= rhs over structural variables. */
-interface SparseRow {
+export interface SparseRow {
     index: number[];
     coef: number[];
     rhs: number;
@@ -150,7 +151,7 @@ export function addMirCuts(tableau: Tableau, original: OriginalRows, maxCuts: nu
     return added;
 }
 
-/** c-MIR cuts from the captured original rows at the current LP optimum. */
+/** c-MIR and cover cuts from the captured original rows at the current LP optimum. */
 export function separateMirCuts(tableau: Tableau, original: OriginalRows): Cut[] {
     if (!tableau.model) return [];
     const data = new Map<number, VariableData>();
@@ -175,6 +176,9 @@ export function separateMirCuts(tableau: Tableau, original: OriginalRows): Cut[]
     for (let r = 0; r < original.rows.length; r++) {
         const cut = separateFromRow(original, r, variableData);
         if (cut !== null) cuts.push(cut);
+        // All-binary rows also get a lifted cover cut (cover.ts).
+        const cover = separateCoverCut(original.rows[r], variableData);
+        if (cover !== null) cuts.push(cover);
     }
     return cuts;
 }
