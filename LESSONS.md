@@ -943,3 +943,55 @@ wants to try it per model (or race it).
 we do not, even with 40 rounds, so the remaining difference is cut classes
 and cut management we lack (its cover/clique/implied-bound cuts, a cut pool,
 conflict analysis, restarts), not rounds.
+
+### Using HiGHS's cut pool as an oracle
+
+The `highs` package's cut-pool callback returns the cuts in its LP at the end
+of the root (presolve off, so they are in our variables; note HiGHS numbers
+columns by first appearance in the LP text). Three experiments on top of it:
+
+**1. Transplant: give our solver HiGHS's root cuts as plain rows.**
+
+| Instance | ours   | ours + HiGHS cuts | HiGHS  |
+| -------- | ------ | ----------------- | ------ |
+| qnet1    | 53.4 s | 1.24 s (3 nodes)  | 0.47 s |
+| vpm2     | > 60 s | 6.7 s             | 1.0 s  |
+| gesa2    | 7.7 s  | 3.0 s             | 0.43 s |
+| p0548    | 0.95 s | 0.08 s            | 0.13 s |
+| blend2   | 5.1 s  | 3.8 s             | 1.3 s  |
+
+fiber, bell5 and enigma get slower with them. So on four instances ~100
+sparse cuts (median 6-10 non-zeros; our Gomory cuts are dense rows) are the
+whole gap. No single family carries it: on qnet1 all cuts give 1.2 s, its 108
+integer cuts alone 38 s, and all but 5 fractional ones 13 s.
+
+**2. Match: at our own root LP point, which violated HiGHS cuts do we also
+produce (cosine > 0.98)?** qnet1 8 of 47, p0548 1 of 117, gesa2 45 of 123,
+vpm2 7 of 84. The misses come from rows we do cut (qnet1: 33 misses from 12
+rows), so the generator, not row coverage, is what differs.
+
+**3. What the misses are.** p0548: knapsack covers from "y = 1 forces enough
+of x" rows (y <= sum x_j) and their lifted forms. qnet1: lifted
+mixed-integer covers on capacity rows with general integers. vpm2/gesa2:
+flow covers and aggregated MIR with continuous variables, plus implied-bound
+cuts (c <= 0.5 b). Two-variable implications (y <= x) appear everywhere.
+
+**What was tried on our separator against that:**
+
+- Up to 200 deltas per row instead of 8, MIN_FRACTION 0.01, several cuts per
+  row: generated counts barely move (qnet1 14 -> 15 -> 31); matches 8 -> 12.
+- The parallelism filter (cosine > 0.1 rejected) is far stricter than usual.
+  At 0.9: p0548 963 -> 628 ms, fixnet6 1560 -> 1029, vpm2 solves in 57 s, but
+  blend2 and qnet1 time out; total flat. Left at 0.1.
+- **Lifted knapsack cover cuts (kept).** New `cover.ts`: greedy violated
+  cover made minimal, Balas lifting (coefficient h when
+  mu*h <= w_j < mu*{h+1}), checked in tests against every 0/1 point of 600
+  random rows. p0548 963 -> 466 ms, p0282 194 -> 82 ms, p0033 16 -> 14,
+  lseu 58 -> 74; every other instance keeps its node count. (An earlier
+  lifted-cover port was reverted for moving bounds by +-1%; this one is a
+  second, independent implementation and was measured per instance.)
+
+**Still to build, in the order the oracle suggests:** lifted covers on rows
+with general integers (qnet1), implied-bound and two-variable implication
+cuts (vpm2, p0548), flow covers (vpm2, gesa2). The transplant numbers are the
+ceiling for all of it.
