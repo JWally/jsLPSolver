@@ -188,11 +188,12 @@ describe("Solver Options", () => {
     });
 
     describe("search tuning (experimental)", () => {
-        it("bestBoundEvery and guidedDive change the search, not the optimum", () => {
+        it("search options change the search, not the optimum", () => {
             const model = createSlowMIP(14);
             const base = solve(model);
             expect(base.feasible).toBe(true);
             for (const options of [
+                { aggressiveRootCuts: true },
                 { bestBoundEvery: 4 },
                 { bestBoundEvery: 25, guidedDive: true },
                 { guidedDive: true },

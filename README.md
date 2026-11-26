@@ -173,7 +173,8 @@ worker.postMessage(model);
 ## Performance
 
 Measured on an Apple M4 Max, Node.js 24, single thread. "v1.0.3" is the
-previous release; "1.1.0" is this one. The reference is
+previous release; "1.1.0" is the current one (mod010 is measured on master,
+after the root cut probe). The reference is
 [HiGHS](https://highs.dev) compiled to WebAssembly (the npm `highs` package,
 version 1.16.0, single thread), the strongest solver that runs in the same
 place. How each step was reached, including what was tried and dropped, is in
@@ -222,6 +223,7 @@ divided by HiGHS-WASM time, so below 1 means jsLPSolver is faster:
 | flugpl   | -      | 0.02 s | 0.09 s     | 0.23  |
 | lseu     | 7.0 s  | 0.06 s | 0.23 s     | 0.24  |
 | p0033    | -      | 0.02 s | 0.06 s     | 0.26  |
+| mod010   | > 60 s | 0.22 s | 0.58 s     | 0.38  |
 | rgn      | -      | 0.09 s | 0.21 s     | 0.40  |
 | gt2      | -      | 0.03 s | 0.08 s     | 0.41  |
 | egout    | 13.8 s | 0.03 s | 0.06 s     | 0.46  |
@@ -237,7 +239,6 @@ divided by HiGHS-WASM time, so below 1 means jsLPSolver is faster:
 | bell5    | > 30 s | 1.4 s  | 0.32 s     | 4.3   |
 | enigma   | > 30 s | 0.75 s | 0.10 s     | 7.2   |
 | p0548    | > 30 s | 0.96 s | 0.13 s     | 7.5   |
-| mod010   | > 60 s | 7.2 s  | 0.58 s     | 12.5  |
 | gesa2    | > 30 s | 7.3 s  | 0.43 s     | 17    |
 | fiber    | > 60 s | 15.4 s | 0.61 s     | 25    |
 | qnet1    | > 60 s | 52.3 s | 0.47 s     | 111   |
@@ -245,8 +246,8 @@ divided by HiGHS-WASM time, so below 1 means jsLPSolver is faster:
 | noswot   | > 60 s | > 60 s | 16.0 s     | -     |
 
 "-" under v1.0.3 means it was not measured for that release. jsLPSolver is
-ahead on 17 of the 28 instances both solve, mostly small models and ones with
-large search trees; HiGHS is far ahead on qnet1, fiber, gesa2 and mod010. The Netlib LPs
+ahead on 18 of the 28 instances both solve, mostly small models and ones with
+large search trees; HiGHS is far ahead on qnet1, fiber and gesa2. The Netlib LPs
 solve in 2-53 ms.
 
 What changed since v1.0.3: a bounded dual simplex with warm-started,

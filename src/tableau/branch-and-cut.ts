@@ -25,7 +25,7 @@ import {
     upperBoundOf,
 } from "./bounds";
 import { Pseudocosts, RELIABILITY, productScore } from "./pseudocosts";
-import { addGomoryCuts, removeSlackCuts } from "./gomory";
+import { addGomoryCuts, removeSlackCuts, takeRangeRejections } from "./gomory";
 import { presolveRootTableau } from "./root-presolve";
 import { addMirCuts, captureOriginalRows, type OriginalRows } from "./mir";
 
@@ -504,16 +504,29 @@ export function createBranchAndCutService(): BranchAndCutService {
         // (10 rounds lost gt2 entirely).
         const ROOT_CUT_ROUNDS = 3;
         const ROOT_CUT_MIN_GAIN = 1e-4;
-        const addRootCuts = (): void => {
-            const firstCutRow = tableau.height;
-            const cutBudget = tableau.height - 1;
-            const rootEvaluation = tableau.evaluation;
-            const beforeCuts = takeSnapshot();
+        // options.aggressiveRootCuts: probe for many rounds, aging out slack
+        // cuts each round, and keep the result even when it is not integral.
+        const aggressiveRootCuts = tableau.model.aggressiveRootCuts;
+        const PROBE_ROUNDS = aggressiveRootCuts ? 40 : ROOT_CUT_ROUNDS;
+        const PROBE_STALL = 3;
+        /**
+         * Cut rounds from the current tableau. Returns false if a re-solve
+         * came back infeasible (the cuts are valid, so the MIP is infeasible).
+         */
+        const runCutRounds = (
+            firstCutRow: number,
+            relaxNoise: boolean,
+            rounds = ROOT_CUT_ROUNDS,
+            age = false
+        ): boolean => {
+            const cutBudget = firstCutRow - 1;
             let total = 0;
-            for (let round = 0; round < ROOT_CUT_ROUNDS && total < cutBudget; round++) {
+            let stalled = 0;
+            for (let round = 0; round < rounds && total < cutBudget; round++) {
+                if (age) total = tableau.height - firstCutRow;
                 const before = tableau.evaluation;
                 const perRound = Math.min(cutBudget - total, Math.max(10, cutBudget >> 2));
-                let added = addGomoryCuts(tableau, perRound);
+                let added = addGomoryCuts(tableau, perRound, relaxNoise);
                 if (originalRows !== null && total + added < cutBudget) {
                     added += addMirCuts(
                         tableau,
@@ -524,12 +537,66 @@ export function createBranchAndCutService(): BranchAndCutService {
                 if (added === 0) break;
                 total += added;
                 tableau.simplex();
-                if (!tableau.feasible) {
+                if (!tableau.feasible) return false;
+                const gain = tableau.evaluation - before;
+                if (age) {
+                    if (tableau.isIntegral()) break;
+                    removeSlackCuts(tableau, firstCutRow);
+                    if (gain < ROOT_CUT_MIN_GAIN * Math.max(1, Math.abs(tableau.evaluation))) {
+                        if (++stalled >= PROBE_STALL) break;
+                    } else {
+                        stalled = 0;
+                    }
+                    continue;
+                }
+                if (gain < ROOT_CUT_MIN_GAIN * Math.max(1, Math.abs(tableau.evaluation))) break;
+            }
+            return true;
+        };
+        const addRootCuts = (): void => {
+            const firstCutRow = tableau.height;
+            const rootEvaluation = tableau.evaluation;
+            const beforeCuts = takeSnapshot();
+            takeRangeRejections();
+            if (!runCutRounds(firstCutRow, false)) {
+                releaseSnapshot(beforeCuts);
+                return;
+            }
+            // Probe: Gomory cuts with noise-sized coefficients relaxed away
+            // (instead of the whole cut being rejected for its coefficient
+            // range) are far more numerous. On most models the extra rows
+            // cost more per node than their bound gain saves, and nothing
+            // measured at the root predicts which. The one clear case is
+            // when they make the root LP integral, which solves the problem
+            // outright (MIPLIB mod010: 753 nodes -> 1). So when the plain
+            // pass rejected more cuts than it kept (mod010: 80 against 2;
+            // where most survive the retry is pure overhead), try again from
+            // the root with the relaxed ones and keep that only if it closes
+            // the problem; otherwise
+            // restore the plain result exactly, pivot count included (the
+            // search budgets strong branching and snapshots from it).
+            const lostMostCuts = takeRangeRejections() > tableau.height - firstCutRow;
+            if ((lostMostCuts || aggressiveRootCuts) && !tableau.isIntegral()) {
+                const plain = takeSnapshot();
+                const plainEvaluation = tableau.evaluation;
+                const plainPivots = tableau.pivotCount;
+                tableau.loadSnapshot(beforeCuts);
+                tableau.feasible = true;
+                tableau.evaluation = rootEvaluation;
+                const feasible = runCutRounds(firstCutRow, true, PROBE_ROUNDS, aggressiveRootCuts);
+                if (!feasible || tableau.isIntegral() || aggressiveRootCuts) {
+                    if (feasible && !tableau.isIntegral()) {
+                        removeSlackCuts(tableau, firstCutRow);
+                    }
+                    releaseSnapshot(plain);
                     releaseSnapshot(beforeCuts);
                     return;
                 }
-                const gain = tableau.evaluation - before;
-                if (gain < ROOT_CUT_MIN_GAIN * Math.max(1, Math.abs(tableau.evaluation))) break;
+                tableau.loadSnapshot(plain);
+                tableau.feasible = true;
+                tableau.evaluation = plainEvaluation;
+                tableau.pivotCount = plainPivots;
+                releaseSnapshot(plain);
             }
             // Cut rows are dense and make every later pivot costlier. With an
             // integral objective, cuts that leave the rounded bound where it

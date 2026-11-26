@@ -888,3 +888,58 @@ took the first to finish. 30 MIPLIB instances, 60 s limit, 14-core machine:
   racing on big-tree instances; that is the experiment worth doing next.
 - The two settings stay available as experimental options
   (`options.bestBoundEvery`, `options.guidedDive`); defaults are unchanged.
+
+### Where HiGHS-WASM is far ahead, and why (1.1.0 vs highs 1.16.0)
+
+Re-measured side by side: jsLPSolver is ahead on 17 of the 28 MIPLIB 3
+instances both solve (mas76 18x, stein45 8x, pk1 5x), HiGHS on qnet1 (111x),
+fiber (25x), gesa2 (17x), mod010 (12x), p0548 and enigma (7x), and it solves
+vpm2 and noswot. Ablations through the `highs` model API (presolve off,
+heuristics off, restarts off, symmetry off) barely change its node counts:
+
+| Instance | HiGHS nodes | ours  |
+| -------- | ----------- | ----- |
+| qnet1    | 1           | 778   |
+| mod010   | 1           | 753   |
+| p0548    | 1           | 3600  |
+| gesa2    | 1           | 2479  |
+| enigma   | 1           | 31825 |
+| fiber    | 9           | 1274  |
+
+So the gap is the root cut loop, not presolve or heuristics.
+
+**Finding: our Gomory separator was rejecting almost every cut.** A cut was
+dropped when its largest/smallest coefficient ratio exceeded 1e6, and
+"smallest" included rounding noise: a tableau entry that should be integral
+comes out as k + 1e-15, its fractional part becomes a 1e-15 coefficient, and
+the ratio is 1e15. mod010 rejected 37 of 37 candidates in round 1, qnet1 45
+of 47, fiber 39 of 40. Fix: coefficients below 1e-9 are relaxed out of the
+cut (the right-hand side gives up coefficient x range, which keeps it valid);
+unbounded variables keep theirs and are left out of the ratio test.
+
+**But more cuts is not a default.** With the relaxed cuts always on: mod010
+7.2 s -> 0.21 s (root integral) and p0282 2.7x, but fiber 15 -> 26 s, p0548
+1.0 -> 2.0 s, qnet1 > 60 s; total 78 -> 88 s. With 40 rounds and slack cuts
+aged out each round the root bound improves a lot (gap closed: bell5 18% ->
+92%, gesa2 80% -> 94%, fiber 88% -> 95%) and p0548 gets 4.5x faster, enigma
+4x, vpm2 solves in 42 s, yet bell5 gets 5x slower with the better bound,
+gesa2 3.4x, and blend2 and qnet1 time out. Root statistics (bound gain,
+cuts, rows) do not predict which: the different root basis moves node counts
+by 2x either way.
+
+**What ships:** a probe. If the plain pass rejected more Gomory cuts than it
+kept, retry from the root with relaxed cuts; keep the result only if the
+root LP is integral, else restore the plain result exactly (pivot count
+included: strong branching and snapshot budgets read it, and without that
+the "identical" search drifted on a dozen instances). mod010 closes at the
+root; all other 54 instances keep their node counts; no instance is more
+than 10% slower. The trigger matters: probing whenever anything was rejected
+cost Vendor Selection 20% (12 rejected, 26 kept).
+
+`options.aggressiveRootCuts` keeps the long aged loop's cuts for anyone who
+wants to try it per model (or race it).
+
+**Still open:** HiGHS closes p0548, qnet1, gesa2 and enigma at the root and
+we do not, even with 40 rounds, so the remaining difference is cut classes
+and cut management we lack (its cover/clique/implied-bound cuts, a cut pool,
+conflict analysis, restarts), not rounds.

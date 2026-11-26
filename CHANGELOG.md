@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Performance
+
+- **Root cut probe** - Gomory cuts were being rejected wholesale for their coefficient range because of rounding noise (an entry stored as `k + 1e-15`). When the plain pass loses more cuts than it keeps, the root is now retried with those coefficients relaxed away, and the result is kept if it makes the root LP integral. MIPLIB mod010: 7.2 s and 753 nodes to 0.22 s at the root; every other benchmark instance searches exactly as before.
+
+### Added
+
+- Experimental options `bestBoundEvery`, `guidedDive` ([#196](https://github.com/JWally/jsLPSolver/pull/196)) and `aggressiveRootCuts`. Defaults are unchanged; each helps some models and hurts others (see LESSONS.md).
+
 ## [1.1.0] - 2026-11-25
 
 ### Performance
