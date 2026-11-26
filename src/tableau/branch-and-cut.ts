@@ -16,7 +16,14 @@ import type Tableau from "./tableau";
 import type { Branch, BranchCut } from "./types";
 import type { NodeSnapshot } from "./backup";
 import { BranchMinHeap } from "./min-heap";
-import { lowerBoundOf, rangeOf, setVariableBounds, toActual, upperBoundOf } from "./bounds";
+import {
+    actualValue,
+    lowerBoundOf,
+    rangeOf,
+    setVariableBounds,
+    toActual,
+    upperBoundOf,
+} from "./bounds";
 import { Pseudocosts, RELIABILITY, productScore } from "./pseudocosts";
 import { addGomoryCuts, removeSlackCuts } from "./gomory";
 import { presolveRootTableau } from "./root-presolve";
@@ -144,6 +151,7 @@ export function createBranchAndCutService(): BranchAndCutService {
         }
 
         let bestEvaluation = Infinity;
+        let incumbentValues: Float64Array | null = null;
         // On the column-bounds path the incumbent's tableau is kept as a
         // snapshot: re-solving its node from the root by its branching bounds
         // would miss reduced-cost fixings and could return a fractional
@@ -263,7 +271,8 @@ export function createBranchAndCutService(): BranchAndCutService {
         // instances but stalls badly on others (MIPLIB bell3a); pure
         // best-first loses the warm start. Siblings live in both the heap
         // and this stack; `done` marks the copy already processed.
-        const BEST_BOUND_EVERY = 100;
+        const BEST_BOUND_EVERY = tableau.model.bestBoundEvery;
+        const guidedDive = tableau.model.guidedDive;
         const recentSiblings: Branch[] = [];
         let selections = 0;
         const nextFromHeap = (): Branch | undefined => {
@@ -666,6 +675,19 @@ export function createBranchAndCutService(): BranchAndCutService {
                 // root can stop at another optimal vertex that is not integral.
                 bestSnapshot = tableau.snapshot();
                 bestEvaluation = evaluation;
+                if (guidedDive) {
+                    const integerVariables = tableau.model.integerVariables;
+                    if (
+                        incumbentValues === null ||
+                        incumbentValues.length <= tableau.lastElementIndex
+                    ) {
+                        incumbentValues = new Float64Array(tableau.lastElementIndex + 1);
+                    }
+                    for (let i = 0; i < integerVariables.length; i++) {
+                        const index = integerVariables[i].index;
+                        incumbentValues[index] = Math.round(actualValue(tableau, index));
+                    }
+                }
                 for (let oCopy = 0; oCopy < nOptionalObjectives; oCopy += 1) {
                     bestOptionalObjectivesEvaluations[oCopy] =
                         optionalObjectives[oCopy].reducedCosts[0];
@@ -739,7 +761,13 @@ export function createBranchAndCutService(): BranchAndCutService {
                     diveCut = chosenDownInfeasible ? cutHigh : cutLow;
                     continue;
                 }
-                if (varValue - Math.floor(varValue) >= 0.5) {
+                // Guided diving: with an incumbent, dive toward its value of the
+                // branching variable; otherwise toward the nearer integer.
+                const diveUp =
+                    incumbentValues !== null && varIndex < incumbentValues.length
+                        ? incumbentValues[varIndex] > varValue
+                        : varValue - Math.floor(varValue) >= 0.5;
+                if (diveUp) {
                     diveBranch = branchHigh;
                     diveCut = cutHigh;
                     sibling = branchLow;

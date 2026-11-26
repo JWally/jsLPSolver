@@ -187,6 +187,30 @@ describe("Solver Options", () => {
         });
     });
 
+    describe("search tuning (experimental)", () => {
+        it("bestBoundEvery and guidedDive change the search, not the optimum", () => {
+            const model = createSlowMIP(14);
+            const base = solve(model);
+            expect(base.feasible).toBe(true);
+            for (const options of [
+                { bestBoundEvery: 4 },
+                { bestBoundEvery: 25, guidedDive: true },
+                { guidedDive: true },
+            ]) {
+                const result = solve({ ...model, options });
+                expect(result.feasible).toBe(true);
+                expect(result.result).toBeCloseTo(base.result, 6);
+            }
+        });
+
+        it("ignores a bestBoundEvery below 1", () => {
+            const model = createSlowMIP(10);
+            const base = solve(model);
+            const result = solve({ ...model, options: { bestBoundEvery: 0 } });
+            expect(result.result).toBeCloseTo(base.result, 6);
+        });
+    });
+
     describe("tolerance", () => {
         it("accepts sub-optimal solution within tolerance", () => {
             // A problem where we know the optimal value

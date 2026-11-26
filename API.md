@@ -172,16 +172,18 @@ Options can be specified at the model level or in an `options` object:
 
 ### Available Options
 
-| Option           | Default        | Description                                                         |
-| ---------------- | -------------- | ------------------------------------------------------------------- |
-| `timeout`        | none           | Maximum solve time in milliseconds (MIP only)                       |
-| `tolerance`      | 0              | Accept solutions within X% of optimal (e.g., 0.05 = 5%)             |
-| `exitOnCycles`   | false          | Stop if cycling is detected in simplex                              |
-| `presolve`       | auto           | Apply preprocessing; set `true` to force or `false` to disable      |
-| `useMIRCuts`     | true           | Apply Mixed-Integer Rounding cuts to tighten LP relaxation          |
-| `keep_solutions` | false          | Store intermediate MIP solutions                                    |
-| `nodeSelection`  | `"hybrid"`     | B&B node selection: `"best-first"`, `"depth-first"`, `"hybrid"`     |
-| `branching`      | `"pseudocost"` | Variable selection: `"most-fractional"`, `"pseudocost"`, `"strong"` |
+| Option           | Default        | Description                                                                                            |
+| ---------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
+| `timeout`        | none           | Maximum solve time in milliseconds (MIP only)                                                          |
+| `tolerance`      | 0              | Accept solutions within X% of optimal (e.g., 0.05 = 5%)                                                |
+| `exitOnCycles`   | false          | Stop if cycling is detected in simplex                                                                 |
+| `presolve`       | auto           | Apply preprocessing; set `true` to force or `false` to disable                                         |
+| `useMIRCuts`     | true           | Apply Mixed-Integer Rounding cuts to tighten LP relaxation                                             |
+| `keep_solutions` | false          | Store intermediate MIP solutions                                                                       |
+| `bestBoundEvery` | 100            | Experimental: jump to the best-bound node every N node selections; the best value depends on the model |
+| `guidedDive`     | false          | Experimental: dive toward the incumbent's value of the branching variable                              |
+| `nodeSelection`  | `"hybrid"`     | B&B node selection: `"best-first"`, `"depth-first"`, `"hybrid"`                                        |
+| `branching`      | `"pseudocost"` | Variable selection: `"most-fractional"`, `"pseudocost"`, `"strong"`                                    |
 
 ### Timeout
 
