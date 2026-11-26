@@ -32,6 +32,16 @@ export interface SolveOptions {
     exitOnCycles?: boolean;
     /** If true, store all integer-feasible solutions found during branch-and-cut (not just the best). */
     keep_solutions?: boolean;
+    /**
+     * Experimental search tuning: jump to the best-bound node every this many
+     * node selections (default 100). The best value is instance-dependent.
+     */
+    bestBoundEvery?: number;
+    /**
+     * Experimental search tuning: dive toward the incumbent's value of the
+     * branching variable once an incumbent exists (default false).
+     */
+    guidedDive?: boolean;
     /** Node selection strategy for branch-and-bound tree exploration. */
     nodeSelection?: "best-first" | "depth-first" | "hybrid";
     /** Variable selection (branching) strategy for choosing which fractional variable to branch on. */

@@ -866,3 +866,25 @@ because node counts swing by 2-4x per instance in both directions:
 What is left on this side is an improvement heuristic proper (RINS or local
 branching as a restricted sub-search on the tableau), bounded above by the
 table, or stronger root cuts for noswot/vpm2.
+
+### Racing search configurations in worker threads (prototype, measured)
+
+The search-order experiments above lost as defaults but often won per
+instance, so a prototype (`scratch/race.ts`, Node worker_threads) ran the same
+model in N workers with different `bestBoundEvery` / `guidedDive` settings and
+took the first to finish. 30 MIPLIB instances, 60 s limit, 14-core machine:
+
+| Workers | Total over the 28 instances solved | Notes                                                                  |
+| ------- | ---------------------------------- | ---------------------------------------------------------------------- |
+| 1       | 138.5 s                            | default configuration                                                  |
+| 4       | 110.2 s                            | mod010 7.7 -> 2.0, fiber 15.7 -> 7.7, qnet1 54 -> 41, pk1 19.6 -> 14.9 |
+| 8       | 134.2 s                            | contention eats the gain                                               |
+
+- A 20% total gain for 4x the CPU, concentrated in four instances; most others
+  get 5-30% slower (worker start-up of 0.2-0.4 s and memory contention).
+  noswot and vpm2 still time out. Every configuration returned the same optimum.
+- With 8 solves running at once a tree-heavy instance (mas76) slowed only ~11%
+  per worker, so splitting one tree across workers should scale better than
+  racing on big-tree instances; that is the experiment worth doing next.
+- The two settings stay available as experimental options
+  (`options.bestBoundEvery`, `options.guidedDive`); defaults are unchanged.

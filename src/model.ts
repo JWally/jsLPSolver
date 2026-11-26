@@ -86,6 +86,10 @@ class Model {
     relaxationIndex: number;
     /** Whether MIR cuts are enabled for branch-and-cut. */
     useMIRCuts: boolean;
+    /** Search tuning: best-bound jump interval (see options.bestBoundEvery). */
+    bestBoundEvery = 100;
+    /** Search tuning: guided diving (see options.guidedDive). */
+    guidedDive = false;
     /** Whether to detect and abort on simplex pivot cycles. */
     checkForCycles: boolean;
     /** Diagnostic messages collected during solving. */
@@ -491,6 +495,15 @@ class Model {
                 this.tolerance = jsonModel.options.tolerance || 0;
             }
 
+            if (
+                typeof jsonModel.options.bestBoundEvery === "number" &&
+                jsonModel.options.bestBoundEvery >= 1
+            ) {
+                this.bestBoundEvery = Math.floor(jsonModel.options.bestBoundEvery);
+            }
+            if (jsonModel.options.guidedDive === true) {
+                this.guidedDive = true;
+            }
             if (jsonModel.options.useMIRCuts) {
                 this.useMIRCuts = jsonModel.options.useMIRCuts;
             }
