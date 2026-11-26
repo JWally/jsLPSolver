@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Presolve dropped fixed variables from the objective** - A variable fixed by presolve (e.g. by `x = 1` plus a redundant row) had its cost zeroed, so the reported `result` missed `cost * value`. ([#176](https://github.com/JWally/jsLPSolver/pull/176))
 - **Presolve reported feasible models with unrestricted variables as infeasible** - It assumed every variable without a recorded lower bound is non-negative. ([#188](https://github.com/JWally/jsLPSolver/pull/188))
 - **Integer variables returned fractional when mixed with unrestricted variables** - The incumbent was rebuilt after the search and could stop at a different optimal vertex. ([#188](https://github.com/JWally/jsLPSolver/pull/188))
+- **`ints` / `binaries` flags set to `false` or `0` were treated as integer** - `ints: { x: false }` changed the answer, and `binaries: { x: 0 }` hid `ints: { x: 1 }`. ([#190](https://github.com/JWally/jsLPSolver/pull/190) by [@bardrop](https://github.com/bardrop))
 
 ### Changed
 
