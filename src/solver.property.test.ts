@@ -364,6 +364,40 @@ describe("integer column bounds", () => {
     });
 });
 
+describe("integer flags set to false", () => {
+    it("leave the variable continuous", () => {
+        // ints: { x: false } is no integer variable, so y = 2.5 is optimal;
+        // y used to be treated as implied integer and stop at 2
+        for (const flag of [false, 0] as const) {
+            const result = solver.Solve({
+                optimize: "obj",
+                opType: "max",
+                constraints: { link: { min: 0 }, cap: { max: 5 } },
+                variables: { x: { cap: 2, link: 1 }, y: { obj: 1, link: -1 } },
+                ints: { x: flag },
+            }) as SolveResult;
+            expect(result.feasible).toBe(true);
+            expect(result.result).toBeCloseTo(2.5);
+        }
+    });
+
+    it("do not hide the ints flag of the same variable", () => {
+        // binaries: { x: 0 } overrode ints: { x: 1 }, so 3x <= 7 was not
+        // rounded and x = 7/3 came back as integral
+        const result = solver.Solve({
+            optimize: "obj",
+            opType: "max",
+            constraints: { a: { max: 7 }, c: { max: 10 } },
+            variables: { x: { obj: 1, a: 3 }, z: { obj: 1, c: 1 } },
+            ints: { x: 1, z: 1 },
+            binaries: { x: 0 },
+        }) as SolveResult;
+        expect(result.feasible).toBe(true);
+        expect(result.result).toBeCloseTo(12);
+        expect(result.x).toBeCloseTo(2);
+    });
+});
+
 describe("unrestricted variables", () => {
     it("presolve does not assume an unrestricted variable is non-negative", () => {
         // 3 x0 + 4 x1 <= -3 needs x1 < 0; presolve used to call it infeasible

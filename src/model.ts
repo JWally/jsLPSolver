@@ -16,7 +16,7 @@ import { Constraint, Equality, IntegerVariable, Variable } from "./expressions";
 import type { Priority } from "./expressions";
 import type { BranchAndCutService } from "./tableau/branch-and-cut";
 import type { ConstraintBound, Model as JsonModel } from "./types/solver";
-import { findImpliedIntegers, findIntegralContinuous } from "./implied-integers";
+import { findImpliedIntegers, findIntegralContinuous, integerIds } from "./implied-integers";
 import type { TableauSolution, TableauSolutionSet } from "./tableau";
 import { presolve, type PresolveResult } from "./tableau/presolve";
 
@@ -617,11 +617,11 @@ class Model {
             if (bound.weight !== undefined || bound.priority !== undefined) return skip;
         }
         const unrestricted = jsonModel.unrestricted ?? {};
-        const integers = { ...(jsonModel.ints ?? {}), ...(jsonModel.binaries ?? {}) };
+        const integers = integerIds(jsonModel);
         // Bounds pay off through branching; on pure LPs the row form measured
         // faster (netlib scagr25 45ms vs 325ms), so LPs keep their rows.
-        if (Object.keys(integers).length === 0) return skip;
-        for (const id of Object.keys(integers)) {
+        if (integers.size === 0) return skip;
+        for (const id of integers) {
             if (unrestricted[id]) return skip;
         }
         this.binariesAsColumnBounds = true;
@@ -678,7 +678,7 @@ class Model {
             // and cut tests integrality on basic variables only, so a nonbasic
             // integer column resting at a fractional bound would be accepted
             // as integral.
-            if (integers[variableId]) {
+            if (integers.has(variableId)) {
                 if (binaries[variableId]) bound.ub = Math.min(bound.ub, 1);
                 bound.lb = Math.ceil(bound.lb - 1e-9);
                 bound.ub = Math.floor(bound.ub + 1e-9);
