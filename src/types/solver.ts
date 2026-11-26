@@ -42,6 +42,12 @@ export interface SolveOptions {
      * branching variable once an incumbent exists (default false).
      */
     guidedDive?: boolean;
+    /**
+     * Experimental: run many more root cut rounds (removing cuts that stop
+     * binding) and keep them. Gives a much stronger root bound; whether the
+     * search then finishes sooner is instance-dependent (default false).
+     */
+    aggressiveRootCuts?: boolean;
     /** Node selection strategy for branch-and-bound tree exploration. */
     nodeSelection?: "best-first" | "depth-first" | "hybrid";
     /** Variable selection (branching) strategy for choosing which fractional variable to branch on. */

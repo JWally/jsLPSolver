@@ -54,8 +54,50 @@ function randomProblem(): Problem {
     return { model: { optimize: "obj", opType: "max", constraints, variables, ints }, optimum };
 }
 
+/** Like randomProblem with 6 variables in 0..3 and 4 rows (4096 points to enumerate). */
+function widerProblem(): Problem {
+    const n = 6;
+    const m = 4;
+    const ub = 3;
+    const c = Array.from({ length: n }, () => 1 + Math.floor(random() * 9));
+    const A = Array.from({ length: m }, () =>
+        Array.from({ length: n }, () => 1 + Math.floor(random() * 9))
+    );
+    const b = A.map((row) => Math.floor(row.reduce((s, a) => s + a * ub, 0) * 0.4) + 0.5);
+    const variables: Record<string, Record<string, number>> = {};
+    const constraints: Record<string, { max: number }> = {};
+    const ints: Record<string, 1> = {};
+    for (let i = 0; i < m; i++) constraints[`r${i}`] = { max: b[i] };
+    for (let j = 0; j < n; j++) {
+        constraints[`ub${j}`] = { max: ub };
+        const coefficients: Record<string, number> = { obj: c[j], [`ub${j}`]: 1 };
+        for (let i = 0; i < m; i++) coefficients[`r${i}`] = A[i][j];
+        variables[`x${j}`] = coefficients;
+        ints[`x${j}`] = 1;
+    }
+    let optimum = -Infinity;
+    const x = new Array<number>(n).fill(0);
+    const visit = (j: number): void => {
+        if (j === n) {
+            if (A.every((row, i) => row.reduce((s, a, k) => s + a * x[k], 0) <= b[i])) {
+                optimum = Math.max(
+                    optimum,
+                    c.reduce((s, cj, k) => s + cj * x[k], 0)
+                );
+            }
+            return;
+        }
+        for (let v = 0; v <= ub; v++) {
+            x[j] = v;
+            visit(j + 1);
+        }
+    };
+    visit(0);
+    return { model: { optimize: "obj", opType: "max", constraints, variables, ints }, optimum };
+}
+
 /** Root LP bound (as a maximum) before and after `rounds` rounds of GMI cuts. */
-function boundsWithCuts(model: Record<string, unknown>, rounds: number) {
+function boundsWithCuts(model: Record<string, unknown>, rounds: number, relaxNoise = false) {
     const m = new Model().loadJson(model as never);
     const tableau = m.tableau;
     tableau.setModel(m);
@@ -63,7 +105,7 @@ function boundsWithCuts(model: Record<string, unknown>, rounds: number) {
     const before = -tableau.evaluation;
     let cuts = 0;
     for (let r = 0; r < rounds && tableau.feasible; r++) {
-        const added = addGomoryCuts(tableau, 10);
+        const added = addGomoryCuts(tableau, 10, relaxNoise);
         if (added === 0) break;
         cuts += added;
         tableau.simplex();
@@ -84,6 +126,23 @@ describe("addGomoryCuts", () => {
             if (result.after < result.before - 1e-6) tightened++;
         }
         expect(tightened).toBeGreaterThan(10);
+    });
+
+    it("stays valid when noise-sized coefficients are relaxed away", () => {
+        // Larger models and more rounds, so repeated pivots leave entries
+        // that are integral up to rounding in the rows being cut.
+        for (let k = 0; k < 25; k++) {
+            const { model, optimum } = widerProblem();
+            const result = boundsWithCuts(model, 8, true);
+            expect(result.feasible, `problem ${k}`).toBe(true);
+            expect(result.after, `problem ${k}`).toBeGreaterThanOrEqual(optimum - 1e-6);
+            expect(result.after, `problem ${k}`).toBeLessThanOrEqual(result.before + 1e-6);
+        }
+        for (let k = 0; k < 40; k++) {
+            const { model, optimum } = randomProblem();
+            const result = boundsWithCuts(model, 5, true);
+            expect(result.after, `problem ${k}`).toBeGreaterThanOrEqual(optimum - 1e-6);
+        }
     });
 
     it("adds nothing when the LP optimum is already integral", () => {

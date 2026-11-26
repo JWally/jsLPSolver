@@ -90,6 +90,8 @@ class Model {
     bestBoundEvery = 100;
     /** Search tuning: guided diving (see options.guidedDive). */
     guidedDive = false;
+    /** Search tuning: long root cut loop (see options.aggressiveRootCuts). */
+    aggressiveRootCuts = false;
     /** Whether to detect and abort on simplex pivot cycles. */
     checkForCycles: boolean;
     /** Diagnostic messages collected during solving. */
@@ -503,6 +505,9 @@ class Model {
             }
             if (jsonModel.options.guidedDive === true) {
                 this.guidedDive = true;
+            }
+            if (jsonModel.options.aggressiveRootCuts === true) {
+                this.aggressiveRootCuts = true;
             }
             if (jsonModel.options.useMIRCuts) {
                 this.useMIRCuts = jsonModel.options.useMIRCuts;

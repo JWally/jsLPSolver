@@ -24,6 +24,19 @@ import { SlackVariable } from "../expressions";
 import { rangeOf } from "./bounds";
 import { allocMatrix } from "./kernel";
 
+/** Cuts rejected for their coefficient range since the last takeRangeRejections(). */
+let rangeRejections = 0;
+
+/**
+ * Number of Gomory cuts rejected for coefficient range since the last call.
+ * Non-zero means relaxNoise would produce cuts the plain pass did not.
+ */
+export function takeRangeRejections(): number {
+    const count = rangeRejections;
+    rangeRejections = 0;
+    return count;
+}
+
 /** Slack indices created for cut rows, per tableau (only those rows may be removed). */
 const cutSlacks = new WeakMap<Tableau, Set<number>>();
 
@@ -31,6 +44,10 @@ const cutSlacks = new WeakMap<Tableau, Set<number>>();
 const MIN_FRACTION = 0.005;
 /** Cuts whose largest/smallest coefficient ratio exceeds this are numerically unsafe. */
 const MAX_DYNAMISM = 1e6;
+/** Cut coefficients below this (the cut reads "... >= 1") are noise and are relaxed away. */
+const TINY = 1e-9;
+/** A cut whose right-hand side gave up more than this to relaxed coefficients is dropped. */
+const MAX_RELAXATION = 1e-3;
 /** Coefficients below this are treated as zero when reading the row. */
 const ZERO = 1e-11;
 
@@ -39,9 +56,11 @@ const ZERO = 1e-11;
  * new tableau rows whose slack is basic and negative (violated). The basis
  * stays dual feasible, so phase 1 re-optimizes with a few dual pivots.
  *
+ * @param relaxNoise - Relax noise-sized coefficients out of a cut instead of
+ *   rejecting the cut for its coefficient range. Yields many more cuts.
  * @returns The number of cuts added.
  */
-export function addGomoryCuts(tableau: Tableau, maxCuts: number): number {
+export function addGomoryCuts(tableau: Tableau, maxCuts: number, relaxNoise = false): number {
     const model = tableau.model;
     if (!model || maxCuts <= 0) return 0;
     const width = tableau.width;
@@ -93,6 +112,7 @@ export function addGomoryCuts(tableau: Tableau, maxCuts: number): number {
         let valid = true;
         let largest = 0;
         let smallest = Infinity;
+        let relaxed = 0;
         for (let c = 1; c <= lastColumn; c++) {
             cut[c] = 0;
             const a = matrix[rowOffset + c];
@@ -111,25 +131,45 @@ export function addGomoryCuts(tableau: Tableau, maxCuts: number): number {
                 g = a > 0 ? a / f0 : -a / (1 - f0);
             }
             if (g <= 0) continue;
+            if (relaxNoise && g < TINY) {
+                // Noise-sized coefficient (an integral entry stored as
+                // k + 1e-15 has a "fractional part" of 1e-15). Dropping it
+                // outright would tighten the cut, so the right-hand side
+                // gives up the most the term could contribute. A variable
+                // with no upper bound keeps its coefficient, which is just
+                // left out of the dynamism test.
+                const range = rangeOf(tableau, varIndexByCol[c]);
+                if (range !== Infinity) {
+                    relaxed += g * range;
+                } else {
+                    cut[c] = g;
+                }
+                continue;
+            }
             cut[c] = g;
             if (g > largest) largest = g;
             if (g < smallest) smallest = g;
         }
-        if (!valid || largest === 0 || largest / smallest > MAX_DYNAMISM) continue;
-        appendCutRow(tableau, cut, largest);
+        if (!valid || largest === 0) continue;
+        if (largest / smallest > MAX_DYNAMISM) {
+            rangeRejections++;
+            continue;
+        }
+        if (relaxed > MAX_RELAXATION) continue;
+        appendCutRow(tableau, cut, largest, 1 - relaxed);
         added++;
     }
     return added;
 }
 
 /**
- * Append sum_j g_j s_j >= 1 as a tableau row with a new basic slack
- * t = sum_j g_j s_j - 1, i.e. t = -1 - sum_j (-g_j) s_j.
+ * Append sum_j g_j s_j >= rhs as a tableau row with a new basic slack
+ * t = sum_j g_j s_j - rhs, i.e. t = -rhs - sum_j (-g_j) s_j.
  */
-function appendCutRow(tableau: Tableau, cut: Float64Array, largest: number): void {
+function appendCutRow(tableau: Tableau, cut: Float64Array, largest: number, rhs: number): void {
     const row = new Float64Array(tableau.width);
     for (let c = 1; c < tableau.width; c++) row[c] = cut[c] === 0 ? 0 : -cut[c];
-    appendCutTableauRow(tableau, -1, row, largest);
+    appendCutTableauRow(tableau, -rhs, row, largest);
 }
 
 /**
