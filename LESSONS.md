@@ -814,3 +814,25 @@ so pass 2 does not rescan the row (mas76 -11%, enigma -10%).
 Measured and dropped: unrolling the indexed update by 4 (blend2 +11%), a
 zero fast path in the pivot-row normalization, and inlining `rangeOf` in the
 phase 1 row scan (both within noise).
+
+### Second WebAssembly pass: what else was worth moving
+
+With the row update in WebAssembly the profile shifted: the kernel 15-69%,
+the phase 1 loop 8-27%, the JS part of pivot (normalizing the pivot row and
+filling its dense copy) 6-26%.
+
+- **Pivot-row normalization in the kernel** (f64x2 divide, compare and mask;
+  it writes the dense pivot row itself, so the JS fill loop goes too): mas76
+  -25%, enigma -17%, blend2 -13%, p0548 -11%, others -5 to -9%. The index
+  list is rebuilt in JS only for the JS update or optional objectives.
+- **Kernel loop unrolled by 4** and **no unrestricted-variable lookup per
+  row** in the phase 1 row scan when the model has none: together 2-8%.
+- Measured: while solving, pivot rows are 60-100% non-zero and most rows are
+  active on every instance looked at, so an indexed (sparse) kernel has
+  nothing to skip. The kernel is close to memory-bound: unrolling gave 5% in
+  isolation.
+- Dropped: the dual ratio test's row scan in WebAssembly (candidates listed
+  for JS). Noise: most columns are candidates, so JS still visits them.
+
+Suite total over the 52 instances solved: 95.7 s -> 80.8 s, node counts
+identical. mas76 4.74 -> 3.40 s, blend2 6.08 -> 5.06 s, pk1 25.5 -> 19.5 s.

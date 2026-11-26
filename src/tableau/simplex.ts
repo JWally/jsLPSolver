@@ -255,6 +255,14 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
     const unrestrictedVars = this.unrestrictedVars;
     const varIndexByRow = this.varIndexByRow;
     const varIndexByCol = this.varIndexByCol;
+    // Most models have no unrestricted variables: skip the lookup per row.
+    let hasUnrestricted = false;
+    for (const key in unrestrictedVars) {
+        if (unrestrictedVars[key] === true) {
+            hasUnrestricted = true;
+            break;
+        }
+    }
 
     // Anti-cycling: on degenerate problems, the max-quotient pivot rule
     // can oscillate, corrupting the matrix. We detect stalling early
@@ -299,8 +307,11 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
         // tests let basic variables overshoot their bounds by that much.
         let rhsValue = -feasTol;
         let leavesAboveRange = false;
+        const rowRanges = this.boundRange;
+        const nRowRanges = rowRanges.length;
         for (let r = 1; r <= lastRow; r++) {
-            if (unrestrictedVars[varIndexByRow[r]] === true) continue;
+            const basicIndex = varIndexByRow[r];
+            if (hasUnrestricted && unrestrictedVars[basicIndex] === true) continue;
             const value = matrix[r * width + rhsColumn];
             if (value < rhsValue) {
                 rhsValue = value;
@@ -309,7 +320,8 @@ function phase1Fast(this: Tableau, robustFallback: boolean): number {
             }
             if (hasBounds) {
                 // A basic variable above its range is as infeasible as one below zero.
-                const excess = rangeOf(this, varIndexByRow[r]) - value;
+                const range = basicIndex < nRowRanges ? rowRanges[basicIndex] : Infinity;
+                const excess = range - value;
                 if (excess < rhsValue) {
                     rhsValue = excess;
                     leavingRowIndex = r;
