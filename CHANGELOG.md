@@ -14,12 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Reliability branching, Devex pricing, root presolve and Gomory cuts** ([#170](https://github.com/JWally/jsLPSolver/pull/170))
 - **Root c-MIR cuts** with variable-upper-bound substitution ([#171](https://github.com/JWally/jsLPSolver/pull/171))
 - **Faster pivot** - Dense pivot rows take a straight, unrolled row update: 5-29% faster on MIPLIB with identical node counts. ([#177](https://github.com/JWally/jsLPSolver/pull/177))
+- **WebAssembly SIMD pivot kernel** - The pivot's row update runs in a 262-byte embedded WebAssembly module where available, with the tableau matrix held in WebAssembly memory. Results are bit-identical to the JS loop; most MIPLIB instances are 1.3-2.5x faster and mid-size LPs 25-45% faster. Matrices under 2048 cells, runtimes without WebAssembly SIMD and `JSLP_NO_WASM=1` use the JS update. ([#189](https://github.com/JWally/jsLPSolver/pull/189))
 
 ### Fixed
 
 - **Simplex hangs, false infeasibility and false unboundedness** on several Netlib LPs (share1b, share2b, brandy, boeing2, e226, agg): cold starts fall back to a sum-of-infeasibilities phase 1, and phase 2 uses a Harris two-pass ratio test. ([#168](https://github.com/JWally/jsLPSolver/pull/168), [#170](https://github.com/JWally/jsLPSolver/pull/170))
 - **Explicit `0` coefficient makes a feasible model infeasible** - Presolve read `0x <= 2` as a bound on `x`. ([#174](https://github.com/JWally/jsLPSolver/issues/174), fixed in [#175](https://github.com/JWally/jsLPSolver/pull/175) by [@bardrop](https://github.com/bardrop), reported by [@trackoor](https://github.com/trackoor))
 - **Presolve dropped fixed variables from the objective** - A variable fixed by presolve (e.g. by `x = 1` plus a redundant row) had its cost zeroed, so the reported `result` missed `cost * value`. ([#176](https://github.com/JWally/jsLPSolver/pull/176))
+- **Presolve reported feasible models with unrestricted variables as infeasible** - It assumed every variable without a recorded lower bound is non-negative. ([#188](https://github.com/JWally/jsLPSolver/pull/188))
+- **Integer variables returned fractional when mixed with unrestricted variables** - The incumbent was rebuilt after the search and could stop at a different optimal vertex. ([#188](https://github.com/JWally/jsLPSolver/pull/188))
 
 ### Changed
 
