@@ -836,3 +836,33 @@ filling its dense copy) 6-26%.
 
 Suite total over the 52 instances solved: 95.7 s -> 80.8 s, node counts
 identical. mas76 4.74 -> 3.40 s, blend2 6.08 -> 5.06 s, pk1 25.5 -> 19.5 s.
+
+### Primal side: what limits the remaining hard instances (measured, nothing shipped)
+
+With the faster pivot, qnet1 solves in ~50 s and vpm2 in ~105 s; noswot does
+not finish. Traces of incumbent and bound over time, and runs with the optimal
+value given as a cutoff from the start (the most any primal heuristic could
+achieve):
+
+| Instance | plain   | optimal cutoff | what limits it                                |
+| -------- | ------- | -------------- | --------------------------------------------- |
+| qnet1    | ~52 s   | ~23 s          | optimum found only at the last node           |
+| vpm2     | ~105 s  | ~49 s          | slow incumbents and a weak bound (12.4/13.75) |
+| noswot   | > 120 s | > 120 s        | bound stuck at -43 (optimum -41) from node 1  |
+
+So a perfect heuristic is worth about 2x on two instances and nothing on
+noswot, which needs cuts, not incumbents.
+
+Cheap search-order changes were tried against that and are all a wash,
+because node counts swing by 2-4x per instance in both directions:
+
+- **Best-bound jump every 25 / 10 / 4 selections** (instead of 100): helps
+  qnet1, pk1, fiber, mod010 (7.6 -> 3.3 -> 1.5 s); hurts misc07 (12 -> 36 s),
+  mas76 (3.6 -> 9 s), bell5; blend2 times out with every alternative.
+- **Guided diving** (dive toward the incumbent's value of the branching
+  variable): p0548 1.0 -> 0.45 s, mod010 7.6 -> 4.1 s, but blend2 5 s ->
+  timeout and vpm2 slower.
+
+What is left on this side is an improvement heuristic proper (RINS or local
+branching as a restricted sub-search on the tableau), bounded above by the
+table, or stronger root cuts for noswot/vpm2.
