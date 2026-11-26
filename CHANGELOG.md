@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Reliability branching, Devex pricing, root presolve and Gomory cuts** ([#170](https://github.com/JWally/jsLPSolver/pull/170))
 - **Root c-MIR cuts** with variable-upper-bound substitution ([#171](https://github.com/JWally/jsLPSolver/pull/171))
 - **Faster pivot** - Dense pivot rows take a straight, unrolled row update: 5-29% faster on MIPLIB with identical node counts. ([#177](https://github.com/JWally/jsLPSolver/pull/177))
-- **WebAssembly SIMD pivot kernel** - The pivot's row update runs in a 262-byte embedded WebAssembly module where available, with the tableau matrix held in WebAssembly memory. Results are bit-identical to the JS loop; most MIPLIB instances are 1.3-2.5x faster and mid-size LPs 25-45% faster. Matrices under 2048 cells, runtimes without WebAssembly SIMD and `JSLP_NO_WASM=1` use the JS update. ([#189](https://github.com/JWally/jsLPSolver/pull/189))
+- **WebAssembly SIMD pivot kernel** - The pivot's row update runs in a small embedded WebAssembly module where available, with the tableau matrix held in WebAssembly memory. Results are bit-identical to the JS loop; most MIPLIB instances are 1.3-2.5x faster and mid-size LPs 25-45% faster. Matrices under 2048 cells, runtimes without WebAssembly SIMD and `JSLP_NO_WASM=1` use the JS update. ([#189](https://github.com/JWally/jsLPSolver/pull/189))
 
 ### Fixed
 
