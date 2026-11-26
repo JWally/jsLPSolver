@@ -19,6 +19,18 @@ import type { Model as JsonModel } from "./types/solver";
 const EPS = 1e-9;
 const isIntegral = (value: number): boolean => Math.abs(value - Math.round(value)) < EPS;
 
+/**
+ * Ids marked integer in `ints` or `binaries`. A flag set to false or 0
+ * (`ints: { x: false }`) leaves the variable continuous, as in loadJson.
+ */
+export function integerIds(model: JsonModel): Set<string> {
+    const ids = new Set<string>();
+    for (const flags of [model.ints, model.binaries]) {
+        for (const [id, flag] of Object.entries(flags ?? {})) if (flag) ids.add(id);
+    }
+    return ids;
+}
+
 /** Ids of continuous variables that can be treated as integer. */
 export function findImpliedIntegers(model: JsonModel): Set<string> {
     const implied = new Set<string>();
@@ -27,10 +39,7 @@ export function findImpliedIntegers(model: JsonModel): Set<string> {
         string,
         { min?: number; max?: number; equal?: number }
     >;
-    const integers = new Set([
-        ...Object.keys(model.ints ?? {}),
-        ...Object.keys(model.binaries ?? {}),
-    ]);
+    const integers = integerIds(model);
     const unrestricted = model.unrestricted ?? {};
     const objective = model.optimize as string;
     if (!Object.keys(variables).some((id) => !integers.has(id) && !unrestricted[id])) {
@@ -101,10 +110,7 @@ export function findIntegralContinuous(model: JsonModel): Set<string> {
         string,
         { min?: number; max?: number; equal?: number }
     >;
-    const integers = new Set([
-        ...Object.keys(model.ints ?? {}),
-        ...Object.keys(model.binaries ?? {}),
-    ]);
+    const integers = integerIds(model);
     const unrestricted = model.unrestricted ?? {};
     const objective = model.optimize as string;
     // Only worth computing when it can decide objective integrality: every
